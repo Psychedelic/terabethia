@@ -44,7 +44,7 @@ library CommitmentTreeUpdateOutput {
 
 library StarknetOutput {
     uint256 internal constant MERKLE_UPDATE_OFFSET = 0;
-    uint256 internal constant HEADER_SIZE = 2;
+    uint256 internal constant HEADER_SIZE = 0;
 
     uint256 constant MESSAGE_FROM_ADDRESS_OFFSET = 0;
     uint256 constant MESSAGE_TO_ADDRESS_OFFSET = 1;

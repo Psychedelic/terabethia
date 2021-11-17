@@ -20,12 +20,12 @@ import "./Output.sol";
 
 library StarknetState {
     struct State {
-        bytes32 globalRoot;
+        // bytes32 globalRoot;
         int256 sequenceNumber;
     }
 
     function copy(State storage state, State memory stateFrom) internal {
-        state.globalRoot = stateFrom.globalRoot;
+        // state.globalRoot = stateFrom.globalRoot;
         state.sequenceNumber = stateFrom.sequenceNumber;
     }
 
@@ -45,16 +45,16 @@ library StarknetState {
             "INVALID_SEQUENCE_NUMBER"
         );
 
-        bytes32[] calldata commitment_tree_update = StarknetOutput
-            .getMerkleUpdate(starknetOutput);
+        // bytes32[] calldata commitment_tree_update = StarknetOutput
+        //     .getMerkleUpdate(starknetOutput);
 
-        require(
-            state.globalRoot ==
-                CommitmentTreeUpdateOutput.getPrevRoot(commitment_tree_update),
-            "INVALID_PREVIOUS_ROOT"
-        );
-        state.globalRoot = CommitmentTreeUpdateOutput.getNewRoot(
-            commitment_tree_update
-        );
+        // require(
+        //     state.globalRoot ==
+        //         CommitmentTreeUpdateOutput.getPrevRoot(commitment_tree_update),
+        //     "INVALID_PREVIOUS_ROOT"
+        // );
+        // state.globalRoot = CommitmentTreeUpdateOutput.getNewRoot(
+        //     commitment_tree_update
+        // );
     }
 }

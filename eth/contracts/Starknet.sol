@@ -40,7 +40,7 @@ contract Starknet is
     using StarknetState for StarknetState.State;
 
     // Logs the new state following a state update.
-    event LogStateUpdate(bytes32 globalRoot, int256 sequenceNumber);
+    event LogStateUpdate(int256 sequenceNumber);
 
     // Logs a stateTransitionFact that was used to update the state.
     // event LogStateTransitionFact(bytes32 stateTransitionFact);
@@ -126,9 +126,9 @@ contract Starknet is
     /**
       Returns the current state root.
     */
-    function stateRoot() external view returns (bytes32) {
-        return state().globalRoot;
-    }
+    // function stateRoot() external view returns (bytes32) {
+    //     return state().globalRoot;
+    // }
 
     /**
       Returns the current sequence number.
@@ -193,6 +193,6 @@ contract Starknet is
         // Perform state update.
         state().update(sequenceNumber, programOutput);
         StarknetState.State memory state_ = state();
-        emit LogStateUpdate(state_.globalRoot, state_.sequenceNumber);
+        emit LogStateUpdate(state_.sequenceNumber);
     }
 }

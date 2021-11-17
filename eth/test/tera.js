@@ -74,8 +74,8 @@ describe("Terabethia", function () {
     const sequenceNumber = await tera.stateSequenceNumber();
     expect(sequenceNumber.toString()).equals('0');
 
-    const stateRoot = await tera.stateRoot();
-    expect(stateRoot).equals('0x0000000000000000000000000000000000000000000000000000000000000000');
+    // const stateRoot = await tera.stateRoot();
+    // expect(stateRoot).equals('0x0000000000000000000000000000000000000000000000000000000000000000');
 
     const txOperator = await tera.registerOperator('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
     await txOperator.wait();
@@ -104,9 +104,9 @@ describe("Terabethia", function () {
     const updateStateTx = await tera.updateState(1, [
       // @todo do we need merkle states at all?
       // merkle state update from
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-      // merkle state update to
-      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      // '0x0000000000000000000000000000000000000000000000000000000000000000',
+      // // merkle state update to
+      // '0x0000000000000000000000000000000000000000000000000000000000000001',
 
       // number of L2 -> L1 messages
       '0x0000000000000000000000000000000000000000000000000000000000000001', // 1 message
