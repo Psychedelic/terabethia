@@ -6,8 +6,6 @@ contract EthProxy {
     // The StarkNet core contract.
     IStarknetMessaging starknetCore;
 
-    mapping(bytes32 => uint256) public userBalances;
-
     uint256 constant MESSAGE_WITHDRAW = 0;
 
     // The selector of the "deposit" l1_handler.
@@ -24,7 +22,7 @@ contract EthProxy {
     function withdraw(uint256 amount) external {
         // Construct the withdrawal message's payload.
         bytes32[] memory payload = new bytes32[](3);
-        payload[0] = MESSAGE_WITHDRAW;
+        payload[0] = bytes32(MESSAGE_WITHDRAW);
         payload[1] = bytes32(uint256(uint160(msg.sender)));
         payload[2] = bytes32(amount);
 
@@ -32,36 +30,48 @@ contract EthProxy {
         // This will revert the (Ethereum) transaction if the message does not exist.
         starknetCore.consumeMessageFromL2(CANISTER_ADDRESS, payload);
 
-        // Update the L1 balance.
-        userBalances[user] += amount;
-    }
-
-    function deposit(bytes32 user, uint256 amount) external {
-        require(amount < 2**64, "Invalid amount.");
+        // withdraw eth
         require(
-            amount <= userBalances[user],
-            "The user's balance is not large enough."
+            address(this).balance >= amount,
+            "Address: insufficient balance"
         );
 
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(
+            success,
+            "Address: unable to send value, recipient may have reverted"
+        );
+    }
+
+    function deposit(bytes32 user) external payable {
+        require(msg.value >= 1 ether, "DepositContract: deposit value too low");
+        require(
+            msg.value % 1 gwei == 0,
+            "DepositContract: deposit value not multiple of gwei"
+        );
+
+        uint256 deposit_amount = msg.value / 1 gwei;
+
+        require(
+            deposit_amount <= type(uint64).max,
+            "DepositContract: deposit value too high"
+        );
+
+        // require(
+        //     amount <= userBalances[user],
+        //     "The user's balance is not large enough."
+        // );
+
         // Update the L1 balance.
-        userBalances[user] -= amount;
+        // @todo: transfer from msg.sender
+        // supply += amount;
 
         // Construct the deposit message's payload.
         bytes32[] memory payload = new bytes32[](2);
         payload[0] = user;
-        payload[1] = bytes32(amount);
+        payload[1] = bytes32(deposit_amount);
 
         // Send the message to the StarkNet core contract.
         starknetCore.sendMessageToL2(CANISTER_ADDRESS, payload);
-    }
-
-    function balanceOf(bytes32 account)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return userBalances[account];
     }
 }
