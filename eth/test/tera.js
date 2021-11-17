@@ -123,6 +123,9 @@ describe("Terabethia", function () {
 
     await withdrawTx2.wait();
 
+    const withdrawTx3 = ethProxy.withdraw(ethValue2);
+    await expect(withdrawTx3).to.be.reverted;
+
     const b3 = await ethers.provider.getBalance(ethProxy.address);
     expect(b3).equals(ethValue3);
 
