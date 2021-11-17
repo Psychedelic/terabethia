@@ -16,14 +16,16 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
+import "hardhat/console.sol";
+
 library CommitmentTreeUpdateOutput {
     /**
       Returns the previous commitment tree root.
     */
-    function getPrevRoot(uint256[] calldata commitment_tree_update_data)
+    function getPrevRoot(bytes32[] calldata commitment_tree_update_data)
         internal
         pure
-        returns (uint256)
+        returns (bytes32)
     {
         return commitment_tree_update_data[0];
     }
@@ -31,10 +33,10 @@ library CommitmentTreeUpdateOutput {
     /**
       Returns the new commitment tree root.
     */
-    function getNewRoot(uint256[] calldata commitment_tree_update_data)
+    function getNewRoot(bytes32[] calldata commitment_tree_update_data)
         internal
         pure
-        returns (uint256)
+        returns (bytes32)
     {
         return commitment_tree_update_data[1];
     }
@@ -68,17 +70,17 @@ library StarknetOutput {
     /**
       Does a sanity check of the output_data length.
     */
-    function validate(uint256[] calldata output_data) internal pure {
+    function validate(bytes32[] calldata output_data) internal pure {
         require(output_data.length > HEADER_SIZE, "STARKNET_OUTPUT_TOO_SHORT");
     }
 
     /**
       Returns a slice of the 'output_data' with the commitment tree update information.
     */
-    function getMerkleUpdate(uint256[] calldata output_data)
+    function getMerkleUpdate(bytes32[] calldata output_data)
         internal
         pure
-        returns (uint256[] calldata)
+        returns (bytes32[] calldata)
     {
         return output_data[MERKLE_UPDATE_OFFSET:MERKLE_UPDATE_OFFSET + 2];
     }
@@ -92,47 +94,54 @@ library StarknetOutput {
     */
     function processMessages(
         bool isL2ToL1,
-        uint256[] calldata programOutputSlice,
+        bytes32[] calldata programOutputSlice,
         mapping(bytes32 => uint256) storage messages
     ) internal returns (uint256) {
-        uint256 message_segment_size = programOutputSlice[0];
+        // int256 tmp_message_segment_size = int256(programOutputSlice[0]);
+        uint256 message_segment_size = uint256(programOutputSlice[0]);
         require(message_segment_size < 2**30, "INVALID_MESSAGE_SEGMENT_SIZE");
 
         uint256 offset = 1;
         uint256 message_segment_end = offset + message_segment_size;
+
+        console.log(
+            "message_segment_size: %s message_segment_end: %s",
+            message_segment_size,
+            message_segment_end
+        );
+
         while (offset < message_segment_end) {
-            uint256 payloadLengthOffset = offset + MESSAGE_PAYLOAD_SIZE_OFFSET;
-            require(
-                payloadLengthOffset < programOutputSlice.length,
-                "MESSAGE_TOO_SHORT"
-            );
+            // uint256 payloadLengthOffset = offset + MESSAGE_PAYLOAD_SIZE_OFFSET;
+            require(offset <= programOutputSlice.length, "MESSAGE_TOO_SHORT");
 
-            uint256 payloadLength = programOutputSlice[payloadLengthOffset];
-            require(payloadLength < 2**30, "INVALID_PAYLOAD_LENGTH");
+            // uint256 payloadLength = programOutputSlice[payloadLengthOffset];
+            // require(payloadLength < 2**30, "INVALID_PAYLOAD_LENGTH");
 
-            uint256 endOffset = offset + MESSAGE_PREFIX_SIZE + payloadLength;
-            require(
-                endOffset <= programOutputSlice.length,
-                "TRUNCATED_MESSAGE_PAYLOAD"
-            );
+            // uint256 endOffset = offset + 1;
+            // require(
+            //     endOffset <= programOutputSlice.length,
+            //     "TRUNCATED_MESSAGE_PAYLOAD"
+            // );
 
-            bytes32 messageHash = keccak256(
-                abi.encodePacked(programOutputSlice[offset:endOffset])
-            );
+            // bytes32 messageHash = keccak256(
+            //     abi.encodePacked(programOutputSlice[offset:endOffset])
+            // );
+            bytes32 messageHash = programOutputSlice[offset];
+
             if (isL2ToL1) {
-                emit LogMessageToL1(
-                    // from=
-                    programOutputSlice[offset + MESSAGE_FROM_ADDRESS_OFFSET],
-                    // to=
-                    address(
-                        programOutputSlice[offset + MESSAGE_TO_ADDRESS_OFFSET]
-                    ),
-                    // payload=
-                    (uint256[])(
-                        programOutputSlice[offset +
-                            MESSAGE_PREFIX_SIZE:endOffset]
-                    )
-                );
+                // emit LogMessageToL1(
+                //     // from=
+                //     programOutputSlice[offset + MESSAGE_FROM_ADDRESS_OFFSET],
+                //     // to=
+                //     address(
+                //         programOutputSlice[offset + MESSAGE_TO_ADDRESS_OFFSET]
+                //     ),
+                //     // payload=
+                //     (uint256[])(
+                //         programOutputSlice[offset +
+                //             MESSAGE_PREFIX_SIZE:endOffset]
+                //     )
+                // );
                 messages[messageHash] += 1;
             } else {
                 require(
@@ -142,28 +151,31 @@ library StarknetOutput {
 
                 // Note that in the case of a message from L1 to L2, the selector (a single integer)
                 // is prepended to the payload.
-                emit ConsumedMessageToL2(
-                    // from=
-                    address(
-                        programOutputSlice[offset + MESSAGE_FROM_ADDRESS_OFFSET]
-                    ),
-                    // to=
-                    programOutputSlice[offset + MESSAGE_TO_ADDRESS_OFFSET],
-                    // selector=
-                    programOutputSlice[offset + MESSAGE_PREFIX_SIZE],
-                    // payload=
-                    (uint256[])(
-                        programOutputSlice[offset +
-                            MESSAGE_PREFIX_SIZE +
-                            1:endOffset]
-                    )
-                );
+                // emit ConsumedMessageToL2(
+                //     // from=
+                //     address(
+                //         programOutputSlice[offset + MESSAGE_FROM_ADDRESS_OFFSET]
+                //     ),
+                //     // to=
+                //     programOutputSlice[offset + MESSAGE_TO_ADDRESS_OFFSET],
+                //     // selector=
+                //     programOutputSlice[offset + MESSAGE_PREFIX_SIZE],
+                //     // payload=
+                //     (uint256[])(
+                //         programOutputSlice[offset +
+                //             MESSAGE_PREFIX_SIZE +
+                //             1:endOffset]
+                //     )
+                // );
                 messages[messageHash] -= 1;
             }
 
-            offset = endOffset;
+            offset += 1;
         }
+
         require(offset == message_segment_end, "INVALID_MESSAGE_SEGMENT_SIZE");
+
+        console.log("returning offset: %s", offset);
 
         return offset;
     }

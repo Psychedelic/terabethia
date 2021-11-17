@@ -20,7 +20,7 @@ import "./Output.sol";
 
 library StarknetState {
     struct State {
-        uint256 globalRoot;
+        bytes32 globalRoot;
         int256 sequenceNumber;
     }
 
@@ -36,7 +36,7 @@ library StarknetState {
     function update(
         State storage state,
         int256 sequenceNumber,
-        uint256[] calldata starknetOutput
+        bytes32[] calldata starknetOutput
     ) internal {
         // Check the sequenceNumber first as the error is less ambiguous then INVALID_PREVIOUS_ROOT.
         state.sequenceNumber += 1;
@@ -45,8 +45,9 @@ library StarknetState {
             "INVALID_SEQUENCE_NUMBER"
         );
 
-        uint256[] calldata commitment_tree_update = StarknetOutput
+        bytes32[] calldata commitment_tree_update = StarknetOutput
             .getMerkleUpdate(starknetOutput);
+
         require(
             state.globalRoot ==
                 CommitmentTreeUpdateOutput.getPrevRoot(commitment_tree_update),

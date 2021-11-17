@@ -1,5 +1,6 @@
 pragma solidity ^0.6.12;
 
+import "hardhat/console.sol";
 import "./IStarknetMessaging.sol";
 
 contract EthProxy {
@@ -25,6 +26,9 @@ contract EthProxy {
         payload[0] = bytes32(MESSAGE_WITHDRAW);
         payload[1] = bytes32(uint256(uint160(msg.sender)));
         payload[2] = bytes32(amount);
+
+        console.log(msg.sender);
+        console.logBytes32(bytes32(amount));
 
         // Consume the message from the StarkNet core contract.
         // This will revert the (Ethereum) transaction if the message does not exist.

@@ -31,7 +31,7 @@ abstract contract Operator is MGovernance, MOperator {
     function registerOperator(address newOperator)
         external
         override
-        onlyGovernance
+    /** onlyGovernance */
     {
         getOperators()[newOperator] = true;
         emit LogOperatorAdded(newOperator);
