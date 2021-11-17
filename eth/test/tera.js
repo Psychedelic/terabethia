@@ -6,6 +6,7 @@ const BN = require('bn.js');
 
 const ethValue1 = ethers.utils.parseEther("5");
 const ethValue2 = ethers.utils.parseEther("0.1");
+const ethValue3 = ethers.utils.parseEther("4.9");
 
 let overrides = {
   // To convert Ether to Wei:
@@ -121,6 +122,9 @@ describe("Terabethia", function () {
     const withdrawTx2 = await ethProxy.withdraw(ethValue2);
 
     await withdrawTx2.wait();
+
+    const b3 = await ethers.provider.getBalance(ethProxy.address);
+    expect(b3).equals(ethValue3);
 
 
     // const wr = await withdrawTx.wait();
