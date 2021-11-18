@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const { soliditySha3 } = require("web3-utils");
 
 const BN = require('bn.js');
@@ -43,32 +43,41 @@ function padToBytes32(n) {
 
 describe("Terabethia", function () {
   it("Should return the new greeting once it's changed", async function () {
-    const Starknet = await ethers.getContractFactory("Starknet");
+    // Starknet Messaging Protocol
+    const Starknet = await ethers.getContractFactory("Terabethia");
+
+    // Upgradable Proxy
+    // const Proxy = await ethers.getContractFactory("Proxy");
+
+    // Ethereum Proxy which is using Tera (Upgradable Starknet Messaging Proxy)
     const EthProxy = await ethers.getContractFactory("EthProxy");
-    const Proxy = await ethers.getContractFactory("Proxy");
+
     const impl = await Starknet.deploy();
-    const tera = await Proxy.deploy(300);
+    await impl.deployed();
+
+    // we only support sequenceNumber=1 as state init
+    const initialState = ethers.utils.defaultAbiCoder.encode(['uint256'], [1]);
+    console.log({ initialState });
+
+    // const tera = await Proxy.deploy(300);
+    const tera = await upgrades.deployProxy(Starknet, [initialState]);
 
     await tera.deployed();
 
-    const addImplTx = await tera.addImplementation(impl.address, ethers.utils.arrayify(1), false);
-    await addImplTx.wait();
+    // const addImplTx = await tera.addImplementation(impl.address, initialState, false);
+    // await addImplTx.wait();
 
-    const upgradeToTx = await tera.upgradeTo(impl.address, ethers.utils.arrayify(1), false);
-    await upgradeToTx.wait();
 
-    console.log('', JSON.stringify(rrr));
+    // const upgradeToTx = await tera.upgradeTo(impl.address, initialState, false);
+    // await upgradeToTx.wait();
 
-    const implAddr = await tera.implementation();
-    expect(implAddr).equal(impl.address);
+    // const implAddr = await tera.getImplementation();
+    // expect(implAddr).equal(impl.address);
 
-    const id = await impl.identify();
-
+    const id = await tera.identify();
     expect(id).equals('Terabethia_2021_1');
 
     const ethProxy = await EthProxy.deploy(tera.address);
-
-    console.log('ethProxy deployed', ethProxy.address);
 
 
 
@@ -78,7 +87,7 @@ describe("Terabethia", function () {
     const depositTx = await ethProxy.deposit(ethers.utils.formatBytes32String('mni2czqaaaaaaadqal6qcai'), overrides);
     await depositTx.wait();
     const balance = await ethers.provider.getBalance(ethProxy.address);
-    expect(balance).equals(ethValue1)
+    expect(balance).equals(ethValue1);
 
 
     // withdrawing without permission should revert
@@ -88,7 +97,7 @@ describe("Terabethia", function () {
     expect(b2).equals(ethValue1);
 
     const sequenceNumber = await tera.stateSequenceNumber();
-    expect(sequenceNumber.toString()).equals('0');
+    expect(sequenceNumber.toString()).equals('1');
 
     // const stateRoot = await tera.stateRoot();
     // expect(stateRoot).equals('0x0000000000000000000000000000000000000000000000000000000000000000');
@@ -115,9 +124,9 @@ describe("Terabethia", function () {
     );
 
     // 0xefb80e98c9f7ac2ad55b3e4f5bb2d3a15fe8c187925eba2ffc721f74d1982c52
-    expect(withdrawMessageHash).equals('0xe758a290839d36f05551ff7857b8c00b8052dc66d2b9eaf810d1ab9b029872a4');
+    expect(withdrawMessageHash).equals('0xff76cffb15cc5fbb35ba768c1aa7a821ccd5e4901c4ff733ea941747a2a52413');
 
-    const updateStateTx = await tera.updateState(1, [
+    const updateStateTx = await tera.updateState(2, [
       // @todo do we need merkle states at all?
       // merkle state update from
       // '0x0000000000000000000000000000000000000000000000000000000000000000',

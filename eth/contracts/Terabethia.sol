@@ -23,58 +23,32 @@ import "./Output.sol";
 import "./StarknetGovernance.sol";
 import "./StarknetMessaging.sol";
 import "./StarknetOperator.sol";
-import "./StarknetState.sol";
 import "./NamedStorage.sol";
 import "./ContractInitializer.sol";
+import "./ProxySupport.sol";
 
-// import "./ProxySupport.sol";
-// import "./OnchainDataFactTreeEncoder.sol";
+import "./TerabethiaState.sol";
 
-contract Starknet is
+contract Terabethia is
     IIdentity,
     StarknetGovernance,
     StarknetMessaging,
     StarknetOperator,
-    ContractInitializer
+    ContractInitializer,
+    ProxySupport
 {
-    using StarknetState for StarknetState.State;
+    using TerabethiaState for TerabethiaState.State;
 
     // Logs the new state following a state update.
     event LogStateUpdate(int256 sequenceNumber);
 
-    // Logs a stateTransitionFact that was used to update the state.
-    // event LogStateTransitionFact(bytes32 stateTransitionFact);
-
-    // Random storage slot tags.
-    // string internal constant PROGRAM_HASH_TAG =
-    //     "STARKNET_1.0_INIT_PROGRAM_HASH_UINT";
-    // string internal constant VERIFIER_ADDRESS_TAG =
-    //     "STARKNET_1.0_INIT_VERIFIER_ADDRESS";
     string internal constant STATE_STRUCT_TAG = "TERABETHIA_1.0_STATE_STRUCT";
-
-    // State variable "programHash" access functions.
-    // function programHash() internal view returns (uint256) {
-    //     return NamedStorage.getUintValue(PROGRAM_HASH_TAG);
-    // }
-
-    // function setProgramHash(uint256 value) internal {
-    //     NamedStorage.setUintValueOnce(PROGRAM_HASH_TAG, value);
-    // }
-
-    // State variable "verifier" access functions.
-    // function verifier() internal view returns (address) {
-    //     return NamedStorage.getAddressValue(VERIFIER_ADDRESS_TAG);
-    // }
-
-    // function setVerifierAddress(address value) internal {
-    //     NamedStorage.setAddressValueOnce(VERIFIER_ADDRESS_TAG, value);
-    // }
 
     // State variable "state" access functions.
     function state()
         internal
         pure
-        returns (StarknetState.State storage stateStruct)
+        returns (TerabethiaState.State storage stateStruct)
     {
         bytes32 location = keccak256(abi.encodePacked(STATE_STRUCT_TAG));
         assembly {
@@ -86,31 +60,18 @@ contract Starknet is
         return state().sequenceNumber > 0;
     }
 
-    // function numOfSubContracts() internal pure override returns (uint256) {
-    //     return 0;
-    // }
-
     function validateInitData(bytes calldata data) internal pure override {
         require(data.length == 32, "ILLEGAL_INIT_DATA_SIZE");
-        // uint256 programHash_ = abi.decode(data[:32], (uint256));
-        // require(programHash_ != 0, "BAD_INITIALIZATION");
     }
 
     function initializeContractState(bytes calldata data) internal override {
-        // uint256 programHash_,
-        // address verifier_,
-        StarknetState.State memory initialState = abi.decode(
+        TerabethiaState.State memory initialState = abi.decode(
             data,
-            (
-                // uint256,
-                /*address,*/
-                StarknetState.State
-            )
+            (TerabethiaState.State)
         );
 
-        // setProgramHash(programHash_);
-        // setVerifierAddress(verifier_);
         state().copy(initialState);
+        initGovernance();
     }
 
     /**
@@ -154,17 +115,6 @@ contract Starknet is
         // Validate program output.
         StarknetOutput.validate(output);
 
-        // bytes32 stateTransitionFact = OnchainDataFactTreeEncoder
-        //     .encodeFactWithOnchainData(programOutput, data_availability_fact);
-        // bytes32 sharpFact = keccak256(
-        //     abi.encode(programHash(), stateTransitionFact)
-        // );
-        // require(
-        //     IFactRegistry(verifier()).isValid(sharpFact),
-        //     "NO_STATE_TRANSITION_PROOF"
-        // );
-        // emit LogStateTransitionFact(stateTransitionFact);
-
         // Process L2 -> L1 messages.
         uint256 outputOffset = 0;
         outputOffset += StarknetOutput.processMessages(
@@ -186,7 +136,7 @@ contract Starknet is
 
         // Perform state update.
         state().update(sequenceNumber);
-        StarknetState.State memory state_ = state();
+        TerabethiaState.State memory state_ = state();
         emit LogStateUpdate(state_.sequenceNumber);
     }
 }

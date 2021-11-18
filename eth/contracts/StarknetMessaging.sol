@@ -28,9 +28,9 @@ contract StarknetMessaging is IStarknetMessaging {
       Random slot storage elements and accessors.
     */
     string constant L1L2_MESSAGE_MAP_TAG =
-        "STARKNET_1.0_MSGING_L1TOL2_MAPPPING";
+        "TERABETHIA_1.0_MSGING_L1TOL2_MAPPPING";
     string constant L2L1_MESSAGE_MAP_TAG =
-        "STARKNET_1.0_MSGING_L2TOL1_MAPPPING";
+        "TERABETHIA_1.0_MSGING_L2TOL1_MAPPPING";
 
     function l1ToL2Messages(bytes32 msgHash) external view returns (uint256) {
         return l1ToL2Messages()[msgHash];

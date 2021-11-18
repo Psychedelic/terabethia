@@ -31,7 +31,7 @@ import "./ContractInitializer.sol";
   Instantiation of the Governance and of the ContractInitializer, that are the app specific
   part of initialization, has to be done by the using contract.
 */
-abstract contract ProxySupport is BlockDirectCall, ContractInitializer {
+abstract contract ProxySupport is ContractInitializer {
     using Addresses for address;
 
     // The two function below (isFrozen & initialize) needed to bind to the Proxy.
@@ -52,8 +52,8 @@ abstract contract ProxySupport is BlockDirectCall, ContractInitializer {
 
          When calling on an initialized contract (no EIC scenario), initData.length must be 0.
     */
-    function initialize(bytes calldata data) external notCalledDirectly {
-        console.log("initialization");
+    function initialize(bytes calldata data) external {
+        console.log("initialization", data.length);
 
         if (isInitialized()) {
             require(data.length == 0, "UNEXPECTED_INIT_DATA");
