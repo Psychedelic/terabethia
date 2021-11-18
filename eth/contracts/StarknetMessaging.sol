@@ -18,8 +18,6 @@ pragma solidity ^0.6.12;
 import "./IStarknetMessaging.sol";
 import "./NamedStorage.sol";
 
-import "hardhat/console.sol";
-
 /**
   Implements sending messages to L2 by adding them to a pipe and consuming messages from L2 by
   removing them from a different pipe. A deriving contract can handle the former pipe and add items
@@ -97,8 +95,6 @@ contract StarknetMessaging is IStarknetMessaging {
                 payload
             )
         );
-
-        console.logBytes32(msgHash);
 
         require(l2ToL1Messages()[msgHash] > 0, "INVALID_MESSAGE_TO_CONSUME");
         emit ConsumedMessageToL1(from_address, msg.sender, payload);

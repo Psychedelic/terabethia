@@ -33,11 +33,7 @@ library StarknetState {
       Validates that the 'sequenceNumber' and the previous root are consistent with the
       current state and updates the state.
     */
-    function update(
-        State storage state,
-        int256 sequenceNumber,
-        bytes32[] calldata starknetOutput
-    ) internal {
+    function update(State storage state, int256 sequenceNumber) internal {
         // Check the sequenceNumber first as the error is less ambiguous then INVALID_PREVIOUS_ROOT.
         state.sequenceNumber += 1;
         require(

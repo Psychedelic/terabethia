@@ -45,17 +45,32 @@ describe("Terabethia", function () {
   it("Should return the new greeting once it's changed", async function () {
     const Starknet = await ethers.getContractFactory("Starknet");
     const EthProxy = await ethers.getContractFactory("EthProxy");
-    const tera = await Starknet.deploy();
+    const Proxy = await ethers.getContractFactory("Proxy");
+    const impl = await Starknet.deploy();
+    const tera = await Proxy.deploy(300);
+
     await tera.deployed();
 
+    const addImplTx = await tera.addImplementation(impl.address, ethers.utils.arrayify(1), false);
+    await addImplTx.wait();
 
-    const id = await tera.identify();
+    const upgradeToTx = await tera.upgradeTo(impl.address, ethers.utils.arrayify(1), false);
+    await upgradeToTx.wait();
 
-    expect(id).equals('InternetComputer_2021_1');
+    console.log('', JSON.stringify(rrr));
+
+    const implAddr = await tera.implementation();
+    expect(implAddr).equal(impl.address);
+
+    const id = await impl.identify();
+
+    expect(id).equals('Terabethia_2021_1');
 
     const ethProxy = await EthProxy.deploy(tera.address);
 
     console.log('ethProxy deployed', ethProxy.address);
+
+
 
     // 5oynryl472mav57c2oxog7wocyytibmp5bokzg3b622puuatefuqe
 

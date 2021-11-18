@@ -26,16 +26,16 @@ import "./StarknetOperator.sol";
 import "./StarknetState.sol";
 import "./NamedStorage.sol";
 import "./ContractInitializer.sol";
-import "./ProxySupport.sol";
-import "./OnchainDataFactTreeEncoder.sol";
+
+// import "./ProxySupport.sol";
+// import "./OnchainDataFactTreeEncoder.sol";
 
 contract Starknet is
     IIdentity,
-    StarknetMessaging,
     StarknetGovernance,
+    StarknetMessaging,
     StarknetOperator,
-    ContractInitializer,
-    ProxySupport
+    ContractInitializer
 {
     using StarknetState for StarknetState.State;
 
@@ -46,21 +46,20 @@ contract Starknet is
     // event LogStateTransitionFact(bytes32 stateTransitionFact);
 
     // Random storage slot tags.
-    string internal constant PROGRAM_HASH_TAG =
-        "STARKNET_1.0_INIT_PROGRAM_HASH_UINT";
+    // string internal constant PROGRAM_HASH_TAG =
+    //     "STARKNET_1.0_INIT_PROGRAM_HASH_UINT";
     // string internal constant VERIFIER_ADDRESS_TAG =
     //     "STARKNET_1.0_INIT_VERIFIER_ADDRESS";
-    string internal constant STATE_STRUCT_TAG =
-        "STARKNET_1.0_INIT_STARKNET_STATE_STRUCT";
+    string internal constant STATE_STRUCT_TAG = "TERABETHIA_1.0_STATE_STRUCT";
 
     // State variable "programHash" access functions.
-    function programHash() internal view returns (uint256) {
-        return NamedStorage.getUintValue(PROGRAM_HASH_TAG);
-    }
+    // function programHash() internal view returns (uint256) {
+    //     return NamedStorage.getUintValue(PROGRAM_HASH_TAG);
+    // }
 
-    function setProgramHash(uint256 value) internal {
-        NamedStorage.setUintValueOnce(PROGRAM_HASH_TAG, value);
-    }
+    // function setProgramHash(uint256 value) internal {
+    //     NamedStorage.setUintValueOnce(PROGRAM_HASH_TAG, value);
+    // }
 
     // State variable "verifier" access functions.
     // function verifier() internal view returns (address) {
@@ -84,34 +83,32 @@ contract Starknet is
     }
 
     function isInitialized() internal view override returns (bool) {
-        return programHash() != 0;
+        return state().sequenceNumber > 0;
     }
 
-    function numOfSubContracts() internal pure override returns (uint256) {
-        return 0;
-    }
+    // function numOfSubContracts() internal pure override returns (uint256) {
+    //     return 0;
+    // }
 
     function validateInitData(bytes calldata data) internal pure override {
-        require(data.length == 4 * 32, "ILLEGAL_INIT_DATA_SIZE");
-        uint256 programHash_ = abi.decode(data[:32], (uint256));
-        require(programHash_ != 0, "BAD_INITIALIZATION");
+        require(data.length == 32, "ILLEGAL_INIT_DATA_SIZE");
+        // uint256 programHash_ = abi.decode(data[:32], (uint256));
+        // require(programHash_ != 0, "BAD_INITIALIZATION");
     }
 
     function initializeContractState(bytes calldata data) internal override {
-        (
-            uint256 programHash_,
-            // address verifier_,
-            StarknetState.State memory initialState
-        ) = abi.decode(
-                data,
-                (
-                    uint256,
-                    /*address,*/
-                    StarknetState.State
-                )
-            );
+        // uint256 programHash_,
+        // address verifier_,
+        StarknetState.State memory initialState = abi.decode(
+            data,
+            (
+                // uint256,
+                /*address,*/
+                StarknetState.State
+            )
+        );
 
-        setProgramHash(programHash_);
+        // setProgramHash(programHash_);
         // setVerifierAddress(verifier_);
         state().copy(initialState);
     }
@@ -120,7 +117,7 @@ contract Starknet is
       Returns a string that identifies the contract.
     */
     function identify() external pure override returns (string memory) {
-        return "InternetComputer_2021_1";
+        return "Terabethia_2021_1";
     }
 
     /**
@@ -150,12 +147,12 @@ contract Starknet is
         OnchainDataFactTreeEncoder.DataAvailabilityFact
         calldata data_availability_fact
     */
-    function updateState(
-        int256 sequenceNumber,
-        bytes32[] calldata programOutput
-    ) external onlyOperator {
+    function updateState(int256 sequenceNumber, bytes32[] calldata output)
+        external
+        onlyOperator
+    {
         // Validate program output.
-        StarknetOutput.validate(programOutput);
+        StarknetOutput.validate(output);
 
         // bytes32 stateTransitionFact = OnchainDataFactTreeEncoder
         //     .encodeFactWithOnchainData(programOutput, data_availability_fact);
@@ -169,11 +166,11 @@ contract Starknet is
         // emit LogStateTransitionFact(stateTransitionFact);
 
         // Process L2 -> L1 messages.
-        uint256 outputOffset = StarknetOutput.HEADER_SIZE;
+        uint256 outputOffset = 0;
         outputOffset += StarknetOutput.processMessages(
             // isL2ToL1=
             true,
-            programOutput[outputOffset:],
+            output[outputOffset:],
             l2ToL1Messages()
         );
 
@@ -181,17 +178,14 @@ contract Starknet is
         outputOffset += StarknetOutput.processMessages(
             // isL2ToL1=
             false,
-            programOutput[outputOffset:],
+            output[outputOffset:],
             l1ToL2Messages()
         );
 
-        require(
-            outputOffset == programOutput.length,
-            "STARKNET_OUTPUT_TOO_LONG"
-        );
+        require(outputOffset == output.length, "STARKNET_OUTPUT_TOO_LONG");
 
         // Perform state update.
-        state().update(sequenceNumber, programOutput);
+        state().update(sequenceNumber);
         StarknetState.State memory state_ = state();
         emit LogStateUpdate(state_.sequenceNumber);
     }

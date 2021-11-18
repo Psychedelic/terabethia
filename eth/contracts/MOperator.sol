@@ -16,8 +16,6 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
-import "./MGovernance.sol";
-
 abstract contract MOperator {
     event LogOperatorAdded(address operator);
     event LogOperatorRemoved(address operator);

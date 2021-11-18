@@ -15,17 +15,12 @@
 */
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
+import "./MGovernance.sol";
 
-/**
-  Interface for contract initialization.
-  The functions it exposes are the app specific parts of the contract initialization,
-  and are called by the ProxySupport contract that implement the generic part of behind-proxy
-  initialization.
+/*
+  Holds the governance slots for ALL entities, including proxy and the main contract.
 */
-abstract contract ContractInitializer {
-    function isInitialized() internal view virtual returns (bool);
-
-    function validateInitData(bytes calldata data) internal pure virtual;
-
-    function initializeContractState(bytes calldata data) internal virtual;
+contract GovernanceStorage {
+    // A map from a Governor tag to its own GovernanceInfoStruct.
+    mapping(string => GovernanceInfoStruct) internal governanceInfo; //NOLINT uninitialized-state.
 }
