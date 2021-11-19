@@ -27,7 +27,7 @@ import "./MGovernance.sol";
   (see :sol:mod:`Governance`). Typically, the Operator is the hot wallet of the service
   submitting proofs for state updates.
 */
-abstract contract Operator is MGovernance, MOperator {
+abstract contract Operator is MOperator, MGovernance {
     function registerOperator(address newOperator)
         external
         override

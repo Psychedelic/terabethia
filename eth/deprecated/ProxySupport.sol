@@ -16,8 +16,6 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
-import "hardhat/console.sol";
-
 import "./Governance.sol";
 import "./Common.sol";
 import "./BlockDirectCall.sol";
@@ -31,7 +29,11 @@ import "./ContractInitializer.sol";
   Instantiation of the Governance and of the ContractInitializer, that are the app specific
   part of initialization, has to be done by the using contract.
 */
-abstract contract ProxySupport is ContractInitializer {
+abstract contract ProxySupport is
+    Governance,
+    BlockDirectCall,
+    ContractInitializer
+{
     using Addresses for address;
 
     // The two function below (isFrozen & initialize) needed to bind to the Proxy.
@@ -52,15 +54,45 @@ abstract contract ProxySupport is ContractInitializer {
 
          When calling on an initialized contract (no EIC scenario), initData.length must be 0.
     */
-    function initialize(bytes calldata data) external {
-        console.log("initialization", data.length);
+    function initialize(bytes calldata data) external notCalledDirectly {
+        uint256 eicOffset = 32 * numOfSubContracts();
+        uint256 expectedBaseSize = eicOffset + 32;
+        require(data.length >= expectedBaseSize, "INIT_DATA_TOO_SMALL");
+        address eicAddress = abi.decode(
+            data[eicOffset:expectedBaseSize],
+            (address)
+        );
+
+        bytes calldata initData = data[expectedBaseSize:];
+
+        // EIC Provided - Pass initData to EIC and the skip standard init flow.
+        if (eicAddress != address(0x0)) {
+            callExternalInitializer(eicAddress, initData);
+            return;
+        }
 
         if (isInitialized()) {
-            require(data.length == 0, "UNEXPECTED_INIT_DATA");
+            require(initData.length == 0, "UNEXPECTED_INIT_DATA");
         } else {
             // Contract was not initialized yet.
-            validateInitData(data);
-            initializeContractState(data);
+            validateInitData(initData);
+            initializeContractState(initData);
+            initGovernance();
         }
+    }
+
+    function callExternalInitializer(
+        address externalInitializerAddr,
+        bytes calldata eicData
+    ) private {
+        require(externalInitializerAddr.isContract(), "EIC_NOT_A_CONTRACT");
+
+        // NOLINTNEXTLINE: low-level-calls, controlled-delegatecall.
+        (bool success, bytes memory returndata) = externalInitializerAddr
+            .delegatecall(
+                abi.encodeWithSelector(this.initialize.selector, eicData)
+            );
+        require(success, string(returndata));
+        require(returndata.length == 0, string(returndata));
     }
 }
