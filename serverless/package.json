@@ -1,17 +1,38 @@
 {
-  "name": "serverless",
-  "version": "1.0.0",
-  "description": "Serverless aws-nodejs-typescript template",
-  "main": "serverless.ts",
+  "name": "tera",
+  "version": "0.0.1",
+  "description": "Tera Centerlaized Infra",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "sls offline start",
+    "local": "sls offline start --stage local",
+    "typecheck": "tsc --noEmit",
+    "deploy:dev": "sls deploy --stage dev",
+    "deploy:prod": "sls deploy --stage prod -v",
+    "build": "rm -rf dist && tsc -b tsconfig.json",
+    "format": "prettier --write \"./src/**/*.{ts,tsx,js,jsx}\"",
+    "format:check": "prettier --check \"./src/**/*.{ts,tsx,js,jsx}\"",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --fix --ext ts && prettier --write \"./src/**/*.{ts,tsx,js,jsx}\""
   },
   "engines": {
     "node": ">=14.15.0"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.42.0",
+    "@aws-sdk/client-sqs": "^3.42.0",
+    "@aws-sdk/lib-dynamodb": "^3.42.0",
+    "@aws-sdk/util-dynamodb": "^3.42.0",
+    "@dfinity/agent": "^0.10.1",
+    "@dfinity/candid": "^0.10.1",
+    "@dfinity/identity": "^0.10.1",
+    "@dfinity/principal": "^0.10.1",
     "@middy/core": "^1.5.2",
     "@middy/http-json-body-parser": "^1.5.2",
+    "@middy/sqs-json-body-parser": "^2.5.3",
+    "@middy/sqs-partial-batch-failure": "^2.5.3",
+    "cross-fetch": "^3.1.4",
+    "remove": "^0.1.5",
     "source-map-support": "^0.5.19"
   },
   "devDependencies": {
@@ -19,7 +40,7 @@
     "@babel/preset-env": "^7.16.4",
     "@babel/preset-typescript": "^7.16.0",
     "@serverless/typescript": "^2.23.0",
-    "@types/aws-lambda": "^8.10.71",
+    "@types/aws-lambda": "^8.10.85",
     "@types/node": "^14.14.25",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
@@ -31,10 +52,13 @@
     "eslint-plugin-module-resolver": "^1.4.0",
     "jest": "^27.3.1",
     "json-schema-to-ts": "^1.5.0",
+    "prettier": "^2.4.1",
     "serverless": "^2.23.0",
+    "serverless-dynamodb-local": "^0.2.40",
     "serverless-iam-roles-per-function": "^3.2.0",
     "serverless-offline": "^8.2.0",
     "serverless-prune-plugin": "^1.6.1",
+    "serverless-stack-termination-protection": "^1.0.4",
     "serverless-webpack": "^5.3.5",
     "ts-loader": "^8.0.15",
     "ts-node": "^9.1.1",
@@ -45,6 +69,6 @@
     "webpack": "^5.20.2",
     "webpack-node-externals": "^2.5.2"
   },
-  "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
+  "author": "Psychedelic",
   "license": "MIT"
 }

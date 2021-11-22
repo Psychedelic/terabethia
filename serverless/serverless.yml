@@ -10,10 +10,68 @@ provider:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     DEBUG: '*'
+    QUEUE_URL: !Ref TeraQueue
     NODE_ENV: ${self:provider.stage}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - "sqs:SendMessage"
+            - "sqs:DeleteMessage"
+          Resource:
+            - !GetAtt
+              - TeraQueue
+              - Arn
+        - Effect: 'Allow'
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+          Resource: 
+            - !GetAtt 
+              - TeraStateTable  
+              - Arn
+
 
 custom:
+  resourceSuffix: ${self:service.name}-${self:provider.stage}
+  deletionPolicy:
+    default: Delete
+    staging: Retain
+    prod: Retain
+  updateReplacePolicy:
+    default: Delete
+    staging: Retain
+    prod: Retain
+  serverlessTerminationProtection:
+  # sls remove --force
+    stages:
+      - prod
+  domain:
+    dev: ${self:service.name}-dev.psychedelic.ooo
+    prod: ${self:service.name}.psychedelic.ooo
+  # ToDo {botch} confirm domains
+  # customDomain:
+  #   domainName: ${self:custom.domain.${opt:stage, 'dev'}}
+  #   stage: ${self:provider.stage}
+  #   basePath: ''
+  #   autoDomain: true
+  #   certificateName: '*.psychedelic.ooo'
+  #   createRoute53Record: false
+  dynamodb:
+    start:
+      port: 8002
+      inMemory: true
+      migrate: true
+    stages:
+      - dev
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
@@ -22,17 +80,74 @@ custom:
   prune:
     automatic: true
     number: 3
+  serverless-offline:
+    httpPort: 3000
+    stageVariables:
+      foo: "bar"
 
 plugins:
   - serverless-offline
   - serverless-webpack
+  - serverless-stack-termination-protection
   - serverless-iam-roles-per-function
   - serverless-prune-plugin
 
+package:
+  individually: true
+
 functions:
-  TeraEventHook:
-    handler: src/functions/hello/handler.main
+  BlockNativeEventHook:
+  # ToDo {botch} SNS topics to publish to queue and storage
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/blocknative/handler.main
     events:
       - http:
-          method: post
-          path: hook
+          method: POST
+          path: /hook
+  ConsumeTeraL1Messages:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/teraQueue/handler.main
+    events:
+      - sqs:
+          batchSize: 10
+          maximumRetryAttempts: 10
+          arn:
+            Fn::GetAtt:
+              - TereaQueue
+              - Arn
+
+resources:
+  - Resources:
+      TeraQueue:
+        Type: 'AWS::SQS::Queue'
+        Properties:
+          QueueName: tera-queue-${self:custom.resourceSuffix}
+          RedrivePolicy:
+            maxReceiveCount: 10
+            deadLetterTargetArn: !GetAtt
+              - TeraDeadLetterQueue
+              - Arn
+      TeraDeadLetterQueue:
+        Type: AWS::SQS::Queue
+        Properties:
+          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}
+
+      TeraL1StateTable:
+        Type: AWS::DynamoDB::Table
+        DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
+        UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
+        Properties:
+          TableName: tera_l1_state_${self:provider.stage}
+          BillingMode: PAY_PER_REQUEST
+          AttributeDefinitions:
+            - AttributeName: pk
+              AttributeType: S
+            - AttributeName: sk
+              AttributeType: S
+          KeySchema:
+            - AttributeName: pk
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
