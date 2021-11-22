@@ -1,3 +1,11 @@
+type ContractAddress = text;
+type Payload = vec nat;
+
 service : {
-    "print": () -> () query;
+    // only operator (AWS Lambda) can call this method
+    receiveMessageFromL1 : (ContractAddress, principal, Payload) -> ();
+
+    // only canisters can call these methods
+    consumeMessageFromL1 : (ContractAddress, Payload) -> (bool);
+    sendMessageToL1 : (ContractAddress, Payload) -> (bool);
 }
