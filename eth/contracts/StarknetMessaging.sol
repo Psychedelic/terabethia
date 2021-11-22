@@ -70,7 +70,7 @@ contract StarknetMessaging is IStarknetMessaging {
             abi.encodePacked(
                 uint256(msg.sender),
                 uint256(to_address),
-                1 + payload.length,
+                payload.length,
                 payload
             )
         );

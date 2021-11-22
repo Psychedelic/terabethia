@@ -2,6 +2,7 @@
   "name": "hardhat-project",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/hardhat-upgrades": "^1.12.0",
     "chai": "^4.3.4",
@@ -10,6 +11,7 @@
     "hardhat": "^2.6.8"
   },
   "dependencies": {
-    "bn.js": "^5.2.0"
+    "bn.js": "^5.2.0",
+    "hardhat-abi-exporter": "^2.3.1"
   }
 }

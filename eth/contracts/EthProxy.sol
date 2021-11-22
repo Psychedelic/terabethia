@@ -48,7 +48,7 @@ contract EthProxy {
     }
 
     function deposit(bytes32 user) external payable {
-        require(msg.value >= 1 ether, "DepositContract: deposit value too low");
+        require(msg.value >= 1 gwei, "DepositContract: deposit value too low");
         require(
             msg.value % 1 gwei == 0,
             "DepositContract: deposit value not multiple of gwei"
