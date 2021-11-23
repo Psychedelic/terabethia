@@ -1,7 +1,7 @@
 import { FromSchema } from "json-schema-to-ts";
 
 export interface BlockNativePayload {
-  hash: String;
+  hash: string;
 }
 
 export const BlockNativeSchema = {
