@@ -286,7 +286,7 @@ dependencies = [
  "candid_derive",
  "codespan-reporting",
  "hex",
- "ic-types",
+ "ic-types 0.2.2",
  "lalrpop",
  "lalrpop-util",
  "leb128",
@@ -454,6 +454,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7402b94a93c24e742487327a7cd839dc9d36fec9de9fb25b09f2dae459f36c3"
 dependencies = [
  "log",
+]
+
+[[package]]
+name = "eth_proxy"
+version = "0.1.0"
+dependencies = [
+ "ic-cdk",
+ "ic-cdk-macros",
+ "ic-kit",
+ "ic-types 0.1.5",
+ "serde",
 ]
 
 [[package]]
@@ -685,6 +696,21 @@ dependencies = [
  "ic-cdk-macros",
  "serde",
  "serde_bytes",
+]
+
+[[package]]
+name = "ic-types"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94dd8ec75019bc7159efe6ca2de5392e14a8e82c02ec6dae6d1b32af5337acd1"
+dependencies = [
+ "base32",
+ "crc32fast",
+ "hex",
+ "serde",
+ "serde_bytes",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]
