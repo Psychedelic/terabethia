@@ -7,8 +7,8 @@ import { formatJSONResponse } from "@src/libs/apiGateway";
 import { BlockNativePayload } from "@src/libs/blocknative";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
-const ALCHEMY_KEY = "8uppuN2k88ZIrJleq7uVcQLqIuedvAO6";
 const INFURA_KEY = "8328044ef20647ca8cf95216e364e9cb";
+const ALCHEMY_KEY = "8uppuN2k88ZIrJleq7uVcQLqIuedvAO6";
 
 const providers = [
   `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
@@ -45,11 +45,16 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
   // const teraL1Txn = event.body as unknown as BlockNativePayload;
   const teraL1Txn = teraL1MockTxn;
   const eventLogs = provider.getTransactionReceipt(teraL1Txn.hash);
-
   const response = {
     statusCode: 200,
     body: "",
   };
+
+  // ToDo {botch}
+  // two sns topics
+  // send to teraQueue
+  // store dynamo
+
   try {
     const command = new SendMessageCommand({
       QueueUrl,

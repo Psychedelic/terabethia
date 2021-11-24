@@ -1,0 +1,10 @@
+
+type User = principal;
+
+service : {
+  // Main Proxy functions
+  withdraw : (amount: u64) -> ();
+  deposit : (User) -> (bool);
+
+  get_eth_address : () -> (text) query;
+}
