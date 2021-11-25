@@ -1,9 +1,16 @@
+import { config } from "@src/libs/config";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  PutCommandInput,
+  PutCommandOutput,
+} from "@aws-sdk/lib-dynamodb";
+import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
 
-const STAGE = (process && process.env.ENV) || "local";
-const DYNAMO_LOCAL_PORT = (process && process.env.DYNAMO_LOCAL_PORT) || "8002";
+const STAGE = config.NODE_ENV || "local";
 const TERA_TABLE = `tera_l1_state_${STAGE}`;
+const DYNAMO_LOCAL_PORT = config.DYNAMO_LOCAL_PORT || "8002";
 
 export class DynamoDb {
   private db: DynamoDBDocumentClient;
@@ -32,7 +39,23 @@ export class DynamoDb {
     this.db = DynamoDBDocumentClient.from(client, { marshallOptions });
   }
 
-  /**
-   * TodO {botch} crud on the tera table
-   */
+  private async put(
+    tableName: string,
+    data: {
+      [key: string]: NativeAttributeValue;
+    }
+  ): Promise<PutCommandOutput | undefined> {
+    const params: PutCommandInput = {
+      TableName: tableName,
+      Item: data,
+    };
+
+    try {
+      const putData = await this.db.send(new PutCommand(params));
+      return putData;
+    } catch (error) {
+      console.error("Error put: ", error);
+      return undefined;
+    }
+  }
 }

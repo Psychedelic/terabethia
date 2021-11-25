@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.42.0",
+    "@aws-sdk/client-sns": "^3.42.0",
     "@aws-sdk/client-sqs": "^3.42.0",
     "@aws-sdk/lib-dynamodb": "^3.42.0",
     "@aws-sdk/util-dynamodb": "^3.42.0",
@@ -58,6 +59,7 @@
     "serverless-dynamodb-local": "^0.2.40",
     "serverless-iam-roles-per-function": "^3.2.0",
     "serverless-offline": "^8.2.0",
+    "serverless-offline-sns": "^0.76.0",
     "serverless-prune-plugin": "^1.6.1",
     "serverless-stack-termination-protection": "^1.0.4",
     "serverless-webpack": "^5.3.5",

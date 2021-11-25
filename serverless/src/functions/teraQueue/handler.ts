@@ -7,7 +7,7 @@ import sqsJsonBodyParser from "@middy/sqs-json-body-parser";
 import { formatJSONResponse } from "@src/libs/apiGateway";
 import { BlockNativePayload } from "@src/libs/blocknative";
 
-const consumeL1Messages = async (event: SQSEvent) => {
+const receiveMessageFromL1 = async (event: SQSEvent) => {
   const promises = event.Records.map(async ({ body }) => {
     const data = body as unknown as BlockNativePayload;
 
@@ -31,6 +31,6 @@ const consumeL1Messages = async (event: SQSEvent) => {
   return Promise.allSettled(promises);
 };
 
-export const main = middy(consumeL1Messages)
+export const main = middy(receiveMessageFromL1)
   .use(sqsJsonBodyParser())
   .use(sqsBatch());

@@ -1,26 +1,26 @@
 import "source-map-support/register";
 
 import { ethers } from "ethers";
+import { config } from "@src/libs/config";
 import { middyfy } from "@src/libs/lambda";
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { formatJSONResponse } from "@src/libs/apiGateway";
 import { BlockNativePayload } from "@src/libs/blocknative";
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
-const INFURA_KEY = "8328044ef20647ca8cf95216e364e9cb";
-const ALCHEMY_KEY = "8uppuN2k88ZIrJleq7uVcQLqIuedvAO6";
-
 const providers = [
-  `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-  `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+  `https://mainnet.infura.io/v3/${config.INFURA_KEY}`,
+  `https://eth-mainnet.alchemyapi.io/v2/${config.ALCHEMY_KEY}`,
 ];
 
 const teraL1MockTxn: BlockNativePayload = {
   hash: "0xbaa8a94cfe52db7bf84c64e90e1da1fb225080897a13d4bb361c15fe3ecf60f7",
 };
 
-const QueueUrl = process.env.QUEUE_URL;
-const sqsClient = new SQSClient({ region: process.env.AWS_REGION });
+const QueueUrl = config.TERA_QUEUE_URL;
+const snsClient = new SNSClient({ region: config.AWS_REGION });
+const sqsClient = new SQSClient({ region: config.AWS_REGION });
 const getProvider = (url: string) =>
   new ethers.providers.StaticJsonRpcProvider(url);
 
@@ -44,23 +44,27 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
 
   // const teraL1Txn = event.body as unknown as BlockNativePayload;
   const teraL1Txn = teraL1MockTxn;
-  const eventLogs = provider.getTransactionReceipt(teraL1Txn.hash);
+  const eventLogs = await provider.getTransactionReceipt(teraL1Txn.hash);
   const response = {
     statusCode: 200,
     body: "",
   };
 
-  // ToDo {botch}
-  // two sns topics
-  // send to teraQueue
-  // store dynamo
+  const snsTopicPayload = {
+    TopicArn: "TOPIC_ARN",
+    Message: JSON.stringify(eventLogs),
+  };
 
   try {
-    const command = new SendMessageCommand({
-      QueueUrl,
-      MessageBody: JSON.stringify(eventLogs),
-    });
-    await sqsClient.send(command);
+    const command = new PublishCommand(snsTopicPayload);
+    const response = await snsClient.send(command);
+
+    return response;
+    // const command = new SendMessageCommand({
+    //   QueueUrl,
+    //   MessageBody: JSON.stringify(eventLogs),
+    // });
+    // await sqsClient.send(command);
   } catch (e) {
     console.error("Exception on queue", e);
     response.body = `Error on send queue: ${e}`;

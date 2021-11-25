@@ -5,10 +5,27 @@ use std::cell::RefCell;
 
 // WETH address
 const WETH_ADDRESS: &str = "0x";
+static mut CONTROLLER: Principal = Principal::anonymous();
+
+fn only_controller() {
+    unsafe {
+       if CONTROLLER != caller() {
+           ic_cdk::trap("caller not controller!");
+       }
+    }
+}
+
+fn only_owner(owner: Principal) {
+    unsafe {
+       if owner != caller() {
+           ic_cdk::trap("caller not owner!");
+       }
+    }
+}
 
 #[derive(Default)]
 struct Proxy {
-    assets: RefCell<Vec<Transaction>>,
+    tansactions: RefCell<Vec<Transaction>>,
     authorized: RefCell<Vec<Principal>>,
 }
 
@@ -18,8 +35,9 @@ struct StableProxy {
     authorized: Vec<Principal>,
 }
 
-struct Transaction {
-    message: &str,
+#[derive(CandidType)]
+pub struct Transaction<'a> {
+    message:  &'a str,
 }
 
 #[derive(CandidType)]
@@ -38,22 +56,30 @@ impl Proxy {
     pub fn get_all_transactions(&self) {}
 }
 
+// #[init]
+// #[candid_method(init)]
+fn init() {
+    unsafe {
+        CONTROLLER = caller();
+    }
+}
+
 #[update(name = "deposit", guard = "is_controller")]
-#[candid_method(update, rename = "deposit")]
+// #[candid_method(update, rename = "deposit")]
 fn deposit(owner: Principal) -> () {
     // on deposit {consumeMessageFromL1}
     unimplemented!()
 }
 
 #[update(name = "withdraw", guard = "is_controller")]
-#[candid_method(update, rename = "withdraw")]
+// #[candid_method(update, rename = "withdraw")]
 fn withdraw(owner: Principal) -> () {
     // on withdrawl {sendMessageToL1}
     unimplemented!()
 }
 
 #[query(name = "getEthAddress")]
-#[candid_method(query, rename = "getEthAddress")]
+// #[candid_method(query, rename = "getEthAddress")]
 fn get_eth_address() -> &'static str {
     WETH_ADDRESS
 }
