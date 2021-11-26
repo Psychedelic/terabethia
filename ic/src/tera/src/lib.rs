@@ -7,24 +7,23 @@ use ic_cdk::export::candid::{CandidType, Principal};
 // use ic_cdk::export::Principal;
 use ic_cdk::{api, caller};
 use ic_cdk_macros::update;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sha3::{Digest, Keccak256};
-use std::collections::HashMap;
+use std::collections::HashMap; // 1.2.7
 
 thread_local! {
     static MESSAGES: RefCell<HashMap<Vec<u8>, u32>> = RefCell::new(HashMap::new());
 }
 
-fn calculate_hash(from: Vec<u8>, to: Vec<u8>, payload: Vec<Vec<u8>>) -> Vec<u8> {
-    let receiver = ethabi::Token::FixedBytes(to);
-    let sender = ethabi::Token::FixedBytes(from);
+fn calculate_hash(from: U256, to: U256, payload: Vec<Vec<u8>>) -> Vec<u8> {
+    let receiver = ethabi::Token::Uint(to);
+    let sender = ethabi::Token::Uint(from);
     let payload_len = ethabi::Token::Uint(U256::from(payload.len()));
-
     // we map payload to FixedBytes
     // becase on L1 these are left padded to 32b
     let payload_padded: Vec<ethabi::Token> = payload
         .into_iter()
-        .map(|x| ethabi::Token::FixedBytes(x.clone()))
+        .map(|x| ethabi::Token::Uint(U256::from(&x[..])))
         .collect();
 
     let payload_slice = &payload_padded[..];
@@ -84,11 +83,10 @@ async fn receive(
  * */
 #[update(name = "store_message")]
 async fn store_message(from: Vec<u8>, to: Principal, payload: Vec<Vec<u8>>) -> () {
-    let msg_hash = calculate_hash(
-        from.clone(),
-        to.clone().as_slice().to_vec(),
-        payload.clone(),
-    );
+    let from_u256 = U256::from(&from[..]);
+    let to_u256 = U256::from(&to.clone().as_slice()[..]);
+
+    let msg_hash = calculate_hash(from_u256, to_u256, payload);
 
     MESSAGES.with(|m| {
         let mut map = m.borrow_mut();
@@ -104,7 +102,10 @@ async fn store_message(from: Vec<u8>, to: Principal, payload: Vec<Vec<u8>>) -> (
 async fn consume(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> {
     let caller = api::id();
 
-    let msg_hash = calculate_hash(eth_addr, caller.as_slice().to_vec(), payload.clone());
+    let from_u256 = U256::from(&eth_addr[..]);
+    let to_u256 = U256::from(&caller.as_slice()[..]);
+
+    let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
 
     MESSAGES.with(|m| {
         let mut map = m.borrow_mut();
@@ -133,7 +134,10 @@ async fn consume(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, Strin
 async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> {
     let caller = api::id();
 
-    let msg_hash = calculate_hash(caller.as_slice().to_vec(), eth_addr, payload.clone());
+    let to_u256 = U256::from(&eth_addr[..]);
+    let from_u256 = U256::from(&caller.as_slice()[..]);
+
+    let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
     // @todo: decode payload to vec nat
     // calculate message hash
     // store message hash
@@ -144,32 +148,31 @@ async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> 
 #[cfg(test)]
 mod tests {
     use crate::calculate_hash;
+    use ethabi::ethereum_types::U256;
 
     #[test]
     fn message_hash() {
-        let from = hex::decode("6d6e6932637a71616161616161616471616c3671636169000000000000000000")
-            .unwrap();
+        let from = hex::decode("00000000003000ea0101").unwrap();
+        let to = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
 
-        let to = hex::decode("000000000000000000000000d2f69519458c157a14c5caf4ed991904870af834")
-            .unwrap();
         let payload = [
-            hex::decode("0000000000000000000000000000000000000000000000000000000000000000")
-                .unwrap(),
-            hex::decode("000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266")
-                .unwrap(),
-            hex::decode("000000000000000000000000000000000000000000000000016345785d8a0000")
-                .unwrap(), // 0.1 eth value
+            hex::decode("00").unwrap(),
+            hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
+            hex::decode("016345785d8a0000").unwrap(), // 0.1 eth value
         ]
         .to_vec();
 
-        let msgHash = calculate_hash(from, to, payload);
+        let from_u256 = U256::from(&from[..]);
+        let to_u256 = U256::from(&to.clone().as_slice()[..]);
+
+        let msgHash = calculate_hash(from_u256, to_u256, payload);
         let msgHashHex = hex::encode(msgHash.clone());
 
         println!("msg hash hex {} arguments", msgHashHex);
 
         // [128, 62, 240, 110, 171, 68, 239, 5, 218, 94, 164, 227, 190, 40, 195, 19, 138, 53, 191, 94, 129, 225, 113, 205, 28, 247, 125, 81, 119, 34, 39, 138]
         let msgHashExpected =
-            hex::decode("a0651ef3ef5db8ae814a37abf8e63cbe88d0194789edc362951825bd4b2c5c55")
+            hex::decode("c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3")
                 .unwrap();
 
         assert_eq!(msgHash, msgHashExpected);

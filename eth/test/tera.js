@@ -81,10 +81,14 @@ describe("Terabethia", function () {
 
 
 
-    // 5oynryl472mav57c2oxog7wocyytibmp5bokzg3b622puuatefuqe
+    // 5oynr-yl472-mav57-c2oxo-g7woc-yytib-mp5bo-kzg3b-622pu-uatef-uqe
+
+    // principal id hex form
+    const canisterId = ethers.utils.hexZeroPad('0x00000000003000ea0101', 32);
+    const principalId = '0x7cfe980af7e2d3aee37ece163134058fe85cac9b61f6b4fa5013216902';
 
     // deposit validation
-    const depositTx = await ethProxy.deposit(ethers.utils.formatBytes32String('mni2czqaaaaaaadqal6qcai'), overrides);
+    const depositTx = await ethProxy.deposit(principalId, overrides);
     await depositTx.wait();
     const balance = await ethers.provider.getBalance(ethProxy.address);
     expect(balance).equals(ethValue1);
@@ -108,23 +112,32 @@ describe("Terabethia", function () {
 
     // reconstruct the withdraw message hash
     const withdrawPayload = [
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-      numStringToBytes32(Buffer.from('f39fd6e51aad88f6f4ce6ab8827279cfffb92266', 'hex')),
-      numStringToBytes32(ethValue2.toString()), // should be 0x000000000000000000000000000000000000000000000000016345785d8a0000
+      '0x00',
+      '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+      ethValue2.toString(), // should be 0x000000000000000000000000000000000000000000000000016345785d8a0000
     ];
 
-    expect(withdrawPayload[1]).equal('0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266')
-    expect(withdrawPayload[2]).equal('0x000000000000000000000000000000000000000000000000016345785d8a0000')
+    // expect(withdrawPayload[1]).equal('0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266')
+    // expect(withdrawPayload[2]).equal('0x000000000000000000000000000000000000000000000000016345785d8a0000')
+
+
+    // 0xdc64a140aa3e981100a9beca4e685f962f0cf6c9000000000000000000000000
+
+    console.log('ETH ADDR BYTES32', ethProxy.address.substr(2).toLowerCase());
 
     const withdrawMessageHash = soliditySha3(
-      "0x6d6e6932637a71616161616161616471616c3671636169000000000000000000",
-      ethProxy.address,
-      withdrawPayload.length,
-      { t: 'bytes32', v: withdrawPayload }
+      { t: 'uint256', v: canisterId },
+      {
+        t: 'uint256', v: ethProxy.address
+      },
+      {
+        t: 'uint256', v: withdrawPayload.length
+      },
+      { t: 'uint256', v: withdrawPayload }
     );
 
     // 0xefb80e98c9f7ac2ad55b3e4f5bb2d3a15fe8c187925eba2ffc721f74d1982c52
-    expect(withdrawMessageHash).equals('0xff76cffb15cc5fbb35ba768c1aa7a821ccd5e4901c4ff733ea941747a2a52413');
+    expect(withdrawMessageHash).equals('0xc6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3');
 
     const updateStateTx = await tera.updateState(2, [
       // @todo do we need merkle states at all?

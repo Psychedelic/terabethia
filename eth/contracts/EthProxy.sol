@@ -10,8 +10,7 @@ contract EthProxy {
     uint256 constant MESSAGE_WITHDRAW = 0;
 
     // The selector of the "deposit" l1_handler.
-    bytes32 constant CANISTER_ADDRESS =
-        0x6d6e6932637a71616161616161616471616c3671636169000000000000000000;
+    uint256 constant CANISTER_ADDRESS = 0x00000000003000ea0101;
 
     /**
       Initializes the contract state.
@@ -22,13 +21,10 @@ contract EthProxy {
 
     function withdraw(uint256 amount) external {
         // Construct the withdrawal message's payload.
-        bytes32[] memory payload = new bytes32[](3);
-        payload[0] = bytes32(MESSAGE_WITHDRAW);
-        payload[1] = bytes32(uint256(uint160(msg.sender)));
-        payload[2] = bytes32(amount);
-
-        console.log(msg.sender);
-        console.logBytes32(bytes32(amount));
+        uint256[] memory payload = new uint256[](3);
+        payload[0] = MESSAGE_WITHDRAW;
+        payload[1] = uint256(uint160(msg.sender));
+        payload[2] = amount;
 
         // Consume the message from the StarkNet core contract.
         // This will revert the (Ethereum) transaction if the message does not exist.
@@ -47,7 +43,7 @@ contract EthProxy {
         );
     }
 
-    function deposit(bytes32 user) external payable {
+    function deposit(uint256 user) external payable {
         require(msg.value >= 1 gwei, "DepositContract: deposit value too low");
         require(
             msg.value % 1 gwei == 0,
@@ -61,19 +57,10 @@ contract EthProxy {
             "DepositContract: deposit value too high"
         );
 
-        // require(
-        //     amount <= userBalances[user],
-        //     "The user's balance is not large enough."
-        // );
-
-        // Update the L1 balance.
-        // @todo: transfer from msg.sender
-        // supply += amount;
-
         // Construct the deposit message's payload.
-        bytes32[] memory payload = new bytes32[](2);
+        uint256[] memory payload = new uint256[](2);
         payload[0] = user;
-        payload[1] = bytes32(deposit_amount);
+        payload[1] = deposit_amount;
 
         // Send the message to the StarkNet core contract.
         starknetCore.sendMessageToL2(CANISTER_ADDRESS, payload);
