@@ -108,13 +108,20 @@ async fn consume(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, Strin
 
     MESSAGES.with(|m| {
         let mut map = m.borrow_mut();
-        let message = map.get_mut(&msg_hash).unwrap();
+        let message = map.get_mut(&msg_hash);
 
-        if message.clone() < 1 {
+        if message.is_none() {
             return Err("Attempted to consume invalid message".to_string());
         }
 
-        *message -= 1;
+        let message_counter = message.unwrap();
+
+        // if there is exactly 1 message, we'll remove it from hashmap
+        if message_counter.clone() == 1 {
+            map.remove(&msg_hash);
+        } else {
+            *message_counter -= 1;
+        }
 
         return Ok(true);
     })
