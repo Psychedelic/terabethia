@@ -54,13 +54,33 @@ pub struct CallResult {
 
 * */
 #[update(name = "trigger_call")]
-async fn receive(
+async fn trigger_call(
     from: Vec<u8>,
     to: Principal,
     payload: Vec<Vec<u8>>,
 ) -> Result<CallResult, String> {
     if api::id() == caller() {
         return Err("Attempted to call on self. This is not allowed.".to_string());
+    }
+
+    let from_u256 = U256::from(&from[..]);
+    let to_u256 = U256::from(&to.clone().as_slice()[..]);
+
+    let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
+
+    let message_exists = MESSAGES.with(|m| {
+        let map = m.borrow();
+        let message = map.get(&msg_hash);
+
+        if message.is_none() {
+            return Err("Message does not exist.".to_string());
+        }
+
+        Ok(true)
+    });
+
+    if message_exists.is_err() {
+        return Err(message_exists.err().unwrap());
     }
 
     let args_raw = encode_args((&from, &payload)).unwrap();
@@ -82,18 +102,22 @@ async fn receive(
  * Instead we'll check state against Eth contract directly.
  * */
 #[update(name = "store_message")]
-async fn store_message(from: Vec<u8>, to: Principal, payload: Vec<Vec<u8>>) -> () {
+async fn store_message(
+    from: Vec<u8>,
+    to: Principal,
+    payload: Vec<Vec<u8>>,
+) -> Result<CallResult, String> {
     let from_u256 = U256::from(&from[..]);
     let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
-    let msg_hash = calculate_hash(from_u256, to_u256, payload);
+    let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
 
     MESSAGES.with(|m| {
         let mut map = m.borrow_mut();
         *map.entry(msg_hash).or_insert(0) += 1;
     });
 
-    return;
+    trigger_call(from, to, payload).await
 }
 
 // consume message from Layer 1
