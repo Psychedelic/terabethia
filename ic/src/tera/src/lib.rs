@@ -148,11 +148,14 @@ async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> 
 #[cfg(test)]
 mod tests {
     use crate::calculate_hash;
+    use candid::Principal;
     use ethabi::ethereum_types::U256;
 
     #[test]
     fn message_hash() {
-        let from = hex::decode("00000000003000ea0101").unwrap();
+        let from_principal = Principal::from_text("rdbii-uiaaa-aaaab-qadva-cai").unwrap();
+
+        // eth address
         let to = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
 
         let payload = [
@@ -162,7 +165,7 @@ mod tests {
         ]
         .to_vec();
 
-        let from_u256 = U256::from(&from[..]);
+        let from_u256 = U256::from(from_principal.as_slice());
         let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
         let msgHash = calculate_hash(from_u256, to_u256, payload);
