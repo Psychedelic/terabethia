@@ -1,9 +1,19 @@
+use std::cell::RefCell;
+
+use candid::encode_args;
 use ethabi::encode;
 use ethabi::ethereum_types::U256;
-use ic_cdk::export::Principal;
+use ic_cdk::export::candid::{CandidType, Principal};
+// use ic_cdk::export::Principal;
 use ic_cdk::{api, caller};
 use ic_cdk_macros::update;
+use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use std::collections::HashMap;
+
+thread_local! {
+    static MESSAGES: RefCell<HashMap<Vec<u8>, u32>> = RefCell::new(HashMap::new());
+}
 
 fn calculate_hash(from: Vec<u8>, to: Vec<u8>, payload: Vec<Vec<u8>>) -> Vec<u8> {
     let receiver = ethabi::Token::FixedBytes(to);
@@ -31,32 +41,33 @@ fn calculate_hash(from: Vec<u8>, to: Vec<u8>, payload: Vec<Vec<u8>>) -> Vec<u8> 
     return result.to_vec();
 }
 
+#[derive(CandidType, Deserialize)]
+pub struct CallResult {
+    #[serde(with = "serde_bytes")]
+    r#return: Vec<u8>,
+}
+
 /**
- * This method is called by AWS Lambda. Purpose of this method is to
- * trigger generic handler method which should be implemented by the "to" canister.
- *
- * @todo: add controller/operator guard
- * @todo: once Eth integration is available on the IC, we should not store messages here.
- * Instead we'll check state against Eth contract directly.
- * */
-#[update(name = "receiveMessageFromL1")]
-pub async fn receive(from: Vec<u8>, to: Principal, payload: Vec<Vec<u8>>) -> Result<bool, String> {
+* This method is called by AWS Lambda. Purpose of this method is to
+* trigger generic handler method which should be implemented by the "to" canister.
+*
+* @todo: add controller/operator guard
+
+* */
+#[update(name = "trigger_call")]
+async fn receive(
+    from: Vec<u8>,
+    to: Principal,
+    payload: Vec<Vec<u8>>,
+) -> Result<CallResult, String> {
     if api::id() == caller() {
-        return Err("Attempted to call handler on self. This is not allowed..".to_string());
+        return Err("Attempted to call on self. This is not allowed.".to_string());
     }
 
-    let msgHash = calculate_hash(from, to.clone().as_slice().to_vec(), payload);
+    let args_raw = encode_args((&from, &payload)).unwrap();
 
-    // encode();
-    // encode()
-    // @todo: decode payload to vec nat
-    // calculate message hash
-    // store message
-
-    // @todo: encode args_raw={to, payload} to be Vec<u8>
-
-    match api::call::call_raw(to.clone(), "handler", [].to_vec(), 0).await {
-        Ok(x) => Ok(true),
+    match api::call::call_raw(to, "handler", args_raw, 0).await {
+        Ok(x) => Ok(CallResult { r#return: x }),
         Err((code, msg)) => Err(format!(
             "An error happened during the call: {}: {}",
             code as u8, msg
@@ -64,23 +75,58 @@ pub async fn receive(from: Vec<u8>, to: Principal, payload: Vec<Vec<u8>>) -> Res
     }
 }
 
-// this method should be called by canisters only
-#[update(name = "consumeMessageFromL1")]
-pub async fn consume(contract: String, payload: Vec<u8>) -> Result<bool, String> {
-    let caller = api::id();
+/**
+ * This method is called by AWS Lambda and it stores message hash into canister store.
+ *
+ * @todo: add controller/operator guard
+ * @todo: once Eth integration is available on the IC, we should not store messages here.
+ * Instead we'll check state against Eth contract directly.
+ * */
+#[update(name = "store_message")]
+async fn store_message(from: Vec<u8>, to: Principal, payload: Vec<Vec<u8>>) -> () {
+    let msg_hash = calculate_hash(
+        from.clone(),
+        to.clone().as_slice().to_vec(),
+        payload.clone(),
+    );
 
-    // @todo: decode payload to vec nat
-    // calculate message hash
-    // store message hash
+    MESSAGES.with(|m| {
+        let mut map = m.borrow_mut();
+        *map.entry(msg_hash).or_insert(0) += 1;
+    });
 
-    unimplemented!()
+    return;
 }
 
-// this method should be called by canisters only
-#[update(name = "sendMessageToL1")]
-pub async fn send(contract: String, payload: Vec<u8>) -> Result<bool, String> {
+// consume message from Layer 1
+// @todo: this should be only called by a canister
+#[update(name = "consume_message")]
+async fn consume(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> {
     let caller = api::id();
 
+    let msg_hash = calculate_hash(eth_addr, caller.as_slice().to_vec(), payload.clone());
+
+    MESSAGES.with(|m| {
+        let mut map = m.borrow_mut();
+        let message = map.get_mut(&msg_hash).unwrap();
+
+        if message.clone() < 1 {
+            return Err("Attempted to consume invalid message".to_string());
+        }
+
+        *message -= 1;
+
+        return Ok(true);
+    })
+}
+
+// send message to Layer 1
+// @todo: this should be only called by a canister
+#[update(name = "send_message")]
+async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> {
+    let caller = api::id();
+
+    let msg_hash = calculate_hash(caller.as_slice().to_vec(), eth_addr, payload.clone());
     // @todo: decode payload to vec nat
     // calculate message hash
     // store message hash
@@ -122,22 +168,3 @@ mod tests {
         assert_eq!(msgHash, msgHashExpected);
     }
 }
-
-// const withdrawPayload = [
-//     '0x0000000000000000000000000000000000000000000000000000000000000000',
-//     numStringToBytes32(Buffer.from('f39fd6e51aad88f6f4ce6ab8827279cfffb92266', 'hex')),
-//     numStringToBytes32(ethValue2.toString()), // should be 0x000000000000000000000000000000000000000000000000016345785d8a0000
-//   ];
-
-//   expect(withdrawPayload[1]).equal('0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266')
-//   expect(withdrawPayload[2]).equal('0x000000000000000000000000000000000000000000000000016345785d8a0000')
-
-//   const withdrawMessageHash = soliditySha3(
-//     "0x6d6e6932637a71616161616161616471616c3671636169000000000000000000",
-//     ethProxy.address,
-//     withdrawPayload.length,
-//     { t: 'bytes32', v: withdrawPayload }
-//   );
-
-//   // 0xefb80e98c9f7ac2ad55b3e4f5bb2d3a15fe8c187925eba2ffc721f74d1982c52
-//   expect(withdrawMessageHash).equals('0xff76cffb15cc5fbb35ba768c1aa7a821ccd5e4901c4ff733ea941747a2a52413');

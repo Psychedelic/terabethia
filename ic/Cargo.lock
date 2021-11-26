@@ -1522,6 +1522,8 @@ dependencies = [
  "ic-cdk",
  "ic-cdk-macros",
  "ic-kit",
+ "serde",
+ "serde_bytes",
  "sha3",
 ]
 
