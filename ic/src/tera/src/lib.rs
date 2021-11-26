@@ -137,7 +137,7 @@ async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> 
     let to_u256 = U256::from(&eth_addr[..]);
     let from_u256 = U256::from(&caller.as_slice()[..]);
 
-    let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
+    let _msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
     // @todo: decode payload to vec nat
     // calculate message hash
     // store message hash
@@ -168,11 +168,11 @@ mod tests {
         let from_u256 = U256::from(from_principal.as_slice());
         let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
-        let msgHash = calculate_hash(from_u256, to_u256, payload);
-        let msgHashExpected =
+        let msg_hash = calculate_hash(from_u256, to_u256, payload);
+        let msg_hash_expected =
             hex::decode("c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3")
                 .unwrap();
 
-        assert_eq!(msgHash, msgHashExpected);
+        assert_eq!(msg_hash, msg_hash_expected);
     }
 }
