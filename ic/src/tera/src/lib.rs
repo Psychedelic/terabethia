@@ -169,11 +169,6 @@ mod tests {
         let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
         let msgHash = calculate_hash(from_u256, to_u256, payload);
-        let msgHashHex = hex::encode(msgHash.clone());
-
-        println!("msg hash hex {} arguments", msgHashHex);
-
-        // [128, 62, 240, 110, 171, 68, 239, 5, 218, 94, 164, 227, 190, 40, 195, 19, 138, 53, 191, 94, 129, 225, 113, 205, 28, 247, 125, 81, 119, 34, 39, 138]
         let msgHashExpected =
             hex::decode("c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3")
                 .unwrap();
