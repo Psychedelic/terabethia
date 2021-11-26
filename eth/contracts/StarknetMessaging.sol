@@ -68,9 +68,9 @@ contract StarknetMessaging is IStarknetMessaging {
         // Note that the selector (a single integer) is prepended to the payload.
         bytes32 msgHash = keccak256(
             abi.encodePacked(
-                uint256(msg.sender),
-                uint256(to_address),
-                payload.length,
+                bytes32(msg.sender),
+                to_address,
+                bytes32(payload.length),
                 payload
             )
         );
@@ -89,9 +89,9 @@ contract StarknetMessaging is IStarknetMessaging {
     ) external override returns (bytes32) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
-                bytes32(from_address),
-                msg.sender,
-                uint256(payload.length),
+                from_address,
+                bytes32(msg.sender),
+                bytes32(payload.length),
                 payload
             )
         );
