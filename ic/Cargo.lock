@@ -491,6 +491,7 @@ dependencies = [
 name = "eth_proxy"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "ic-cdk",
  "ic-cdk-macros",
  "ic-kit",
@@ -1522,7 +1523,6 @@ dependencies = [
  "hex",
  "ic-cdk",
  "ic-cdk-macros",
- "ic-kit",
  "serde",
  "serde_bytes",
  "sha3",
