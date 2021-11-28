@@ -65,21 +65,21 @@ fn init() {
 }
 
 #[update(name = "deposit", guard = "is_controller")]
-// #[candid_method(update, rename = "deposit")]
+#[candid_method(update, rename = "deposit")]
 fn deposit(owner: Principal) -> () {
     // on deposit {consumeMessageFromL1}
     unimplemented!()
 }
 
 #[update(name = "withdraw", guard = "is_controller")]
-// #[candid_method(update, rename = "withdraw")]
+#[candid_method(update, rename = "withdraw")]
 fn withdraw(owner: Principal) -> () {
     // on withdrawl {sendMessageToL1}
     unimplemented!()
 }
 
 #[query(name = "getEthAddress")]
-// #[candid_method(query, rename = "getEthAddress")]
+#[candid_method(query, rename = "getEthAddress")]
 fn get_eth_address() -> &'static str {
     WETH_ADDRESS
 }

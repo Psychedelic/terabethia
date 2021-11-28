@@ -9,3 +9,22 @@ service : {
     // consumeMessageFromL1 : (ContractAddress, Payload) -> (bool);
     // sendMessageToL1 : (ContractAddress, Payload) -> (bool);
 }
+
+// the starknet code its basically using eth proxy address
+// if it returns true then the message is no longer present
+// safely tokens
+// if miniting fails
+// split to two calls
+// 
+
+if you rpxy call to this birdge 
+write down the message hash 
+from handler funciton
+of handler funcion return true
+you can remove from the canister
+if hanlder returns true
+    - we can remove it from 
+if false 
+
+update state call
+// once we 
