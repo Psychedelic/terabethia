@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use candid::encode_args;
+use candid::{Nat, encode_args};
 use ethabi::encode;
 use ethabi::ethereum_types::U256;
 use ic_cdk::export::candid::{CandidType, Principal};
@@ -15,7 +15,7 @@ thread_local! {
     static MESSAGES: RefCell<HashMap<Vec<u8>, u32>> = RefCell::new(HashMap::new());
 }
 
-fn calculate_hash(from: U256, to: U256, payload: Vec<Vec<u8>>) -> Vec<u8> {
+fn calculate_hash(from: U256, to: U256, payload: Vec<Nat>) -> Vec<u8> {
     let receiver = ethabi::Token::Uint(to);
     let sender = ethabi::Token::Uint(from);
     let payload_len = ethabi::Token::Uint(U256::from(payload.len()));
@@ -23,7 +23,7 @@ fn calculate_hash(from: U256, to: U256, payload: Vec<Vec<u8>>) -> Vec<u8> {
     // becase on L1 these are left padded to 32b
     let payload_padded: Vec<ethabi::Token> = payload
         .into_iter()
-        .map(|x| ethabi::Token::Uint(U256::from(&x[..])))
+        .map(|x| ethabi::Token::Uint(U256::from(&x.clone().0.to_bytes_be()[..])))
         .collect();
 
     let payload_slice = &payload_padded[..];
@@ -57,7 +57,7 @@ pub struct CallResult {
 async fn trigger_call(
     from: Vec<u8>,
     to: Principal,
-    payload: Vec<Vec<u8>>,
+    payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
     if api::id() == caller() {
         return Err("Attempted to call on self. This is not allowed.".to_string());
@@ -105,7 +105,7 @@ async fn trigger_call(
 async fn store_message(
     from: Vec<u8>,
     to: Principal,
-    payload: Vec<Vec<u8>>,
+    payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
     let from_u256 = U256::from(&from[..]);
     let to_u256 = U256::from(&to.clone().as_slice()[..]);
@@ -123,7 +123,7 @@ async fn store_message(
 // consume message from Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "consume_message")]
-async fn consume(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> {
+async fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
     let from_u256 = U256::from(&eth_addr[..]);
@@ -155,7 +155,7 @@ async fn consume(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, Strin
 // send message to Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "send_message")]
-async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> {
+async fn send(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
     let to_u256 = U256::from(&eth_addr[..]);
@@ -171,8 +171,10 @@ async fn send(eth_addr: Vec<u8>, payload: Vec<Vec<u8>>) -> Result<bool, String> 
 
 #[cfg(test)]
 mod tests {
+    use std::{convert::TryFrom, str::FromStr};
+
     use crate::calculate_hash;
-    use candid::Principal;
+    use candid::{Nat, Principal};
     use ethabi::ethereum_types::U256;
 
     #[test]
@@ -183,11 +185,10 @@ mod tests {
         let to = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
 
         let payload = [
-            hex::decode("00").unwrap(),
-            hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
-            hex::decode("016345785d8a0000").unwrap(), // 0.1 eth value
-        ]
-        .to_vec();
+            Nat::from_str("00").unwrap(),
+            Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
+            Nat::from_str("100000000000000000").unwrap(),
+        ].to_vec();
 
         let from_u256 = U256::from(from_principal.as_slice());
         let to_u256 = U256::from(&to.clone().as_slice()[..]);
