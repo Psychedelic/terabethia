@@ -19,7 +19,7 @@ sudo dfx canister --no-wallet install token --argument "(
    \"Wrapped Ether\", 
    \"WETH\", 
    18:nat8, 
-   100,000,000,000:nat64, 
+   0:nat64, 
    $OWNER, 
    0
 )" -m=reinstall

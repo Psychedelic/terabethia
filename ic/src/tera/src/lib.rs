@@ -165,7 +165,10 @@ fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
     });
 
     if res.is_ok() {
-        store_outgoing_message(msg_hash, MESSAGE_CONSUMED);
+        match store_outgoing_message(msg_hash, MESSAGE_CONSUMED) {
+            Err(e) => panic!("{:?}", e),
+            _ => (),
+        }
     }
 
     return res;

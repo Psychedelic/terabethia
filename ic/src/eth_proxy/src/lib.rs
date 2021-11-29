@@ -1,4 +1,6 @@
-use ic_cdk::{export::candid::CandidType, storage};
+use std::str::FromStr;
+
+use ic_cdk::export::candid::Nat;
 use ic_kit::{
     candid::{candid_method, decode_args},
     ic::{call, caller},
@@ -6,84 +8,93 @@ use ic_kit::{
     CallHandler, Principal, RejectionCode,
 };
 use serde::Deserialize;
-use std::cell::RefCell;
 
+// ToDo replace with actual canister Ids
 const TERA_ADDRESS: Principal = Principal::anonymous();
-const WETH_ADDRESS: &str = "0xd2f69519458c157a14C5CAf4ed991904870aF834";
+const WETH_ADDRESS_IC: Principal = Principal::anonymous();
+const WETH_ADDRESS_ETH: &str = "0xd2f69519458c157a14C5CAf4ed991904870aF834";
 
 static mut CONTROLLER: Principal = Principal::anonymous();
 
-#[derive(Default)]
-struct Proxy {
-    tansactions: RefCell<Vec<Transaction>>,
-    authorized: RefCell<Vec<Principal>>,
+pub type TxReceipt = Result<usize, TxError>;
+
+#[derive(CandidType, Debug, PartialEq)]
+pub enum TxError {
+    InsufficientBalance,
+    InsufficientAllowance,
+    Unauthorized,
+    Other,
 }
 
-#[derive(Clone, Debug, CandidType, Deserialize)]
-struct StableProxy {
-    tansactions: Vec<Transaction>,
-    authorized: Vec<Principal>,
-}
-
-#[derive(CandidType)]
-pub struct Transaction<'a> {
-    message: &'a str,
-}
-
-#[derive(CandidType)]
+#[derive(CandidType, Debug, PartialEq)]
 pub enum MessageStatus {
-    Failed,
+    Failed(RejectionCode, String),
+    BurnFailed,
+    MintFaile,
     Succeeded,
 }
 
 #[derive(Serialize, Deserialize, CandidType)]
-pub struct ConsumeMessage {
+pub struct MintMessage {
     pub eth_addr: Vec<u8>,
-    pub payload: Vec<Vec<u8>>,
+    pub payload: Vec<Nat>,
 }
 
 #[derive(Serialize, Deserialize, CandidType)]
-pub struct WithdrawMessage {
+pub struct SendMessage {
     pub eth_addr: Vec<u8>,
-    pub payload: Vec<Vec<u8>>,
+    pub payload: Vec<Nat>,
 }
 
-impl Proxy {
-    pub fn add_transaction(&self) {}
+/// Explore inter canister calls with tera bridge & weth
+// #[import(canister = "tera")]
+// struct Tera;
 
-    pub fn remove_transaction(&self) {}
+// #[import(canister = "weth")]
+// struct WETH;
 
-    pub fn get_transaction(&self) {}
-
-    pub fn get_all_transactions(&self) {}
-}
-
-// #[init]
-// #[candid_method(init)]
+#[init]
+#[candid_method(init)]
 fn init() {
     unsafe {
         CONTROLLER = caller();
     }
 }
 
+/// ToDo: Access control
 #[update(name = "handler", guard = "is_controller")]
-fn handler(args: Vec<u8>) -> () {
-    let (from, payload): (Vec<u8>, Vec<Vec<u8>>) = decode_args(&bytes).unwrap();
+fn handler(args: Vec<u8>) -> Result<bool, (RejectionCode, String)> {
+    let (eth_addr, payload): (Vec<u8>, Vec<Nat>) =
+        decode_args(&args).expect("Message decode failed");
+    let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
 
-    // Decode payload
-    // extract message contents
-    // either deposit or withdraw
+    if !(eth_addr_hex == WETH_ADDRESS_IC.trim_start_matches("0x")) {
+        panic!("Eth Contract Address is inccorrect!");
+    }
+
+    let args_raw = encode_args((
+        hex::encode(&payload[0].0.to_bytes_be()),
+        Nat::from(payload[1].0.clone()),
+    ))
+    .unwrap();
+
+    // ToDo: make sure that to, amount exist in the payload
+    // validate them
+    let (to, amount): (String, Nat) = decode_args(&args_raw).unwrap();
+
+    mint(eth_addr, Principal::from_str(to), amount, payload).await
 }
 
+/// ToDo: Access control
 #[update]
-// #[candid_method(update, rename = "deposit")]
-fn deposit(to: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
-    // only_owner(owner);
-
-    // need an eth_addr
-    // payload
-    // eth_addr mapped to pid
-
+#[candid_method(update, rename = "mint")]
+async fn mint(
+    eth_addr: Vec<u8>,
+    to: Principal,
+    amount: Nat,
+    payload: Vec<Nat>,
+) -> Result<bool, (RejectionCode, String)> {
+    // Is it feasible to make these inter cansiter calls?
     let consume: (bool,) = call(
         TERA_ADDRESS,
         "consume_message",
@@ -92,38 +103,41 @@ fn deposit(to: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
     .await?;
 
     if let Some(message) = consume {
-        // Mint token on IC here (inter canister call)
-        // if minting succedes return OK
-        // otherwise handle putting back message on tera
+        let mint: (TxReceipt,) = call(WETH_ADDRESS_IC, "mint", (to, amount)).await?;
 
-        Ok(message)
+        Ok(mint.0)
     } else {
         Err(MessageStatus::Failed)
     }
 }
 
+/// ToDo: Access control
 #[update]
-// #[candid_method(update, rename = "withdraw")]
-fn withdraw(from: Principal, amount: Nat) -> Result<bool, (RejectionCode, String)> {
-    // only_owner(owner);
+#[candid_method(update, rename = "burn")]
+async fn burn(eth_addr: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
+    let payload = [Nat::from(00), hex::encode(eth_addr), amount.unwrap()].to_vec();
 
-    // ToDo
-    // construct withdraw payload
-    // burn ic_weth
+    let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", (amount))
+        .await
+        .map_err(|err| MessageStatus::Failed(err.0, err.1))?;
 
-    // on withdrawl {send_message}
-    let withdraw: (bool,) = call(
-        TERA_ADDRESS,
-        "send_message",
-        (WithdrawMessage { eth_addr, payload },),
-    )
-    .await?;
+    if let Some(_) = burn_txn.0 {
+        // Is it feasible to make these inter cansiter calls?
+        let send_message: (bool,) = call(
+            TERA_ADDRESS,
+            "send_message",
+            (SendMessage { eth_addr, payload },),
+        )
+        .await?;
 
-    Ok(withdraw)
+        Ok(send_message)
+    } else {
+        Err(MessageStatus::BurnFailed)
+    }
 }
 
 #[query(name = "getEthAddress")]
-// #[candid_method(query, rename = "getEthAddress")]
+#[candid_method(query, rename = "getEthAddress")]
 fn get_eth_address() -> &'static str {
     WETH_ADDRESS
 }
@@ -159,19 +173,51 @@ fn is_controller() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    use ic_cdk::export::candid::{decode_args, encode_args, Nat};
+    use std::str::FromStr;
+
     #[test]
-    fn test_handler_fork() {
+    fn test_decode_eth_payload() {
         let payload = [
-            hex::decode("00").unwrap(),
-            hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
-            hex::decode("016345785d8a0000").unwrap(), // 0.1 eth value
+            // amount
+            Nat::from_str("100000000000000000").unwrap(),
+            // eth_addr
+            Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
         ]
         .to_vec();
 
-        let from = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
-        let args_raw = encode_args((&from, &payload)).unwrap();
+        let args_raw = encode_args((
+            Nat::from(payload[0].0.clone()),
+            hex::encode(&payload[1].0.to_bytes_be()),
+        ))
+        .unwrap();
 
-        // decode args_raw
-        // extract content
+        let (amount, eth_addr): (Nat, String) = decode_args(&args_raw).unwrap();
+
+        let expected_amount = "016345785d8a0000";
+        assert_eq!(hex::encode(amount.0.to_bytes_be()), expected_amount);
+
+        let expected_eth_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+        assert_eq!(eth_addr, expected_eth_addr);
+    }
+
+    #[test]
+    fn test_handler_args_decode() {
+        let from = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
+
+        let trigger_payload = [
+            // amount
+            Nat::from_str("100000000000000000").unwrap(),
+            // eth_addr
+            Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
+        ]
+        .to_vec();
+
+        let args = encode_args((&from, &trigger_payload)).unwrap();
+
+        let (from, payload): (Vec<u8>, Vec<Nat>) =
+            decode_args(&args).expect("Message decode failed");
+
+        println!("{}", hex::encode(&payload[1].0.to_bytes_be()));
     }
 }

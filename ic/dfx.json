@@ -1,6 +1,6 @@
 {
   "canisters": {
-    "rust_cron": {
+    "tera": {
       "build": "cargo build --target wasm32-unknown-unknown --package tera --release",
       "candid": "src/rust_cron/tera.did",
       "wasm": "target/wasm32-unknown-unknown/release/tera.wasm",
