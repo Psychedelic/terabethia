@@ -490,12 +490,23 @@ fn main() {
 
 #[pre_upgrade]
 fn pre_upgrade() {
-    ic::stable_store((ic::get::<Metadata>().clone(),ic::get::<Balances>(), ic::get::<Allowances>(), tx_log())).unwrap();
+    ic::stable_store((
+        ic::get::<Metadata>().clone(),
+        ic::get::<Balances>(),
+        ic::get::<Allowances>(),
+        tx_log(),
+    ))
+    .unwrap();
 }
 
 #[post_upgrade]
 fn post_upgrade() {
-    let (metadata_stored, balances_stored, allowances_stored, tx_log_stored): (Metadata,Balances,Allowances,TxLog) = ic::stable_restore().unwrap();
+    let (metadata_stored, balances_stored, allowances_stored, tx_log_stored): (
+        Metadata,
+        Balances,
+        Allowances,
+        TxLog,
+    ) = ic::stable_restore().unwrap();
     let metadata = ic::get_mut::<Metadata>();
     *metadata = metadata_stored;
 

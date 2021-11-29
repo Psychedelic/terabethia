@@ -9,7 +9,7 @@ edition = "2018"
 ic-cdk-macros = "0.3"
 candid = "0.7.4"
 serde = "1.0"
-ic-kit = "0.4.3"
+ic-kit = "0.4.2"
 ic-cdk = "0.3.1"
 assert-panic = "1.0.1"
 cap-std = { git = "https://github.com/flyq/cap", branch = "sdk-fix", package="cap-standards", features = ["alpha-dip20", "cap-sdk", "sdk-impls"] }

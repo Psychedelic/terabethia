@@ -155,6 +155,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-stream"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "171374e7e3b2504e0e5236e3b59260560f9fe94bfe9ac39ba5e4e929c5590625"
+dependencies = [
+ "async-stream-impl",
+ "futures-core",
+]
+
+[[package]]
+name = "async-stream-impl"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "648ed8c8d2ce5409ccd57453d9d1b214b342a0d69376a6feda1fd6cae3299308"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-task"
 version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -194,6 +215,15 @@ name = "beef"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bed554bd50246729a1ec158d08aa3235d1b69d94ad120ebe187e28894787e736"
+
+[[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "binread"
@@ -317,6 +347,62 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "cap-common"
+version = "0.1.0"
+source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+dependencies = [
+ "async-std",
+ "ic-cdk",
+ "ic-certified-map",
+ "ic-kit",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+ "sha2",
+]
+
+[[package]]
+name = "cap-sdk"
+version = "0.1.0-alpha1"
+source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+dependencies = [
+ "async-stream",
+ "cap-sdk-core",
+ "futures",
+ "ic-cdk",
+ "ic-kit",
+ "lazy_static",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cap-sdk-core"
+version = "0.1.0-alpha1"
+source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+dependencies = [
+ "cap-common",
+ "ic-cdk",
+ "ic-kit",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cap-standards"
+version = "0.1.0-alpha1"
+source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+dependencies = [
+ "bincode",
+ "candid",
+ "cap-sdk",
+ "ic-cdk",
+ "num-bigint",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -627,6 +713,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "half"
+version = "1.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
+
+[[package]]
 name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -671,6 +763,17 @@ dependencies = [
  "serde",
  "serde_tokenstream",
  "syn",
+]
+
+[[package]]
+name = "ic-certified-map"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54640ea6dc0dd1c7cddec8586f42c81aa5a02edd0b82ad7b96360ee5b591d7b6"
+dependencies = [
+ "serde",
+ "serde_bytes",
+ "sha2",
 ]
 
 [[package]]
@@ -1097,6 +1200,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_cbor"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bef2ebfde456fb76bbcf9f59315333decc4fda0b2b44b420243c11e0f5ec1f5"
+dependencies = [
+ "half",
+ "serde",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.130"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1232,6 +1345,8 @@ dependencies = [
  "assert-panic",
  "async-std",
  "candid",
+ "cap-sdk",
+ "cap-standards",
  "ic-cdk",
  "ic-cdk-macros",
  "ic-kit",

@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
-use ic_cdk::export::candid::Nat;
+use ic_cdk::{export::candid::Nat, storage};
 use ic_kit::{
-    candid::{candid_method, decode_args},
+    candid::{candid_method, decode_args, CandidType, encode_args},
     ic::{call, caller},
     macros::*,
     CallHandler, Principal, RejectionCode,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 // ToDo replace with actual canister Ids
 const TERA_ADDRESS: Principal = Principal::anonymous();
@@ -26,7 +26,7 @@ pub enum TxError {
     Other,
 }
 
-#[derive(CandidType, Debug, PartialEq)]
+#[derive(Debug)]
 pub enum MessageStatus {
     Failed(RejectionCode, String),
     BurnFailed,
@@ -34,13 +34,13 @@ pub enum MessageStatus {
     Succeeded,
 }
 
-#[derive(Serialize, Deserialize, CandidType)]
+#[derive(Deserialize, CandidType)]
 pub struct MintMessage {
     pub eth_addr: Vec<u8>,
     pub payload: Vec<Nat>,
 }
 
-#[derive(Serialize, Deserialize, CandidType)]
+#[derive(Deserialize, CandidType)]
 pub struct SendMessage {
     pub eth_addr: Vec<u8>,
     pub payload: Vec<Nat>,
@@ -62,13 +62,13 @@ fn init() {
 }
 
 /// ToDo: Access control
-#[update(name = "handler", guard = "is_controller")]
-fn handler(args: Vec<u8>) -> Result<bool, (RejectionCode, String)> {
+#[update]
+async fn handler(args: Vec<u8>) -> Result<bool, (RejectionCode, String)> {
     let (eth_addr, payload): (Vec<u8>, Vec<Nat>) =
         decode_args(&args).expect("Message decode failed");
-    let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
+    let eth_addr_hex = hex::encode(&eth_addr);
 
-    if !(eth_addr_hex == WETH_ADDRESS_IC.trim_start_matches("0x")) {
+    if !(eth_addr_hex == WETH_ADDRESS_IC.to_string().trim_start_matches("0x")) {
         panic!("Eth Contract Address is inccorrect!");
     }
 
@@ -82,12 +82,12 @@ fn handler(args: Vec<u8>) -> Result<bool, (RejectionCode, String)> {
     // validate them
     let (to, amount): (String, Nat) = decode_args(&args_raw).unwrap();
 
-    mint(eth_addr, Principal::from_str(to), amount, payload).await
+    mint(eth_addr, Principal::from_text(&to), amount, payload).await
 }
 
 /// ToDo: Access control
 #[update]
-#[candid_method(update, rename = "mint")]
+// #[candid_method(update, rename = "mint")]
 async fn mint(
     eth_addr: Vec<u8>,
     to: Principal,
@@ -98,30 +98,29 @@ async fn mint(
     let consume: (bool,) = call(
         TERA_ADDRESS,
         "consume_message",
-        (ConsumeMessage { eth_addr, payload },),
+        (MintMessage { eth_addr, payload },),
     )
     .await?;
 
-    if let Some(message) = consume {
+    if consume.0 {
         let mint: (TxReceipt,) = call(WETH_ADDRESS_IC, "mint", (to, amount)).await?;
-
-        Ok(mint.0)
+        Ok(mint.0.is_ok())
     } else {
-        Err(MessageStatus::Failed)
+        MessageStatus::Failed(5, String::from("Consume message failed!"))
     }
 }
 
 /// ToDo: Access control
 #[update]
-#[candid_method(update, rename = "burn")]
+// #[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
     let payload = [Nat::from(00), hex::encode(eth_addr), amount.unwrap()].to_vec();
 
-    let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", (amount))
+    let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", amount)
         .await
         .map_err(|err| MessageStatus::Failed(err.0, err.1))?;
 
-    if let Some(_) = burn_txn.0 {
+    if burn_txn.0.is_ok() {
         // Is it feasible to make these inter cansiter calls?
         let send_message: (bool,) = call(
             TERA_ADDRESS,
@@ -130,16 +129,16 @@ async fn burn(eth_addr: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, St
         )
         .await?;
 
-        Ok(send_message)
+        Ok(send_message.0)
     } else {
         Err(MessageStatus::BurnFailed)
     }
 }
 
 #[query(name = "getEthAddress")]
-#[candid_method(query, rename = "getEthAddress")]
-fn get_eth_address() -> &'static str {
-    WETH_ADDRESS
+// #[candid_method(query, rename = "getEthAddress")]
+fn get_eth_address() -> Principal {
+    WETH_ADDRESS_IC
 }
 
 /// guard method for canister controller
@@ -158,17 +157,6 @@ fn only_owner(owner: Principal) {
             ic_cdk::trap("caller not owner!");
         }
     }
-}
-
-/// update guard
-fn is_controller() -> Result<(), String> {
-    let is_controller = storage::get_mut::<Proxy>()
-        .borrow_mut()
-        .contains(&caller())
-        .then(|| ())
-        .ok_or("Caller is not authorized".to_string());
-
-    is_controller
 }
 
 #[cfg(test)]
