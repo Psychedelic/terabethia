@@ -11,11 +11,24 @@ use serde::Deserialize;
 use sha3::{Digest, Keccak256};
 use std::collections::HashMap; // 1.2.7
 
+const MESSAGE_CONSUMED: u8 = 0;
+const MESSAGE_PRODUCED: u8 = 1;
+
 thread_local! {
-    static MESSAGES: RefCell<HashMap<Vec<u8>, u32>> = RefCell::new(HashMap::new());
+    static STATE: TerabetiaState = TerabetiaState::default();
 }
 
-fn calculate_hash(from: U256, to: U256, payload: Vec<Nat>) -> Vec<u8> {
+#[derive(Default)]
+pub struct TerabetiaState {
+    // incoming messages from L1
+    pub messages: RefCell<HashMap<String, u32>>,
+
+    // outgoing messages
+    pub messages_out: RefCell<HashMap<u64, (String, u8)>>,
+    pub message_index: RefCell<u64>,
+}
+
+fn calculate_hash(from: U256, to: U256, payload: Vec<Nat>) -> String {
     let receiver = ethabi::Token::Uint(to);
     let sender = ethabi::Token::Uint(from);
     let payload_len = ethabi::Token::Uint(U256::from(payload.len()));
@@ -37,7 +50,7 @@ fn calculate_hash(from: U256, to: U256, payload: Vec<Nat>) -> Vec<u8> {
 
     let result = hasher.finalize();
 
-    return result.to_vec();
+    hex::encode(result.to_vec())
 }
 
 #[derive(CandidType, Deserialize)]
@@ -68,8 +81,8 @@ async fn trigger_call(
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
 
-    let message_exists = MESSAGES.with(|m| {
-        let map = m.borrow();
+    let message_exists = STATE.with(|s| {
+        let map = s.messages.borrow();
         let message = map.get(&msg_hash);
 
         if message.is_none() {
@@ -112,8 +125,8 @@ async fn store_message(
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
 
-    MESSAGES.with(|m| {
-        let mut map = m.borrow_mut();
+    STATE.with(|s| {
+        let mut map = s.messages.borrow_mut();
         *map.entry(msg_hash).or_insert(0) += 1;
     });
 
@@ -123,7 +136,7 @@ async fn store_message(
 // consume message from Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "consume_message")]
-async fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
+fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
     let from_u256 = U256::from(&eth_addr[..]);
@@ -131,8 +144,8 @@ async fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
 
-    MESSAGES.with(|m| {
-        let mut map = m.borrow_mut();
+    let res = STATE.with(|s| {
+        let mut map = s.messages.borrow_mut();
         let message = map.get_mut(&msg_hash);
 
         if message.is_none() {
@@ -149,29 +162,46 @@ async fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
         }
 
         return Ok(true);
-    })
+    });
+
+    if res.is_ok() {
+        store_outgoing_message(msg_hash, MESSAGE_CONSUMED);
+    }
+
+    return res;
 }
 
 // send message to Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "send_message")]
-async fn send(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
+fn send(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
     let to_u256 = U256::from(&eth_addr[..]);
     let from_u256 = U256::from(&caller.as_slice()[..]);
 
-    let _msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
-    // @todo: decode payload to vec nat
-    // calculate message hash
-    // store message hash
+    let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
 
-    unimplemented!()
+    store_outgoing_message(msg_hash, MESSAGE_PRODUCED)
+}
+
+fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
+    STATE.with(|s| {
+        // we increment outgoing message counter
+        let mut index = s.message_index.borrow_mut();
+        *index += 1;
+
+        let mut map = s.messages_out.borrow_mut();
+        let msg = (hash, msg_type);
+        map.insert(*index, msg);
+
+        return Ok(true);
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{convert::TryFrom, str::FromStr};
+    use std::str::FromStr;
 
     use crate::calculate_hash;
     use candid::{Nat, Principal};
@@ -195,9 +225,7 @@ mod tests {
         let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
         let msg_hash = calculate_hash(from_u256, to_u256, payload);
-        let msg_hash_expected =
-            hex::decode("c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3")
-                .unwrap();
+        let msg_hash_expected = "c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3";
 
         assert_eq!(msg_hash, msg_hash_expected);
     }
