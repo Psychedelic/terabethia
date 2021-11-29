@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use candid::{Nat, encode_args};
+use candid::{encode_args, Nat};
 use ethabi::encode;
 use ethabi::ethereum_types::U256;
 use ic_cdk::export::candid::{CandidType, Principal};
@@ -188,7 +188,8 @@ mod tests {
             Nat::from_str("00").unwrap(),
             Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
             Nat::from_str("100000000000000000").unwrap(),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let from_u256 = U256::from(from_principal.as_slice());
         let to_u256 = U256::from(&to.clone().as_slice()[..]);
