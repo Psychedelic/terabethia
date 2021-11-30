@@ -1,10 +1,12 @@
-
-type User = principal;
-
-service : {
-  // Main Proxy functions
-  withdraw : (amount: u64) -> ();
-  deposit : (User) -> (bool);
-
-  get_eth_address : () -> (text) query;
+type MessageStatus = variant {
+  MessageHandlerFailed;
+  BurnFailed;
+  Succeeded;
+  MintFailed;
+};
+type Result = variant { Ok : bool; Err : MessageStatus };
+service : () -> {
+  burn : (nat, nat) -> (Result);
+  handle_message : (nat, vec nat) -> (Result);
+  mint : (principal, nat, vec nat) -> (Result);
 }
