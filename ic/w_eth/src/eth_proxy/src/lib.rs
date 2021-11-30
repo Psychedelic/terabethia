@@ -1,11 +1,9 @@
-use std::str::FromStr;
-
 use ic_cdk::{export::candid::Nat, storage};
 use ic_kit::{
-    candid::{candid_method, decode_args, CandidType, encode_args},
+    candid::{candid_method, CandidType},
     ic::{call, caller},
     macros::*,
-    CallHandler, Principal, RejectionCode,
+    Principal, RejectionCode,
 };
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +16,7 @@ static mut CONTROLLER: Principal = Principal::anonymous();
 
 pub type TxReceipt = Result<usize, TxError>;
 
-#[derive(CandidType, Debug, PartialEq)]
+#[derive(Deserialize, CandidType, Debug, PartialEq)]
 pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
@@ -53,8 +51,8 @@ pub struct SendMessage {
 // #[import(canister = "weth")]
 // struct WETH;
 
-#[init]
-#[candid_method(init)]
+// #[init]
+// #[candid_method(init)]
 fn init() {
     unsafe {
         CONTROLLER = caller();
@@ -63,37 +61,33 @@ fn init() {
 
 /// ToDo: Access control
 #[update]
-async fn handler(args: Vec<u8>) -> Result<bool, (RejectionCode, String)> {
-    let (eth_addr, payload): (Vec<u8>, Vec<Nat>) =
-        decode_args(&args).expect("Message decode failed");
+// #[candid_method(update, rename = "handler")]
+async fn handler(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, (RejectionCode, String)> {
     let eth_addr_hex = hex::encode(&eth_addr);
 
     if !(eth_addr_hex == WETH_ADDRESS_IC.to_string().trim_start_matches("0x")) {
         panic!("Eth Contract Address is inccorrect!");
     }
 
-    let args_raw = encode_args((
-        hex::encode(&payload[0].0.to_bytes_be()),
-        Nat::from(payload[1].0.clone()),
-    ))
-    .unwrap();
+    let to = hex::encode(&payload[0].0.to_bytes_be());
+    let amount = Nat::from(payload[1].0.clone());
 
-    // ToDo: make sure that to, amount exist in the payload
-    // validate them
-    let (to, amount): (String, Nat) = decode_args(&args_raw).unwrap();
-
-    mint(eth_addr, Principal::from_text(&to), amount, payload).await
+    match Principal::from_text(&to) {
+        Ok(to) => mint(to, amount, payload).await,
+        Err(_) => todo!(),
+    }
 }
 
 /// ToDo: Access control
 #[update]
 // #[candid_method(update, rename = "mint")]
 async fn mint(
-    eth_addr: Vec<u8>,
     to: Principal,
     amount: Nat,
     payload: Vec<Nat>,
 ) -> Result<bool, (RejectionCode, String)> {
+    let eth_addr = WETH_ADDRESS_IC.to_string().as_bytes().to_vec();
+
     // Is it feasible to make these inter cansiter calls?
     let consume: (bool,) = call(
         TERA_ADDRESS,
@@ -106,19 +100,30 @@ async fn mint(
         let mint: (TxReceipt,) = call(WETH_ADDRESS_IC, "mint", (to, amount)).await?;
         Ok(mint.0.is_ok())
     } else {
-        MessageStatus::Failed(5, String::from("Consume message failed!"))
+        Err((
+            RejectionCode::Unknown,
+            String::from("Consume message failed!"),
+        ))
     }
 }
 
 /// ToDo: Access control
 #[update]
 // #[candid_method(update, rename = "burn")]
-async fn burn(eth_addr: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
-    let payload = [Nat::from(00), hex::encode(eth_addr), amount.unwrap()].to_vec();
+async fn burn(to: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
+    let eth_addr = WETH_ADDRESS_IC.to_string().as_bytes().to_vec();
 
-    let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", amount)
+    let payload = [
+        Nat::from(00),
+        // Weird behaviour here
+        hex::encode(to),
+        amount,
+    ]
+    .to_vec();
+
+    let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", (amount,))
         .await
-        .map_err(|err| MessageStatus::Failed(err.0, err.1))?;
+        .map_err(|err| (err.0, err.1))?;
 
     if burn_txn.0.is_ok() {
         // Is it feasible to make these inter cansiter calls?
@@ -131,7 +136,7 @@ async fn burn(eth_addr: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, St
 
         Ok(send_message.0)
     } else {
-        Err(MessageStatus::BurnFailed)
+        Err((RejectionCode::Unknown, String::from("Burn failed!")))
     }
 }
 
