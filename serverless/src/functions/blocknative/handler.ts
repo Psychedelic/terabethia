@@ -18,7 +18,7 @@ const typesArray = [
   { type: "uint256", name: "wow" },
   { type: "uint256", name: "meow" },
   { type: "uint256", name: "principal" },
-  { type: "uint256", name: "doge" },
+  { type: "uint256", name: "amount" },
 ];
 
 const providers = [
@@ -69,6 +69,8 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
     typesArray,
     logs[0]?.data as string
   );
+
+  console.log(JSON.stringify(eventProps, null, 4));
 
   // const snsTopicPayload = {
   //   TopicArn: "TOPIC_ARN",

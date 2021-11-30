@@ -10,42 +10,41 @@ provider:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     DEBUG: '*'
-    QUEUE_URL: !Ref TeraQueue
+    # QUEUE_URL: !Ref TeraQueue
     NODE_ENV: ${self:provider.stage}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
-    ETH_L1_MESSAGE_TOPIC_NAME: !Ref EthL1MessageTopic
-    ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
+    # ETH_L1_MESSAGE_TOPIC_NAME: !Ref EthL1MessageTopic
+    # ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
     DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
-  iam:
-    role:
-      statements:
-        - Effect: 'Allow'
-          Action:
-            - "sqs:SendMessage"
-            - "sqs:DeleteMessage"
-          Resource:
-            - !GetAtt
-              - TeraQueue
-              - Arn
-        - Effect: Allow
-          Action:
-            - sns:Publish
-            - sns:Subscribe
-          Resource: ${self:custom.snsTopicArn.${self:provider.stage}}
-        - Effect: 'Allow'
-          Action:
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:GetItem
-            - dynamodb:PutItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-            - dynamodb:BatchWriteItem
-          Resource: 
-            - !GetAtt 
-              - TeraStateTable  
-              - Arn
-
+  # iam:
+  #   role:
+  #     statements:
+  #       - Effect: 'Allow'
+  #         Action:
+  #           - "sqs:SendMessage"
+  #           - "sqs:DeleteMessage"
+  #         Resource:
+  #           - !GetAtt
+  #             - TeraQueue
+  #             - Arn
+  #       - Effect: Allow
+  #         Action:
+  #           - sns:Publish
+  #           - sns:Subscribe
+  #         Resource: ${self:custom.snsTopicArn.${self:provider.stage}}
+  #       - Effect: 'Allow'
+  #         Action:
+  #           - dynamodb:Query
+  #           - dynamodb:Scan
+  #           - dynamodb:GetItem
+  #           - dynamodb:PutItem
+  #           - dynamodb:UpdateItem
+  #           - dynamodb:DeleteItem
+  #           - dynamodb:BatchWriteItem
+  #         Resource: 
+  #           - !GetAtt 
+  #             - TeraStateTable  
+  #             - Arn
 
 custom:
   region: ${opt:region, self:provider.region}
