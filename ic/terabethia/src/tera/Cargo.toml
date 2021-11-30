@@ -5,7 +5,7 @@ authors = ["BotchM <botchm@hotmail.com>"]
 edition = "2018"
 
 [lib]
-path = "src/lib.rs"
+path = "src/main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]

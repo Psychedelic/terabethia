@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use candid::{encode_args, Nat};
+use candid::{encode_args, Nat, candid_method};
 use ethabi::encode;
 use ethabi::ethereum_types::U256;
 use ic_cdk::export::candid::{CandidType, Principal};
@@ -67,6 +67,7 @@ pub struct CallResult {
 
 * */
 #[update(name = "trigger_call")]
+#[candid_method(update, rename = "trigger_call")]
 async fn trigger_call(
     eth_addr: Nat,
     to: Principal,
@@ -115,6 +116,7 @@ async fn trigger_call(
  * Instead we'll check state against Eth contract directly.
  * */
 #[update(name = "store_message")]
+#[candid_method(update, rename = "store_message")]
 async fn store_message(
     eth_addr: Nat,
     to: Principal,
@@ -136,6 +138,7 @@ async fn store_message(
 // consume message from Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "consume_message")]
+#[candid_method(update, rename = "consume_message")]
 fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
@@ -177,6 +180,7 @@ fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
 // send message to Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "send_message")]
+#[candid_method(update, rename = "send_message")]
 fn send(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
@@ -200,6 +204,15 @@ fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
 
         return Ok(true);
     })
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn main() {}
+
+#[cfg(not(any(target_arch = "wasm32", test)))]
+fn main() {
+    candid::export_service!();
+    std::print!("{}", __export_service());
 }
 
 #[cfg(test)]
@@ -232,13 +245,4 @@ mod tests {
 
         assert_eq!(msg_hash, msg_hash_expected);
     }
-}
-
-#[cfg(any(target_arch = "wasm32", test))]
-fn main() {}
-
-#[cfg(not(any(target_arch = "wasm32", test)))]
-fn main() {
-    candid::export_service!();
-    std::print!("{}", __export_service());
 }
