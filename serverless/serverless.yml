@@ -114,92 +114,92 @@ functions:
       - http:
           method: POST
           path: /hook
-  ReceiveMessageFromL1:
-    timeout: 10
-    memorySize: 128
-    handler: src/functions/teraQueue/handler.main
-    events:
-      - sqs:
-          batchSize: 10
-          maximumRetryAttempts: 10
-          arn:
-            Fn::GetAtt:
-              - TereaQueue
-              - Arn
-  StoreMessageFromL1:
-    timeout: 10
-    memorySize: 128
-    handler: src/functions/store/handler.main
-    events:
-      - sns:
-          arn: !Ref EthL1MessageTopic
-          topicName: ${self:custom.EthL1MessageTopic}
+#   ReceiveMessageFromL1:
+#     timeout: 10
+#     memorySize: 128
+#     handler: src/functions/teraQueue/handler.main
+#     events:
+#       - sqs:
+#           batchSize: 10
+#           maximumRetryAttempts: 10
+#           arn:
+#             Fn::GetAtt:
+#               - TereaQueue
+#               - Arn
+#   StoreMessageFromL1:
+#     timeout: 10
+#     memorySize: 128
+#     handler: src/functions/store/handler.main
+#     events:
+#       - sns:
+#           arn: !Ref EthL1MessageTopic
+#           topicName: ${self:custom.EthL1MessageTopic}
 
-resources:
-  - Resources:
-      TeraQueue:
-        Type: 'AWS::SQS::Queue'
-        Properties:
-          QueueName: tera-queue-${self:custom.resourceSuffix}
-          RedrivePolicy:
-            maxReceiveCount: 10
-            deadLetterTargetArn: !GetAtt
-              - TeraDeadLetterQueue
-              - Arn
-      TeraDeadLetterQueue:
-        Type: AWS::SQS::Queue
-        Properties:
-          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}
+# resources:
+#   - Resources:
+#       TeraQueue:
+#         Type: 'AWS::SQS::Queue'
+#         Properties:
+#           QueueName: tera-queue-${self:custom.resourceSuffix}
+#           RedrivePolicy:
+#             maxReceiveCount: 10
+#             deadLetterTargetArn: !GetAtt
+#               - TeraDeadLetterQueue
+#               - Arn
+#       TeraDeadLetterQueue:
+#         Type: AWS::SQS::Queue
+#         Properties:
+#           QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}
 
-      TeraL1StateTable:
-        Type: AWS::DynamoDB::Table
-        DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
-        UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
-        Properties:
-          TableName: tera_l1_state_${self:provider.stage}
-          BillingMode: PAY_PER_REQUEST
-          AttributeDefinitions:
-            - AttributeName: pk
-              AttributeType: S
-            - AttributeName: sk
-              AttributeType: S
-          KeySchema:
-            - AttributeName: pk
-              KeyType: HASH
-            - AttributeName: sk
-              KeyType: RANGE
+#       TeraL1StateTable:
+#         Type: AWS::DynamoDB::Table
+#         DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
+#         UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
+#         Properties:
+#           TableName: tera_l1_state_${self:provider.stage}
+#           BillingMode: PAY_PER_REQUEST
+#           AttributeDefinitions:
+#             - AttributeName: pk
+#               AttributeType: S
+#             - AttributeName: sk
+#               AttributeType: S
+#           KeySchema:
+#             - AttributeName: pk
+#               KeyType: HASH
+#             - AttributeName: sk
+#               KeyType: RANGE
 
-      EthL1MessageTopic:
-        Type: AWS::SNS::Topic
-        Properties:
-          DisplayName: ETH L1 Message
-          TopicName: ${self:custom.EthL1MessageTopic}
+#       EthL1MessageTopic:
+#         Type: AWS::SNS::Topic
+#         Properties:
+#           DisplayName: ETH L1 Message
+#           TopicName: ${self:custom.EthL1MessageTopic}
 
-      SnsToTeraQueuePolicy:
-        Type: AWS::SQS::QueuePolicy
-        Properties:
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: "allow-sns-messages"
-                Effect: Allow
-                Principal: "*"
-                Resource: !GetAtt
-                  - TeraQueue
-                  - Arn
-                Action: "SQS:SendMessage"
-                Condition:
-                  ArnEquals:
-                    "aws:SourceArn": !Ref EthL1MessageTopic
-          Queues:
-            - !Ref TeraQueue
+#       SnsToTeraQueuePolicy:
+#         Type: AWS::SQS::QueuePolicy
+#         Properties:
+#           PolicyDocument:
+#             Version: "2012-10-17"
+#             Statement:
+#               - Sid: "allow-sns-messages"
+#                 Effect: Allow
+#                 Principal: "*"
+#                 Resource: !GetAtt
+#                   - TeraQueue
+#                   - Arn
+#                 Action: "SQS:SendMessage"
+#                 Condition:
+#                   ArnEquals:
+#                     "aws:SourceArn": !Ref EthL1MessageTopic
+#           Queues:
+#             - !Ref TeraQueue
 
-        TeraQueueSubscription:
-          Type: 'AWS::SNS::Subscription'
-          Properties:
-            TopicArn: !Ref EthL1MessageTopic
-            Endpoint: !GetAtt
-              - TeraQueue
-              - Arn
-            Protocol: sqs
-            RawMessageDelivery: 'true'
+#         TeraQueueSubscription:
+#           Type: 'AWS::SNS::Subscription'
+#           Properties:
+#             TopicArn: !Ref EthL1MessageTopic
+#             Endpoint: !GetAtt
+#               - TeraQueue
+#               - Arn
+#             Protocol: sqs
+#             RawMessageDelivery: 'true'

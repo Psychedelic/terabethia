@@ -35,7 +35,8 @@
     "cross-fetch": "^3.1.4",
     "ethers": "^5.5.1",
     "remove": "^0.1.5",
-    "source-map-support": "^0.5.19"
+    "source-map-support": "^0.5.19",
+    "web3": "^1.6.1"
   },
   "devDependencies": {
     "@babel/core": "^7.16.0",
