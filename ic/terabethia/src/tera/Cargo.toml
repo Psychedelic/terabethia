@@ -5,6 +5,7 @@ authors = ["BotchM <botchm@hotmail.com>"]
 edition = "2018"
 
 [lib]
+path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
@@ -16,4 +17,4 @@ sha3 = "0.9.1"
 hex = "0.4.3"
 serde = "1.0.130"
 serde_bytes = "0.11"
-byteorder = "1.4.3"
+getrandom = { version = "0.2", features = ["js"] }

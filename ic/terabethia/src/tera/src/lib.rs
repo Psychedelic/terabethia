@@ -233,3 +233,12 @@ mod tests {
         assert_eq!(msg_hash, msg_hash_expected);
     }
 }
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn main() {}
+
+#[cfg(not(any(target_arch = "wasm32", test)))]
+fn main() {
+    candid::export_service!();
+    std::print!("{}", __export_service());
+}
