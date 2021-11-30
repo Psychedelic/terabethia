@@ -68,7 +68,7 @@ pub struct CallResult {
 * */
 #[update(name = "trigger_call")]
 async fn trigger_call(
-    from: Vec<u8>,
+    eth_addr: Nat,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
@@ -76,7 +76,7 @@ async fn trigger_call(
         return Err("Attempted to call on self. This is not allowed.".to_string());
     }
 
-    let from_u256 = U256::from(&from[..]);
+    let from_u256 = U256::from(&eth_addr.0.to_bytes_be()[..]);
     let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
@@ -96,7 +96,7 @@ async fn trigger_call(
         return Err(message_exists.err().unwrap());
     }
 
-    let args_raw = encode_args((&from, &payload)).unwrap();
+    let args_raw = encode_args((&eth_addr, &payload)).unwrap();
 
     match api::call::call_raw(to, "handler", args_raw, 0).await {
         Ok(x) => Ok(CallResult { r#return: x }),
@@ -116,11 +116,11 @@ async fn trigger_call(
  * */
 #[update(name = "store_message")]
 async fn store_message(
-    from: Vec<u8>,
+    eth_addr: Nat,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let from_u256 = U256::from(&from[..]);
+    let from_u256 = U256::from(&eth_addr.0.to_bytes_be()[..]);
     let to_u256 = U256::from(&to.clone().as_slice()[..]);
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
@@ -130,16 +130,16 @@ async fn store_message(
         *map.entry(msg_hash).or_insert(0) += 1;
     });
 
-    trigger_call(from, to, payload).await
+    trigger_call(eth_addr, to, payload).await
 }
 
 // consume message from Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "consume_message")]
-fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
+fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
-    let from_u256 = U256::from(&eth_addr[..]);
+    let from_u256 = U256::from(&eth_addr.0.to_bytes_be()[..]);
     let to_u256 = U256::from(&caller.as_slice()[..]);
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
@@ -177,10 +177,10 @@ fn consume(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
 // send message to Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "send_message")]
-fn send(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, String> {
+fn send(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
-    let to_u256 = U256::from(&eth_addr[..]);
+    let to_u256 = U256::from(&eth_addr.0.to_bytes_be()[..]);
     let from_u256 = U256::from(&caller.as_slice()[..]);
 
     let msg_hash = calculate_hash(from_u256, to_u256, payload.clone());
