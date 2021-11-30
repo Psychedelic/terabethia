@@ -1,11 +1,11 @@
-use ic_cdk::{export::candid::Nat, storage};
+use std::str::FromStr;
+
+use candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::{
-    candid::{candid_method, CandidType},
     ic::{call, caller},
     macros::*,
-    Principal, RejectionCode,
+    Principal
 };
-use serde::{Deserialize, Serialize};
 
 // ToDo replace with actual canister Ids
 const TERA_ADDRESS: Principal = Principal::anonymous();
@@ -24,23 +24,23 @@ pub enum TxError {
     Other,
 }
 
-#[derive(Debug)]
+#[derive(Debug, CandidType)]
 pub enum MessageStatus {
-    Failed(RejectionCode, String),
     BurnFailed,
-    MintFaile,
+    MintFailed,
     Succeeded,
+    MessageHandlerFailed,
 }
 
 #[derive(Deserialize, CandidType)]
 pub struct MintMessage {
-    pub eth_addr: Vec<u8>,
+    pub eth_addr: Nat,
     pub payload: Vec<Nat>,
 }
 
 #[derive(Deserialize, CandidType)]
 pub struct SendMessage {
-    pub eth_addr: Vec<u8>,
+    pub eth_addr: Nat,
     pub payload: Vec<Nat>,
 }
 
@@ -51,8 +51,8 @@ pub struct SendMessage {
 // #[import(canister = "weth")]
 // struct WETH;
 
-// #[init]
-// #[candid_method(init)]
+#[init]
+#[candid_method(init)]
 fn init() {
     unsafe {
         CONTROLLER = caller();
@@ -61,11 +61,11 @@ fn init() {
 
 /// ToDo: Access control
 #[update]
-// #[candid_method(update, rename = "handler")]
-async fn handler(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, (RejectionCode, String)> {
-    let eth_addr_hex = hex::encode(&eth_addr);
+#[candid_method(update, rename = "handle_message")]
+async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, MessageStatus> {
+    let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
 
-    if !(eth_addr_hex == WETH_ADDRESS_IC.to_string().trim_start_matches("0x")) {
+    if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
         panic!("Eth Contract Address is inccorrect!");
     }
 
@@ -74,76 +74,69 @@ async fn handler(eth_addr: Vec<u8>, payload: Vec<Nat>) -> Result<bool, (Rejectio
 
     match Principal::from_text(&to) {
         Ok(to) => mint(to, amount, payload).await,
-        Err(_) => todo!(),
+        Err(_) => Err(MessageStatus::MessageHandlerFailed),
     }
 }
 
 /// ToDo: Access control
 #[update]
-// #[candid_method(update, rename = "mint")]
-async fn mint(
-    to: Principal,
-    amount: Nat,
-    payload: Vec<Nat>,
-) -> Result<bool, (RejectionCode, String)> {
-    let eth_addr = WETH_ADDRESS_IC.to_string().as_bytes().to_vec();
+#[candid_method(update, rename = "mint")]
+async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<bool, MessageStatus> {
+    let weth_addr = WETH_ADDRESS_IC.to_string();
+    let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
     // Is it feasible to make these inter cansiter calls?
     let consume: (bool,) = call(
         TERA_ADDRESS,
         "consume_message",
-        (MintMessage { eth_addr, payload },),
+        (MintMessage {
+            eth_addr: Nat::from(eth_addr),
+            payload,
+        },),
     )
-    .await?;
+    .await
+    .expect("consuming message from L1 failed!");
 
     if consume.0 {
-        let mint: (TxReceipt,) = call(WETH_ADDRESS_IC, "mint", (to, amount)).await?;
+        let mint: (TxReceipt,) = call(WETH_ADDRESS_IC, "mint", (to, amount))
+            .await
+            .expect("minting weth failed!");
         Ok(mint.0.is_ok())
     } else {
-        Err((
-            RejectionCode::Unknown,
-            String::from("Consume message failed!"),
-        ))
+        Err(MessageStatus::MintFailed)
     }
 }
 
 /// ToDo: Access control
 #[update]
-// #[candid_method(update, rename = "burn")]
-async fn burn(to: Vec<u8>, amount: Nat) -> Result<bool, (RejectionCode, String)> {
-    let eth_addr = WETH_ADDRESS_IC.to_string().as_bytes().to_vec();
+#[candid_method(update, rename = "burn")]
+async fn burn(to: Nat, amount: Nat) -> Result<bool, MessageStatus> {
+    let weth_addr = WETH_ADDRESS_IC.to_string();
+    let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
-    let payload = [
-        Nat::from(00),
-        // Weird behaviour here
-        hex::encode(to),
-        amount,
-    ]
-    .to_vec();
+    let payload = [Nat::from_str("00").unwrap(), to.clone(), amount.clone()];
 
     let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", (amount,))
         .await
-        .map_err(|err| (err.0, err.1))?;
+        .expect("burning weth failed!");
 
     if burn_txn.0.is_ok() {
         // Is it feasible to make these inter cansiter calls?
         let send_message: (bool,) = call(
             TERA_ADDRESS,
             "send_message",
-            (SendMessage { eth_addr, payload },),
+            (SendMessage {
+                eth_addr: Nat::from(eth_addr),
+                payload: payload.to_vec(),
+            },),
         )
-        .await?;
+        .await
+        .expect("sending message to L1 failed!");
 
         Ok(send_message.0)
     } else {
-        Err((RejectionCode::Unknown, String::from("Burn failed!")))
+        Err(MessageStatus::BurnFailed)
     }
-}
-
-#[query(name = "getEthAddress")]
-// #[candid_method(query, rename = "getEthAddress")]
-fn get_eth_address() -> Principal {
-    WETH_ADDRESS_IC
 }
 
 /// guard method for canister controller
@@ -210,7 +203,5 @@ mod tests {
 
         let (from, payload): (Vec<u8>, Vec<Nat>) =
             decode_args(&args).expect("Message decode failed");
-
-        println!("{}", hex::encode(&payload[1].0.to_bytes_be()));
     }
 }

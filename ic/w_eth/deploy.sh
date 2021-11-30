@@ -1,7 +1,7 @@
-sudo dfx canister --no-wallet create --all
+dfx canister --no-wallet create --all
 cargo run > token.did
 ic-cdk-optimizer target/wasm32-unknown-unknown/release/token.wasm -o target/wasm32-unknown-unknown/release/opt.wasm
-sudo dfx build token
+dfx build token
 OWNER="principal \"$( \
    dfx identity get-principal
 )\""
@@ -14,7 +14,7 @@ OWNER="principal \"$( \
 #  owner: Principal,
 #  fee: u64,
 
-sudo dfx canister --no-wallet install token --argument "(
+dfx canister --no-wallet install token --argument "(
    \"NA\", 
    \"Wrapped Ether\", 
    \"WETH\", 
