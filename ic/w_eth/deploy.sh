@@ -6,20 +6,16 @@ OWNER="principal \"$( \
    dfx identity get-principal
 )\""
 
-#  logo: String,
-#  name: String,
-#  symbol: String,
-#  decimals: u8, 1e18
-#  total_supply: u64, 
-#  owner: Principal,
-#  fee: u64,
+CAP_ID="principal \"lj532-6iaaa-aaaah-qcc7a-cai\""
 
 dfx canister --no-wallet install token --argument "(
    \"NA\", 
    \"Wrapped Ether\", 
    \"WETH\", 
    18:nat8, 
-   0:nat64, 
+   0,
    $OWNER, 
-   0
+   0,
+   $OWNER, 
+   $CAP_ID, 
 )" -m=reinstall

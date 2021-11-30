@@ -8,7 +8,7 @@
 	  },
     "eth_proxy": {
       "build": "cargo build --target wasm32-unknown-unknown --package eth_proxy --release",
-      "candid": "src/eth_proxy/eth_proxy.did",
+      "candid": "src/eth_proxy/proxy.did",
       "wasm": "target/wasm32-unknown-unknown/release/eth_proxy.wasm",
       "type": "custom"
     }
