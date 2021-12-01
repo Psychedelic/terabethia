@@ -79,7 +79,22 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
   // };
 
   try {
-    const to = Principal.fromHex(BigInt(eventProps.principal).toString(16));
+    // const to = Principal.fromHex(BigInt(eventProps.principal).toString(16));
+    const to = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
+
+    // console.log(BigInt(eventProps.principal).toString(16));
+    // 7cfe980af7e2d3aee37ece163134058fe85cac9b61f6b4fa5013216902
+
+    console.log(from, to.toString(), [
+      // pid
+      BigInt(eventProps.principal),
+      // amount
+      BigInt(eventProps.amount),
+      // ethAddr
+      BigInt(from),
+    ]);
+
+
     const response = await Tera.storeMessage(from, to, [
       // pid
       BigInt(eventProps.principal),
@@ -88,6 +103,7 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
       // ethAddr
       BigInt(from),
     ]);
+
     return response;
 
     // const command = new PublishCommand(snsTopicPayload);

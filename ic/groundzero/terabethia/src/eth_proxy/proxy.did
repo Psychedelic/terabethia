@@ -1,0 +1,14 @@
+type MessageStatus = variant {
+  MessageHandlerFailed;
+  BurnFailed;
+  Succeeded;
+  ConsumeMessageFailed;
+  SendMessageFailed;
+  MintFailed;
+};
+type Result = variant { Ok : nat; Err : MessageStatus };
+service : () -> {
+  burn : (nat, nat) -> (Result);
+  handle_message : (nat, vec nat) -> (Result);
+  mint : (principal, nat, vec nat) -> (Result);
+}
