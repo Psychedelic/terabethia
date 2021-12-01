@@ -7,7 +7,7 @@ import {
 } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
 
-import _TERA_SERVICE from "./idls/tera/tera";
+import _TERA_SERVICE, { Result_1 } from "./idls/tera/tera";
 import TERA_FACTORY from "./idls/tera/tera.did";
 
 export interface ActorParams {
@@ -55,16 +55,16 @@ const createActor = <T>({
 };
 
 export const Tera = {
-  triggerCall: async (
+  storeMessage: async (
     from: string,
     to: Principal,
-    payload: any
-  ): Promise<undefined> => {
+    payload: Array<bigint>
+  ): Promise<Result_1> => {
     const teraCanister = createActor<_TERA_SERVICE>({
       host: Hosts.mainnet,
       canisterId: "",
       idlFactory: TERA_FACTORY,
     });
-    return await teraCanister.trigger_call(from, to, payload);
+    return await teraCanister.store_message(BigInt(from), to, payload);
   },
 };

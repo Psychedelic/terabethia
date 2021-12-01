@@ -11,6 +11,7 @@ import { BlockNativePayload } from "@libs/blocknative";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { IDL } from "@dfinity/candid";
+import { Principal } from "@dfinity/principal";
 
 const web3 = new Web3();
 
@@ -64,13 +65,13 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
     body: "",
   };
 
-  const { to, logs } = eventRecipt;
+  const { to: from, logs } = eventRecipt;
   const eventProps = web3.eth.abi.decodeParameters(
     typesArray,
     logs[0]?.data as string
   );
 
-  console.log(JSON.stringify(eventProps, null, 4));
+  // console.log(JSON.stringify(eventProps, null, 4));
 
   // const snsTopicPayload = {
   //   TopicArn: "TOPIC_ARN",
@@ -78,11 +79,15 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
   // };
 
   try {
-    const response = await Tera.triggerCall(
-      to,
-      eventProps.principal,
-      IDL.encode([IDL.Vec(IDL.Nat8)], [logs[0]?.data])
-    );
+    const to = Principal.fromHex(BigInt(eventProps.principal).toString(16));
+    const response = await Tera.storeMessage(from, to, [
+      // pid
+      BigInt(eventProps.principal),
+      // amount
+      BigInt(eventProps.amount),
+      // ethAddr
+      BigInt(from),
+    ]);
     return response;
 
     // const command = new PublishCommand(snsTopicPayload);
