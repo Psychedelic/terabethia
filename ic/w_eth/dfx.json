@@ -1,11 +1,5 @@
 {
   "canisters": {
-    "token": {
-		  "build": "cargo build --target wasm32-unknown-unknown --package token --release",
-		  "candid": "src/token/token.did",
-		  "wasm": "target/wasm32-unknown-unknown/release/token.wasm",
-		  "type": "custom"
-	  },
     "eth_proxy": {
       "build": "cargo build --target wasm32-unknown-unknown --package eth_proxy --release",
       "candid": "src/eth_proxy/proxy.did",

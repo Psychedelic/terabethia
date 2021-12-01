@@ -9,6 +9,7 @@ use candid::{candid_method, CandidType, Deserialize, Int, Nat};
 use cap_sdk::{handshake, insert, Event, IndefiniteEvent, TypedEvent};
 use cap_std::dip20::cap::DIP20Details;
 use cap_std::dip20::{Operation, TransactionStatus, TxRecord};
+use ic_cdk::print;
 use ic_cdk_macros::*;
 use ic_kit::{ic, Principal};
 use std::collections::HashMap;
@@ -273,6 +274,7 @@ async fn mint(to: Principal, amount: Nat) -> TxReceipt {
     if caller != metadata.owner {
         return Err(TxError::Unauthorized);
     }
+
     let to_balance = balance_of(to);
     let balances = ic::get_mut::<Balances>();
     balances.insert(to, to_balance + amount.clone());
@@ -280,7 +282,7 @@ async fn mint(to: Principal, amount: Nat) -> TxReceipt {
     metadata.history_size += 1;
 
     add_record(
-        None,
+        Some(caller),
         Operation::Mint,
         caller,
         to,
@@ -534,7 +536,7 @@ async fn add_record(
         TypedEvent<DIP20Details>,
     >::into(
         TxRecord {
-            caller,
+            caller: Some(Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap()),
             index: Nat::from(0),
             from,
             to,

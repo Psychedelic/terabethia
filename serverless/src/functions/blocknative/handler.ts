@@ -80,7 +80,7 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
 
   try {
     // const to = Principal.fromHex(BigInt(eventProps.principal).toString(16));
-    const to = Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
+    const to = Principal.fromText("rrkah-fqaaa-aaaaa-aaaaq-cai");
 
     // console.log(BigInt(eventProps.principal).toString(16));
     // 7cfe980af7e2d3aee37ece163134058fe85cac9b61f6b4fa5013216902

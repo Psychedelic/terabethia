@@ -6,8 +6,8 @@ use ic_kit::{ic, macros::*, Principal};
 static mut CONTROLLER: Principal = Principal::anonymous();
 
 // ToDo replace with actual canister Ids
-const TERA_ADDRESS: &str = "r7inp-6aaaa-aaaaa-aaabq-cai";
-const WETH_ADDRESS_IC: &str = "r7inp-6aaaa-aaaaa-aaabq-cai";
+const TERA_ADDRESS: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+const WETH_ADDRESS_IC: &str = "rkp4c-7iaaa-aaaaa-aaaca-cai";
 const WETH_ADDRESS_ETH: &str = "0xdf2b596d8a47adebe2ab2491f52d2b5ec32f80e0";
 
 pub type TxReceipt = Result<Nat, TxError>;
@@ -219,28 +219,5 @@ mod tests {
 
         let (from, payload): (Vec<u8>, Vec<Nat>) =
             decode_args(&args).expect("Message decode failed");
-    }
-
-    fn message_hash_v2() {
-        let from_principal = Principal::from_text("ryjl3-tyaaa-aaaaa-aaaba-cai").unwrap();
-
-        let from = from_principal.to_nat();
-
-        // eth address
-        let to_slice = hex::decode("dF2B596D8A47ADEbE2AB2491f52d2B5Ec32f80e0").unwrap();
-        let to = Nat::from(num_bigint::BigUint::from_bytes_be(&to_slice[..]));
-
-        let payload = [
-            Nat::from_str("3369845255609057416114325799424930494354215184876951323452734594705666")
-                .unwrap(),
-            Nat::from_str("10000000").unwrap(),
-            Nat::from_str("1274071664205284595784225684715431379298228863200").unwrap(),
-        ]
-        .to_vec();
-
-        let msg_hash = calculate_hash(to, from, payload);
-        let msg_hash_expected = "89996b60c79deb4cef291b177aff92126313acce39fc12f2ad5832e692153f94";
-
-        assert_eq!(msg_hash, msg_hash_expected);
     }
 }
