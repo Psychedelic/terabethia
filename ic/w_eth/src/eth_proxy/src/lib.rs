@@ -7,7 +7,7 @@ static mut CONTROLLER: Principal = Principal::anonymous();
 
 // ToDo replace with actual canister Ids
 const TERA_ADDRESS: Principal = Principal::anonymous();
-const WETH_ADDRESS_IC: Principal = Principal::anonymous();
+const WETH_ADDRESS_IC: &str = "r7inp-6aaaa-aaaaa-aaabq-cai";
 const WETH_ADDRESS_ETH: &str = "0xd2f69519458c157a14C5CAf4ed991904870aF834";
 
 pub type TxReceipt = Result<Nat, TxError>;
@@ -82,7 +82,8 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
 #[update]
 #[candid_method(update, rename = "mint")]
 async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> ProxyResponse {
-    let weth_addr = WETH_ADDRESS_IC.to_string();
+    let weth_addr = WETH_ADDRESS_IC;
+    let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
     // Is it feasible to make these inter cansiter calls?
@@ -100,7 +101,7 @@ async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> ProxyResponse {
     // this is redundant on prupose for now
     // expect will panic
     if consume.0 {
-        let mint: (TxReceipt,) = ic::call(WETH_ADDRESS_IC, "mint", (to, amount))
+        let mint: (TxReceipt,) = ic::call(weth_addr_pid, "mint", (to, amount))
             .await
             .expect("minting weth failed!");
 
@@ -117,12 +118,13 @@ async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> ProxyResponse {
 #[update]
 #[candid_method(update, rename = "burn")]
 async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
-    let weth_addr = WETH_ADDRESS_IC.to_string();
+    let weth_addr = WETH_ADDRESS_IC;
     let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
+    let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [Nat::from_str("00").unwrap(), to.clone(), amount.clone()];
 
-    let burn_txn: (TxReceipt,) = ic::call(WETH_ADDRESS_IC, "burn", (amount,))
+    let burn_txn: (TxReceipt,) = ic::call(weth_addr_pid, "burn", (amount,))
         .await
         .expect("burning weth failed!");
 
