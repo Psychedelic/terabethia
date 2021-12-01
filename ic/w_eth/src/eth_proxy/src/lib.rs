@@ -1,11 +1,7 @@
 use std::str::FromStr;
 
 use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{
-    ic::{call, caller},
-    macros::*,
-    Principal
-};
+use ic_kit::{ic, macros::*, Principal};
 
 // ToDo replace with actual canister Ids
 const TERA_ADDRESS: Principal = Principal::anonymous();
@@ -26,9 +22,11 @@ pub enum TxError {
 
 #[derive(Debug, CandidType)]
 pub enum MessageStatus {
+    Succeeded,
     BurnFailed,
     MintFailed,
-    Succeeded,
+    SendMessageFailed,
+    ConsumeMessageFailed,
     MessageHandlerFailed,
 }
 
@@ -55,14 +53,14 @@ pub struct SendMessage {
 #[candid_method(init)]
 fn init() {
     unsafe {
-        CONTROLLER = caller();
+        CONTROLLER = ic::caller();
     }
 }
 
 /// ToDo: Access control
 #[update]
 #[candid_method(update, rename = "handle_message")]
-async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, MessageStatus> {
+async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> Result<usize, MessageStatus> {
     let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
 
     if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
@@ -81,12 +79,12 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, MessageStatus
 /// ToDo: Access control
 #[update]
 #[candid_method(update, rename = "mint")]
-async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<bool, MessageStatus> {
+async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<usize, MessageStatus> {
     let weth_addr = WETH_ADDRESS_IC.to_string();
     let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
     // Is it feasible to make these inter cansiter calls?
-    let consume: (bool,) = call(
+    let consume: (bool,) = ic::call(
         TERA_ADDRESS,
         "consume_message",
         (MintMessage {
@@ -98,51 +96,59 @@ async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<bool, Mes
     .expect("consuming message from L1 failed!");
 
     if consume.0 {
-        let mint: (TxReceipt,) = call(WETH_ADDRESS_IC, "mint", (to, amount))
+        let mint: (TxReceipt,) = ic::call(WETH_ADDRESS_IC, "mint", (to, amount))
             .await
             .expect("minting weth failed!");
-        Ok(mint.0.is_ok())
+
+        match mint {
+            (Ok(txn_id),) => Ok(txn_id),
+            (Err(_),) => Err(MessageStatus::MintFailed),
+        }
     } else {
-        Err(MessageStatus::MintFailed)
+        Err(MessageStatus::ConsumeMessageFailed)
     }
 }
 
 /// ToDo: Access control
 #[update]
 #[candid_method(update, rename = "burn")]
-async fn burn(to: Nat, amount: Nat) -> Result<bool, MessageStatus> {
+async fn burn(to: Nat, amount: Nat) -> Result<usize, MessageStatus> {
     let weth_addr = WETH_ADDRESS_IC.to_string();
     let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
     let payload = [Nat::from_str("00").unwrap(), to.clone(), amount.clone()];
 
-    let burn_txn: (TxReceipt,) = call(WETH_ADDRESS_IC, "burn", (amount,))
+    let burn_txn: (TxReceipt,) = ic::call(WETH_ADDRESS_IC, "burn", (amount,))
         .await
         .expect("burning weth failed!");
 
-    if burn_txn.0.is_ok() {
-        // Is it feasible to make these inter cansiter calls?
-        let send_message: (bool,) = call(
-            TERA_ADDRESS,
-            "send_message",
-            (SendMessage {
-                eth_addr: Nat::from(eth_addr),
-                payload: payload.to_vec(),
-            },),
-        )
-        .await
-        .expect("sending message to L1 failed!");
+    match burn_txn {
+        (Ok(txn_id),) => {
+            let send_message: (bool,) = ic::call(
+                TERA_ADDRESS,
+                "send_message",
+                (SendMessage {
+                    eth_addr: Nat::from(eth_addr),
+                    payload: payload.to_vec(),
+                },),
+            )
+            .await
+            .expect("sending message to L1 failed!");
 
-        Ok(send_message.0)
-    } else {
-        Err(MessageStatus::BurnFailed)
+            if send_message.0 {
+                Ok(txn_id)
+            } else {
+                Err(MessageStatus::BurnFailed)
+            }
+        }
+        (Err(_),) => Err(MessageStatus::SendMessageFailed),
     }
 }
 
 /// guard method for canister controller
 fn only_controller() {
     unsafe {
-        if CONTROLLER != caller() {
+        if CONTROLLER != ic::caller() {
             ic_cdk::trap("caller not controller!");
         }
     }
@@ -151,7 +157,7 @@ fn only_controller() {
 /// guard method for transaction owner
 fn only_owner(owner: Principal) {
     unsafe {
-        if owner != caller() {
+        if owner != ic::caller() {
             ic_cdk::trap("caller not owner!");
         }
     }
