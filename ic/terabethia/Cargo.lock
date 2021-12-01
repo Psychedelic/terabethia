@@ -816,6 +816,7 @@ dependencies = [
  "hex",
  "ic-cdk",
  "ic-cdk-macros",
+ "num-bigint",
  "serde",
  "serde_bytes",
  "sha3",

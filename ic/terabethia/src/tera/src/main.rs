@@ -89,6 +89,16 @@ fn calculate_hash(from: Nat, to: Nat, payload: Vec<Nat>) -> String {
     hex::encode(result.to_vec())
 }
 
+pub trait ToNat {
+    fn to_nat(&self) -> Nat;
+}
+
+impl ToNat for Principal {
+    fn to_nat(&self) -> Nat {
+        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+    }
+}
+
 #[derive(CandidType, Deserialize)]
 pub struct CallResult {
     #[serde(with = "serde_bytes")]
@@ -113,9 +123,7 @@ async fn trigger_call(
         return Err("Attempted to call on self. This is not allowed.".to_string());
     }
 
-    let to_nat =
-        Nat::from(usize::from_str_radix(&hex::encode(&to.clone().as_slice()), 16).expect("error"));
-
+    let to_nat = to.to_nat();
     let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
 
     let message_exists = STATE.with(|s| {
@@ -158,10 +166,7 @@ async fn store_message(
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let to_nat =
-        Nat::from(usize::from_str_radix(&hex::encode(&to.clone().as_slice()), 16).expect("error"));
-
-    let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
+    let msg_hash = calculate_hash(eth_addr.clone(), to.to_nat(), payload.clone());
 
     STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
@@ -178,11 +183,7 @@ async fn store_message(
 fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
 
-    let to = Nat::from(
-        usize::from_str_radix(&hex::encode(&caller.clone().as_slice()), 16).expect("error"),
-    );
-
-    let msg_hash = calculate_hash(eth_addr, to, payload.clone());
+    let msg_hash = calculate_hash(eth_addr, caller.to_nat(), payload.clone());
 
     let res = STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
@@ -220,12 +221,7 @@ fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
 #[candid_method(update, rename = "send_message")]
 fn send(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::id();
-
-    let from = Nat::from(
-        usize::from_str_radix(&hex::encode(&caller.clone().as_slice()), 16).expect("error"),
-    );
-
-    let msg_hash = calculate_hash(from, eth_addr, payload.clone());
+    let msg_hash = calculate_hash(caller.to_nat(), eth_addr, payload.clone());
 
     store_outgoing_message(msg_hash, MESSAGE_PRODUCED)
 }
@@ -295,17 +291,14 @@ fn main() {
 mod tests {
     use std::str::FromStr;
 
-    use crate::calculate_hash;
+    use crate::{calculate_hash, ToNat};
     use candid::{Nat, Principal};
 
     #[test]
     fn message_hash() {
         let from_principal = Principal::from_text("rdbii-uiaaa-aaaab-qadva-cai").unwrap();
 
-        let from = Nat::from(
-            usize::from_str_radix(&hex::encode(&from_principal.clone().as_slice()), 16)
-                .expect("error"),
-        );
+        let from = from_principal.to_nat();
 
         // eth address
         let to_slice = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
