@@ -1,12 +1,13 @@
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 
-use candid::{encode_args, Nat, candid_method};
+use candid::{candid_method, encode_args, Nat};
 use ethabi::encode;
 use ethabi::ethereum_types::U256;
 use ic_cdk::export::candid::{CandidType, Principal};
 // use ic_cdk::export::Principal;
-use ic_cdk::{api, caller};
-use ic_cdk_macros::update;
+use ic_cdk::{api, caller, storage, trap};
+use ic_cdk_macros::{post_upgrade, pre_upgrade, update};
 use serde::Deserialize;
 use sha3::{Digest, Keccak256};
 use std::collections::HashMap; // 1.2.7
@@ -18,7 +19,7 @@ thread_local! {
     static STATE: TerabetiaState = TerabetiaState::default();
 }
 
-#[derive(Default)]
+#[derive(CandidType, Deserialize, Default)]
 pub struct TerabetiaState {
     // incoming messages from L1
     pub messages: RefCell<HashMap<String, u32>>,
@@ -26,6 +27,41 @@ pub struct TerabetiaState {
     // outgoing messages
     pub messages_out: RefCell<HashMap<u64, (String, u8)>>,
     pub message_index: RefCell<u64>,
+}
+
+#[derive(CandidType, Deserialize, Default)]
+pub struct StableTerabetiaState {
+    pub messages: HashMap<String, u32>,
+    pub messages_out: HashMap<u64, (String, u8)>,
+    pub message_index: u64,
+}
+
+impl TerabetiaState {
+    pub fn take_all(&self) -> StableTerabetiaState {
+        STATE.with(|tera| StableTerabetiaState {
+            messages: tera.messages.take(),
+            messages_out: tera.messages_out.take(),
+            message_index: tera.message_index.take(),
+        })
+    }
+
+    pub fn clear_all(&self) {
+        STATE.with(|tera| {
+            tera.messages.borrow_mut().clear();
+            tera.messages_out.borrow_mut().clear();
+
+            // ToDo unsfe set this back to 0
+            // self.message_index.borrow_mut();
+        })
+    }
+
+    pub fn replace_all(&self, stable_tera_state: StableTerabetiaState) {
+        STATE.with(|tera| {
+            tera.messages.replace(stable_tera_state.messages);
+            tera.messages_out.replace(stable_tera_state.messages_out);
+            tera.message_index.replace(stable_tera_state.message_index);
+        })
+    }
 }
 
 fn calculate_hash(from: U256, to: U256, payload: Vec<Nat>) -> String {
@@ -204,6 +240,44 @@ fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
 
         return Ok(true);
     })
+}
+
+// Approach #1
+// ToDo {Botch}
+// #[pre_upgrade]
+// fn pre_upgrade() {
+//     let stable_tera_state = STATE.with(|state| candid::encode_one(&state.borrow()).unwrap());
+
+//     storage::stable_save((stable_tera_state,)).expect("failed to save tera state");
+// }
+
+// #[post_upgrade]
+// fn post_upgrade() {
+//     let (stable_tera_state,): (Vec<u8>,) = storage::stable_restore().expect("failed to restore stable tera state");
+
+//     STATE.with(|state| {
+//         let data = candid::decode_one(&stable_tera_state).expect("failed to deserialize tera state");
+
+//         *state.borrow_mut() = data
+//     });
+// }
+
+// Approach #2
+#[pre_upgrade]
+fn pre_upgrade() {
+    let stable_tera_state = STATE.with(|s| s.take_all());
+
+    storage::stable_save((stable_tera_state,)).expect("failed to save tera state");
+}
+
+#[post_upgrade]
+fn post_upgrade() {
+    STATE.with(|s| s.clear_all());
+
+    let (stable_tera_state,): (StableTerabetiaState,) =
+        storage::stable_restore().expect("failed to restore stable tera state");
+
+    STATE.with(|s| s.replace_all(stable_tera_state));
 }
 
 #[cfg(any(target_arch = "wasm32", test))]

@@ -75,7 +75,7 @@ pub enum TxError {
     Unauthorized,
     Other,
 }
-pub type TxReceipt = Result<usize, TxError>;
+pub type TxReceipt = Result<Nat, TxError>;
 
 #[init]
 #[candid_method(init)]
@@ -490,23 +490,12 @@ fn main() {
 
 #[pre_upgrade]
 fn pre_upgrade() {
-    ic::stable_store((
-        ic::get::<Metadata>().clone(),
-        ic::get::<Balances>(),
-        ic::get::<Allowances>(),
-        tx_log(),
-    ))
-    .unwrap();
+    ic::stable_store((ic::get::<Metadata>().clone(),ic::get::<Balances>(), ic::get::<Allowances>(), tx_log())).unwrap();
 }
 
 #[post_upgrade]
 fn post_upgrade() {
-    let (metadata_stored, balances_stored, allowances_stored, tx_log_stored): (
-        Metadata,
-        Balances,
-        Allowances,
-        TxLog,
-    ) = ic::stable_restore().unwrap();
+    let (metadata_stored, balances_stored, allowances_stored, tx_log_stored): (Metadata,Balances,Allowances,TxLog) = ic::stable_restore().unwrap();
     let metadata = ic::get_mut::<Metadata>();
     *metadata = metadata_stored;
 
@@ -559,7 +548,7 @@ pub async fn insert_into_cap(ie: IndefiniteEvent) -> TxReceipt {
 async fn insert_into_cap_priv(ie: IndefiniteEvent) -> TxReceipt {
     let insert_res = insert(ie.clone())
         .await
-        .map(|tx_id| tx_id as usize)
+        .map(|tx_id| Nat::from(tx_id))
         .map_err(|_| TxError::Other);
 
     if insert_res.is_err() {

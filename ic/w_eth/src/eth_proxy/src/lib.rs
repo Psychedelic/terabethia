@@ -3,14 +3,16 @@ use std::str::FromStr;
 use candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::{ic, macros::*, Principal};
 
+static mut CONTROLLER: Principal = Principal::anonymous();
+
 // ToDo replace with actual canister Ids
 const TERA_ADDRESS: Principal = Principal::anonymous();
 const WETH_ADDRESS_IC: Principal = Principal::anonymous();
 const WETH_ADDRESS_ETH: &str = "0xd2f69519458c157a14C5CAf4ed991904870aF834";
 
-static mut CONTROLLER: Principal = Principal::anonymous();
+pub type TxReceipt = Result<Nat, TxError>;
 
-pub type TxReceipt = Result<usize, TxError>;
+pub type ProxyResponse = Result<Nat, MessageStatus>;
 
 #[derive(Deserialize, CandidType, Debug, PartialEq)]
 pub enum TxError {
@@ -60,7 +62,7 @@ fn init() {
 /// ToDo: Access control
 #[update]
 #[candid_method(update, rename = "handle_message")]
-async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> Result<usize, MessageStatus> {
+async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
     let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
 
     if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
@@ -79,7 +81,7 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> Result<usize, MessageStatu
 /// ToDo: Access control
 #[update]
 #[candid_method(update, rename = "mint")]
-async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<usize, MessageStatus> {
+async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> ProxyResponse {
     let weth_addr = WETH_ADDRESS_IC.to_string();
     let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
@@ -95,6 +97,8 @@ async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<usize, Me
     .await
     .expect("consuming message from L1 failed!");
 
+    // this is redundant on prupose for now
+    // expect will panic
     if consume.0 {
         let mint: (TxReceipt,) = ic::call(WETH_ADDRESS_IC, "mint", (to, amount))
             .await
@@ -112,7 +116,7 @@ async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> Result<usize, Me
 /// ToDo: Access control
 #[update]
 #[candid_method(update, rename = "burn")]
-async fn burn(to: Nat, amount: Nat) -> Result<usize, MessageStatus> {
+async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
     let weth_addr = WETH_ADDRESS_IC.to_string();
     let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
 
@@ -135,6 +139,8 @@ async fn burn(to: Nat, amount: Nat) -> Result<usize, MessageStatus> {
             .await
             .expect("sending message to L1 failed!");
 
+            // this is redundant on prupose for now
+            // expect will panic
             if send_message.0 {
                 Ok(txn_id)
             } else {
