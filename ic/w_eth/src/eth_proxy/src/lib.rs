@@ -6,9 +6,9 @@ use ic_kit::{ic, macros::*, Principal};
 static mut CONTROLLER: Principal = Principal::anonymous();
 
 // ToDo replace with actual canister Ids
-const TERA_ADDRESS: Principal = Principal::anonymous();
+const TERA_ADDRESS: &str = "r7inp-6aaaa-aaaaa-aaabq-cai";
 const WETH_ADDRESS_IC: &str = "r7inp-6aaaa-aaaaa-aaabq-cai";
-const WETH_ADDRESS_ETH: &str = "0xd2f69519458c157a14C5CAf4ed991904870aF834";
+const WETH_ADDRESS_ETH: &str = "0xdf2b596d8a47adebe2ab2491f52d2b5ec32f80e0";
 
 pub type TxReceipt = Result<Nat, TxError>;
 
@@ -33,13 +33,13 @@ pub enum MessageStatus {
 }
 
 #[derive(Deserialize, CandidType)]
-pub struct MintMessage {
+pub struct ConsumeMessageParam {
     pub eth_addr: Nat,
     pub payload: Vec<Nat>,
 }
 
 #[derive(Deserialize, CandidType)]
-pub struct SendMessage {
+pub struct SendMessageParam {
     pub eth_addr: Nat,
     pub payload: Vec<Nat>,
 }
@@ -51,6 +51,16 @@ pub struct SendMessage {
 // #[import(canister = "weth")]
 // struct WETH;
 
+pub trait ToNat {
+    fn to_nat(&self) -> Nat;
+}
+
+impl ToNat for Principal {
+    fn to_nat(&self) -> Nat {
+        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+    }
+}
+
 #[init]
 #[candid_method(init)]
 fn init() {
@@ -60,8 +70,8 @@ fn init() {
 }
 
 /// ToDo: Access control
-#[update]
-#[candid_method(update, rename = "handle_message")]
+#[update(name = "handle_message")]
+// #[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
     let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
 
@@ -69,38 +79,35 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
         panic!("Eth Contract Address is inccorrect!");
     }
 
-    let to = hex::encode(&payload[0].0.to_bytes_be());
-    let amount = Nat::from(payload[1].0.clone());
+    // ToDo: more validation here
 
-    match Principal::from_text(&to) {
-        Ok(to) => mint(to, amount, payload).await,
-        Err(_) => Err(MessageStatus::MessageHandlerFailed),
-    }
+    mint(payload).await
 }
 
 /// ToDo: Access control
-#[update]
+#[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
-async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> ProxyResponse {
-    let weth_addr = WETH_ADDRESS_IC;
-    let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-    let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
-
+async fn mint(payload: Vec<Nat>) -> ProxyResponse {
+    let eth_addr_slice = hex::decode(WETH_ADDRESS_ETH.trim_start_matches("0x")).unwrap();
+    let eth_addr = Nat::from(num_bigint::BigUint::from_bytes_be(&eth_addr_slice[..]));
+ 
     // Is it feasible to make these inter cansiter calls?
-    let consume: (bool,) = ic::call(
-        TERA_ADDRESS,
+    let consume: (Result<bool, String>,) = ic::call(
+        Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
-        (MintMessage {
-            eth_addr: Nat::from(eth_addr),
-            payload,
-        },),
+        (eth_addr, &payload),
     )
     .await
     .expect("consuming message from L1 failed!");
-
+    
     // this is redundant on prupose for now
     // expect will panic
-    if consume.0 {
+    if consume.0.unwrap() {
+        let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
+
+        let amount = Nat::from(payload[1].0.clone());
+        let to = Principal::from_slice(&payload[0].0.to_bytes_be().as_slice());
+
         let mint: (TxReceipt,) = ic::call(weth_addr_pid, "mint", (to, amount))
             .await
             .expect("minting weth failed!");
@@ -115,14 +122,12 @@ async fn mint(to: Principal, amount: Nat, payload: Vec<Nat>) -> ProxyResponse {
 }
 
 /// ToDo: Access control
-#[update]
+#[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
-    let weth_addr = WETH_ADDRESS_IC;
-    let eth_addr = usize::from_str_radix(weth_addr.trim_start_matches("0x"), 16).expect("error");
-
     let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [Nat::from_str("00").unwrap(), to.clone(), amount.clone()];
+    let eth_addr = to.clone();
 
     let burn_txn: (TxReceipt,) = ic::call(weth_addr_pid, "burn", (amount,))
         .await
@@ -131,12 +136,9 @@ async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
     match burn_txn {
         (Ok(txn_id),) => {
             let send_message: (bool,) = ic::call(
-                TERA_ADDRESS,
+                Principal::from_str(TERA_ADDRESS).unwrap(),
                 "send_message",
-                (SendMessage {
-                    eth_addr: Nat::from(eth_addr),
-                    payload: payload.to_vec(),
-                },),
+                (&eth_addr, &payload, ),
             )
             .await
             .expect("sending message to L1 failed!");

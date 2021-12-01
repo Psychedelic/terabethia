@@ -141,9 +141,6 @@ async fn trigger_call(
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    if api::id() == caller() {
-        return Err("Attempted to call on self. This is not allowed.".to_string());
-    }
 
     let to_nat = to.to_nat();
     let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
@@ -165,7 +162,7 @@ async fn trigger_call(
 
     let args_raw = encode_args((&eth_addr, &payload)).unwrap();
 
-    match api::call::call_raw(to, "handler", args_raw, 0).await {
+    match api::call::call_raw(to, "handle_message", args_raw, 0).await {
         Ok(x) => Ok(CallResult { r#return: x }),
         Err((code, msg)) => Err(format!(
             "An error happened during the call: {}: {}",
@@ -203,7 +200,7 @@ async fn store_message(
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
 fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
-    let caller = api::id();
+    let caller = api::caller();
 
     let msg_hash = calculate_hash(eth_addr, caller.to_nat(), payload.clone());
 
