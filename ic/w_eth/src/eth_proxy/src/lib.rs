@@ -90,7 +90,7 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
 async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     let eth_addr_slice = hex::decode(WETH_ADDRESS_ETH.trim_start_matches("0x")).unwrap();
     let eth_addr = Nat::from(num_bigint::BigUint::from_bytes_be(&eth_addr_slice[..]));
- 
+
     // Is it feasible to make these inter cansiter calls?
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
@@ -99,7 +99,7 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     )
     .await
     .expect("consuming message from L1 failed!");
-    
+
     // this is redundant on prupose for now
     // expect will panic
     if consume.0.unwrap() {
@@ -126,7 +126,7 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
 #[candid_method(update, rename = "burn")]
 async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
     let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-    let payload = [Nat::from_str("00").unwrap(), to.clone(), amount.clone()];
+    let payload = [to.clone(), amount.clone()];
     let eth_addr = to.clone();
 
     let burn_txn: (TxReceipt,) = ic::call(weth_addr_pid, "burn", (amount,))
@@ -138,7 +138,7 @@ async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
             let send_message: (bool,) = ic::call(
                 Principal::from_str(TERA_ADDRESS).unwrap(),
                 "send_message",
-                (&eth_addr, &payload, ),
+                (&eth_addr, &payload),
             )
             .await
             .expect("sending message to L1 failed!");
