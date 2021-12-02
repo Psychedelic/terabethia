@@ -141,7 +141,6 @@ async fn trigger_call(
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-
     let to_nat = to.to_nat();
     let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
 

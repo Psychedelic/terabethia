@@ -79,21 +79,8 @@ export const blockNativeEventHook: APIGatewayProxyHandler = async (
   // };
 
   try {
-    // const to = Principal.fromHex(BigInt(eventProps.principal).toString(16));
-    const to = Principal.fromText("rrkah-fqaaa-aaaaa-aaaaq-cai");
-
-    // console.log(BigInt(eventProps.principal).toString(16));
-    // 7cfe980af7e2d3aee37ece163134058fe85cac9b61f6b4fa5013216902
-
-    console.log(from, to.toString(), [
-      // pid
-      BigInt(eventProps.principal),
-      // amount
-      BigInt(eventProps.amount),
-      // ethAddr
-      BigInt(from),
-    ]);
-
+    // Eth Proxy address
+    const to = Principal.fromText("tcy4r-qaaaa-aaaab-qadyq-cai");
 
     const response = await Tera.storeMessage(from, to, [
       // pid

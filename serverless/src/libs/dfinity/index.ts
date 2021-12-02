@@ -62,7 +62,8 @@ export const Tera = {
   ): Promise<Result_1> => {
     const teraCanister = createActor<_TERA_SERVICE>({
       host: Hosts.local,
-      canisterId: "ryjl3-tyaaa-aaaaa-aaaba-cai",
+      // tera ic bridge
+      canisterId: "s5qpg-tyaaa-aaaab-qad4a-cai",
       idlFactory: TERA_FACTORY,
     });
     return await teraCanister.store_message(BigInt(from), to, payload);

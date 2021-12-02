@@ -70,7 +70,7 @@ fn init() {
 
 /// ToDo: Access control
 #[update(name = "handle_message")]
-// #[candid_method(update, rename = "handle_message")]
+#[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
     let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
 
@@ -125,7 +125,7 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
 #[candid_method(update, rename = "burn")]
 async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
     let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-    let payload = [Nat::from_str("00").unwrap(), to.clone(), amount.clone()];
+    let payload = [to.clone(), amount.clone()];
     let eth_addr = to.clone();
 
     let burn_txn: (TxReceipt,) = ic::call(weth_addr_pid, "burn", (amount,))
