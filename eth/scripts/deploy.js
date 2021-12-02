@@ -31,6 +31,9 @@ async function main() {
     const txOperator = await tera.registerOperator('0x5B21e6B8432432B4f4E2C86F87eb88c78986E882');
     await txOperator.wait();
 
+    console.log('Execute these commands to verify contracts on Etherscan:');
+    console.log(`npx hardhat verify --network goerli ${impl.address}`);
+    console.log(`npx hardhat verify --network goerli ${ethProxy.address} ${tera.address}`);
 }
 
 main()
