@@ -5,8 +5,7 @@ use ic_kit::{ic, macros::*, Principal};
 
 static mut CONTROLLER: Principal = Principal::anonymous();
 
-// ToDo replace with actual canister Ids
-const TERA_ADDRESS: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
 const WETH_ADDRESS_IC: &str = "tq6li-4qaaa-aaaab-qad3q-cai";
 const WETH_ADDRESS_ETH: &str = "0xdf2b596d8a47adebe2ab2491f52d2b5ec32f80e0";
 
