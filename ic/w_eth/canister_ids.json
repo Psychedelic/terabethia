@@ -1,5 +1,8 @@
 {
   "eth_proxy": {
     "ic": "tcy4r-qaaaa-aaaab-qadyq-cai"
+  },
+  "token": {
+    "ic": "tq6li-4qaaa-aaaab-qad3q-cai"
   }
 }

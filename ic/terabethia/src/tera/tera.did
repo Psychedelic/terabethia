@@ -2,16 +2,9 @@ type CallResult = record { return : vec nat8 };
 type Result = variant { Ok : bool; Err : text };
 type Result_1 = variant { Ok : CallResult; Err : text };
 service : {
-<<<<<<< master
-  consume_message : (nat, vec nat) -> (Result);
-  send_message : (nat, vec nat) -> (Result);
-  store_message : (nat, principal, vec nat) -> (Result_1);
-  trigger_call : (nat, principal, vec nat) -> (Result_1);
-=======
   authorize : (principal) -> ();
   consume_message : (principal, vec nat) -> (Result);
   send_message : (principal, vec nat) -> (Result);
   store_message : (principal, principal, vec nat) -> (Result_1);
   trigger_call : (principal, principal, vec nat) -> (Result_1);
->>>>>>> local
 }

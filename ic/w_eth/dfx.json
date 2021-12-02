@@ -5,7 +5,13 @@
       "candid": "src/eth_proxy/proxy.did",
       "wasm": "target/wasm32-unknown-unknown/release/eth_proxy-opt.wasm",
       "type": "custom"
-    }
+    },
+    "token": {
+		  "build": "bash build.sh token",
+		  "candid": "src/token/token.did",
+		  "wasm": "target/wasm32-unknown-unknown/release/token-opt.wasm",
+		  "type": "custom"
+	  }
   },
   "defaults": {
     "build": {

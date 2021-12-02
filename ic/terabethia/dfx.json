@@ -1,9 +1,9 @@
 {
   "canisters": {
     "tera": {
-      "build": "cargo build --target wasm32-unknown-unknown --package tera --release",
+      "build": "bash build.sh tera",
       "candid": "src/tera/tera.did",
-      "wasm": "target/wasm32-unknown-unknown/release/tera.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/tera-opt.wasm",
       "type": "custom"
     }
   },
@@ -13,7 +13,7 @@
       "packtool": ""
     }
   },
-  "dfx": "0.8.0",
+  "dfx": "0.8.1",
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",

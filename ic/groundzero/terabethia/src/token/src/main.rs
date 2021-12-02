@@ -9,7 +9,6 @@ use candid::{candid_method, CandidType, Deserialize, Int, Nat};
 use cap_sdk::{handshake, insert, Event, IndefiniteEvent, TypedEvent};
 use cap_std::dip20::cap::DIP20Details;
 use cap_std::dip20::{Operation, TransactionStatus, TxRecord};
-use ic_cdk::print;
 use ic_cdk_macros::*;
 use ic_kit::{ic, Principal};
 use std::collections::HashMap;
@@ -106,7 +105,7 @@ fn init(
     let balances = ic::get_mut::<Balances>();
     balances.insert(owner, total_supply.clone());
     let _ = add_record(
-        None,
+        owner,
         Operation::Mint,
         owner,
         owner,
@@ -153,7 +152,7 @@ async fn transfer(to: Principal, value: Nat) -> TxReceipt {
     metadata.history_size += 1;
 
     add_record(
-        None,
+        from,
         Operation::Transfer,
         from,
         to,
@@ -204,7 +203,7 @@ async fn transfer_from(from: Principal, to: Principal, value: Nat) -> TxReceipt 
     metadata.history_size += 1;
 
     add_record(
-        Some(owner),
+        owner,
         Operation::TransferFrom,
         from,
         to,
@@ -254,7 +253,7 @@ async fn approve(spender: Principal, value: Nat) -> TxReceipt {
     metadata.history_size += 1;
 
     add_record(
-        None,
+        owner,
         Operation::Approve,
         owner,
         spender,
@@ -274,7 +273,6 @@ async fn mint(to: Principal, amount: Nat) -> TxReceipt {
     if caller != metadata.owner {
         return Err(TxError::Unauthorized);
     }
-
     let to_balance = balance_of(to);
     let balances = ic::get_mut::<Balances>();
     balances.insert(to, to_balance + amount.clone());
@@ -282,7 +280,7 @@ async fn mint(to: Principal, amount: Nat) -> TxReceipt {
     metadata.history_size += 1;
 
     add_record(
-        Some(caller),
+        caller,
         Operation::Mint,
         caller,
         to,
@@ -309,7 +307,7 @@ async fn burn(amount: Nat) -> TxReceipt {
     metadata.history_size += 1;
 
     add_record(
-        None,
+        caller,
         Operation::Burn,
         caller,
         caller,
@@ -523,7 +521,7 @@ fn post_upgrade() {
 }
 
 async fn add_record(
-    caller: Option<Principal>,
+    caller: Principal,
     op: Operation,
     from: Principal,
     to: Principal,
@@ -536,7 +534,7 @@ async fn add_record(
         TypedEvent<DIP20Details>,
     >::into(
         TxRecord {
-            caller: Some(Principal::from_text("rkp4c-7iaaa-aaaaa-aaaca-cai").unwrap()),
+            caller: Some(caller),
             index: Nat::from(0),
             from,
             to,

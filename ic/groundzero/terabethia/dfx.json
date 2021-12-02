@@ -3,19 +3,19 @@
     "tera": {
       "build": "bash build.sh tera",
       "candid": "src/tera/tera.did",
-      "wasm": "target/wasm32-unknown-unknown/release/tera.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/tera-opt.wasm",
       "type": "custom"
     },
     "eth_proxy": {
       "build": "bash build.sh eth_proxy",
       "candid": "src/eth_proxy/proxy.did",
-      "wasm": "target/wasm32-unknown-unknown/release/eth_proxy.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/eth_proxy-opt.wasm",
       "type": "custom"
     },
     "token": {
-		  "build": "cargo build --target wasm32-unknown-unknown --package token --release",
+		  "build": "bash build.sh token",
 		  "candid": "src/token/token.did",
-		  "wasm": "target/wasm32-unknown-unknown/release/token.wasm",
+		  "wasm": "target/wasm32-unknown-unknown/release/token-opt.wasm",
 		  "type": "custom"
 	  }
   },

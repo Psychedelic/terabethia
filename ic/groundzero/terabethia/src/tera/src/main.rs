@@ -3,8 +3,8 @@ use std::cell::RefCell;
 use candid::{candid_method, encode_args, Nat};
 use ic_cdk::export::candid::{CandidType, Principal};
 // use ic_cdk::export::Principal;
-use ic_cdk::{api, caller, storage, print};
-use ic_cdk_macros::{post_upgrade, pre_upgrade, update};
+use ic_cdk::{api, caller, storage};
+use ic_cdk_macros::{init, post_upgrade, pre_upgrade, update};
 use serde::Deserialize;
 use sha3::{Digest, Keccak256};
 use std::collections::HashMap; // 1.2.7
@@ -24,6 +24,8 @@ pub struct TerabetiaState {
     // outgoing messages
     pub messages_out: RefCell<HashMap<u64, (String, u8)>>,
     pub message_index: RefCell<u64>,
+
+    pub authorized: RefCell<Vec<Principal>>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
@@ -31,6 +33,7 @@ pub struct StableTerabetiaState {
     pub messages: HashMap<String, u32>,
     pub messages_out: HashMap<u64, (String, u8)>,
     pub message_index: u64,
+    pub authorized: Vec<Principal>,
 }
 
 impl TerabetiaState {
@@ -39,6 +42,7 @@ impl TerabetiaState {
             messages: tera.messages.take(),
             messages_out: tera.messages_out.take(),
             message_index: tera.message_index.take(),
+            authorized: tera.authorized.take(),
         })
     }
 
@@ -46,6 +50,7 @@ impl TerabetiaState {
         STATE.with(|tera| {
             tera.messages.borrow_mut().clear();
             tera.messages_out.borrow_mut().clear();
+            tera.authorized.borrow_mut().clear();
 
             // ToDo unsfe set this back to 0
             // self.message_index.borrow_mut();
@@ -57,6 +62,7 @@ impl TerabetiaState {
             tera.messages.replace(stable_tera_state.messages);
             tera.messages_out.replace(stable_tera_state.messages_out);
             tera.message_index.replace(stable_tera_state.message_index);
+            tera.authorized.replace(stable_tera_state.authorized);
         })
     }
 }
@@ -89,6 +95,17 @@ fn calculate_hash(from: Nat, to: Nat, payload: Vec<Nat>) -> String {
     hex::encode(result.to_vec())
 }
 
+// guard func
+fn is_authorized() -> Result<(), String> {
+    STATE.with(|s| {
+        s.authorized
+            .borrow()
+            .contains(&caller())
+            .then(|| ())
+            .ok_or("Caller is not authorized".to_string())
+    })
+}
+
 pub trait ToNat {
     fn to_nat(&self) -> Nat;
 }
@@ -105,6 +122,11 @@ pub struct CallResult {
     r#return: Vec<u8>,
 }
 
+#[init]
+fn init() {
+    STATE.with(|s| s.authorized.borrow_mut().push(caller()));
+}
+
 /**
 * This method is called by AWS Lambda. Purpose of this method is to
 * trigger generic handler method which should be implemented by the "to" canister.
@@ -112,7 +134,7 @@ pub struct CallResult {
 * @todo: add controller/operator guard
 
 * */
-#[update(name = "trigger_call")]
+#[update(name = "trigger_call", guard = "is_authorized")]
 #[candid_method(update, rename = "trigger_call")]
 async fn trigger_call(
     eth_addr: Nat,
@@ -156,7 +178,7 @@ async fn trigger_call(
  * @todo: once Eth integration is available on the IC, we should not store messages here.
  * Instead we'll check state against Eth contract directly.
  * */
-#[update(name = "store_message")]
+#[update(name = "store_message", guard = "is_authorized")]
 #[candid_method(update, rename = "store_message")]
 async fn store_message(
     eth_addr: Nat,
@@ -234,6 +256,18 @@ fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
         map.insert(*index, msg);
 
         return Ok(true);
+    })
+}
+
+#[update(name = "authorize")]
+#[candid_method(update)]
+fn authorize(other: Principal) {
+    let caller = caller();
+    STATE.with(|s| {
+        let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
+        if caller_autorized {
+            s.authorized.borrow_mut().push(other);
+        }
     })
 }
 
