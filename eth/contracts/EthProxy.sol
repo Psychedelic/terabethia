@@ -7,10 +7,8 @@ contract EthProxy {
     // The StarkNet core contract.
     IStarknetMessaging starknetCore;
 
-    uint256 constant MESSAGE_WITHDRAW = 0;
-
     // The selector of the "deposit" l1_handler.
-    uint256 constant CANISTER_ADDRESS = 0x00000000003000ea0101;
+    uint256 constant CANISTER_ADDRESS = 0x00000000003000F10101;
 
     /**
       Initializes the contract state.
@@ -21,14 +19,13 @@ contract EthProxy {
 
     function withdraw(uint256 amount) external {
         // Construct the withdrawal message's payload.
-        uint256[] memory payload = new uint256[](3);
-        payload[0] = MESSAGE_WITHDRAW;
-        payload[1] = uint256(uint160(msg.sender));
-        payload[2] = amount;
+        uint256[] memory payload = new uint256[](2);
+        payload[0] = uint256(uint160(msg.sender));
+        payload[1] = amount;
 
-        // Consume the message from the StarkNet core contract.
+        // Consume the message from the IC
         // This will revert the (Ethereum) transaction if the message does not exist.
-        starknetCore.consumeMessageFromL2(CANISTER_ADDRESS, payload);
+        starknetCore.consumeMessage(CANISTER_ADDRESS, payload);
 
         // withdraw eth
         require(
@@ -62,7 +59,7 @@ contract EthProxy {
         payload[0] = user;
         payload[1] = deposit_amount;
 
-        // Send the message to the StarkNet core contract.
-        starknetCore.sendMessageToL2(CANISTER_ADDRESS, payload);
+        // Send the message to the IC
+        starknetCore.sendMessage(CANISTER_ADDRESS, payload);
     }
 }

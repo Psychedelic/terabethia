@@ -49,7 +49,7 @@ interface IStarknetMessaging {
 
       Returns the hash of the message.
     */
-    function sendMessageToL2(uint256 to_address, uint256[] calldata payload)
+    function sendMessage(uint256 to_address, uint256[] calldata payload)
         external
         returns (bytes32);
 
@@ -58,8 +58,7 @@ interface IStarknetMessaging {
 
       Returns the hash of the message.
     */
-    function consumeMessageFromL2(
-        uint256 fromAddress,
-        uint256[] calldata payload
-    ) external returns (bytes32);
+    function consumeMessage(uint256 fromAddress, uint256[] calldata payload)
+        external
+        returns (bytes32);
 }

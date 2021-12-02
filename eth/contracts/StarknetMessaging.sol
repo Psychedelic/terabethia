@@ -15,8 +15,6 @@
 */
 pragma solidity ^0.6.12;
 
-import "hardhat/console.sol";
-
 import "./IStarknetMessaging.sol";
 import "./NamedStorage.sol";
 
@@ -61,7 +59,7 @@ contract StarknetMessaging is IStarknetMessaging {
     /**
       Sends a message to an L2 contract.
     */
-    function sendMessageToL2(uint256 to_address, uint256[] calldata payload)
+    function sendMessage(uint256 to_address, uint256[] calldata payload)
         external
         override
         returns (bytes32)
@@ -70,7 +68,7 @@ contract StarknetMessaging is IStarknetMessaging {
         // Note that the selector (a single integer) is prepended to the payload.
         bytes32 msgHash = keccak256(
             abi.encodePacked(
-                uint256(msg.sender),
+                uint256(uint160(msg.sender)),
                 to_address,
                 uint256(payload.length),
                 payload
@@ -86,14 +84,15 @@ contract StarknetMessaging is IStarknetMessaging {
 
       Returns the hash of the message.
     */
-    function consumeMessageFromL2(
-        uint256 from_address,
-        uint256[] calldata payload
-    ) external override returns (bytes32) {
+    function consumeMessage(uint256 from_address, uint256[] calldata payload)
+        external
+        override
+        returns (bytes32)
+    {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 from_address,
-                uint256(msg.sender),
+                uint256(uint160(msg.sender)),
                 uint256(payload.length),
                 payload
             )

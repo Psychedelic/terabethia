@@ -62,7 +62,7 @@ describe("Terabethia", function () {
 
         // reconstruct the withdraw message hash
         const withdrawPayload = [
-            '0x0000000000000000000000000000000000000000000000000000000000000000',
+            // '0x0000000000000000000000000000000000000000000000000000000000000000',
             numStringToBytes32(Buffer.from('fd82d7ababc1461798deb5a5d9812603fdd650cc', 'hex')),
             numStringToBytes32(ethValue2.toString()), // should be 0x000000000000000000000000000000000000000000000000016345785d8a0000
         ];

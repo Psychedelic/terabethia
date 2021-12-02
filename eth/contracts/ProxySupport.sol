@@ -16,8 +16,6 @@
 // SPDX-License-Identifier: Apache-2.0.
 pragma solidity ^0.6.12;
 
-import "hardhat/console.sol";
-
 import "./Governance.sol";
 import "./Common.sol";
 import "./BlockDirectCall.sol";
@@ -53,8 +51,6 @@ abstract contract ProxySupport is ContractInitializer {
          When calling on an initialized contract (no EIC scenario), initData.length must be 0.
     */
     function initialize(bytes calldata data) external {
-        console.log("initialization", data.length);
-
         if (isInitialized()) {
             require(data.length == 0, "UNEXPECTED_INIT_DATA");
         } else {

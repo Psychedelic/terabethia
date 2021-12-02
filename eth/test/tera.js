@@ -84,7 +84,7 @@ describe("Terabethia", function () {
     // 5oynr-yl472-mav57-c2oxo-g7woc-yytib-mp5bo-kzg3b-622pu-uatef-uqe
 
     // principal id hex form
-    const canisterId = ethers.utils.hexZeroPad('0x00000000003000ea0101', 32);
+    const canisterId = '0x00000000003000ea0101';
     const principalId = '0x7cfe980af7e2d3aee37ece163134058fe85cac9b61f6b4fa5013216902';
 
     // deposit validation
@@ -112,7 +112,7 @@ describe("Terabethia", function () {
 
     // reconstruct the withdraw message hash
     const withdrawPayload = [
-      '0x00',
+      // '0x00',
       '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
       ethValue2.toString(), // should be 0x000000000000000000000000000000000000000000000000016345785d8a0000
     ];
@@ -136,8 +136,7 @@ describe("Terabethia", function () {
       { t: 'uint256', v: withdrawPayload }
     );
 
-    // 0xefb80e98c9f7ac2ad55b3e4f5bb2d3a15fe8c187925eba2ffc721f74d1982c52
-    expect(withdrawMessageHash).equals('0xc6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3');
+    expect(withdrawMessageHash).equals('0x33ccbcf525a78f667fbac0ffe776d6e1dd28e23bef3c33563b43a45d6b50c1d4');
 
     const updateStateTx = await tera.updateState(2, [
       // @todo do we need merkle states at all?

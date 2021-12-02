@@ -27,8 +27,8 @@ async function main() {
     console.log("Terabethia proxy deployed to:", tera.address);
     console.log("Eth Bridge deployed to:", ethProxy.address);
 
-    // set operator
-    const txOperator = await tera.registerOperator('0xfd82d7abAbC1461798deB5a5d9812603fdd650cc');
+    // set operator (who can update tera state)
+    const txOperator = await tera.registerOperator('0x5B21e6B8432432B4f4E2C86F87eb88c78986E882');
     await txOperator.wait();
 
 }
