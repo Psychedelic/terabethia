@@ -2,7 +2,7 @@
 set -e
 
 name="$1"
-pkg_root="./src/$name" # ./asset_storage
+pkg_root="./src/$name"
 
 cargo build --manifest-path="$pkg_root/Cargo.toml" \
     --target wasm32-unknown-unknown \

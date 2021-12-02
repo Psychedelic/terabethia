@@ -1,9 +1,9 @@
 {
   "canisters": {
     "eth_proxy": {
-      "build": "cargo build --target wasm32-unknown-unknown --package eth_proxy --release",
+      "build": "bash build.sh eth_proxy",
       "candid": "src/eth_proxy/proxy.did",
-      "wasm": "target/wasm32-unknown-unknown/release/eth_proxy.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/eth_proxy-opt.wasm",
       "type": "custom"
     }
   },

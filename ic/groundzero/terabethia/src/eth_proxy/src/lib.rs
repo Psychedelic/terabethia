@@ -175,8 +175,10 @@ fn only_owner(owner: Principal) {
 
 #[cfg(test)]
 mod tests {
+    use candid::Principal;
+    use hex::ToHex;
     use ic_cdk::export::candid::{decode_args, encode_args, Nat};
-    use std::str::FromStr;
+    use std::{str::FromStr, convert::TryFrom};
 
     #[test]
     fn test_decode_eth_payload() {
@@ -219,5 +221,17 @@ mod tests {
 
         let (from, payload): (Vec<u8>, Vec<Nat>) =
             decode_args(&args).expect("Message decode failed");
+
+        let from_principal = Principal::from_slice(&hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap());
+        println!("{}", hex::encode(from_principal));
+    }
+
+    #[test]
+    fn test_pid_to_ether_hex() {
+        let from_principal = Principal::from_slice(&hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap());
+
+        let ether_addr = hex::encode(from_principal);
+        let expected_ether_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+        assert_eq!(ether_addr, expected_ether_addr)
     }
 }
