@@ -61,11 +61,12 @@ export const Tera = {
     payload: Array<bigint>
   ): Promise<Result_1> => {
     const teraCanister = createActor<_TERA_SERVICE>({
-      host: Hosts.local,
+      host: Hosts.mainnet,
       // tera ic bridge
       canisterId: "s5qpg-tyaaa-aaaab-qad4a-cai",
       idlFactory: TERA_FACTORY,
     });
+
     return await teraCanister.store_message(BigInt(from), to, payload);
   },
 };

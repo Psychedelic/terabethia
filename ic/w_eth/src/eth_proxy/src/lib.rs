@@ -3,8 +3,6 @@ use std::str::FromStr;
 use candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::{ic, macros::*, Principal};
 
-static mut CONTROLLER: Principal = Principal::anonymous();
-
 const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
 const WETH_ADDRESS_IC: &str = "tq6li-4qaaa-aaaab-qad3q-cai";
 const WETH_ADDRESS_ETH: &str = "0xdf2b596d8a47adebe2ab2491f52d2b5ec32f80e0";
@@ -63,12 +61,11 @@ impl ToNat for Principal {
 #[init]
 #[candid_method(init)]
 fn init() {
-    unsafe {
-        CONTROLLER = ic::caller();
-    }
+    ic_kit::ic::store(caller());
 }
 
 /// ToDo: Access control
+// #[update(name = "handle_message", guard = "only_controller")]
 #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
@@ -84,6 +81,7 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
 }
 
 /// ToDo: Access control
+// #[update(name = "mint", guard = "only_controller")]
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
 async fn mint(payload: Vec<Nat>) -> ProxyResponse {
@@ -163,13 +161,16 @@ fn only_controller() {
     }
 }
 
-/// guard method for transaction owner
-fn only_owner(owner: Principal) {
-    unsafe {
-        if owner != ic::caller() {
-            ic_cdk::trap("caller not owner!");
-        }
-    }
+#[pre_upgrade]
+pub fn pre_upgragde() {
+    ic_kit::ic::stable_store((owner(),)).expect("unable to store data in stable storage")
+}
+
+#[post_upgrade]
+pub fn post_upgragde() {
+    let (owner,) = ic_kit::ic::stable_restore::<(Principal,)>()
+        .expect("unable to restore data in stable storage");
+    ic_kit::ic::store(owner);
 }
 
 #[cfg(test)]

@@ -134,14 +134,14 @@ fn init() {
 * @todo: add controller/operator guard
 
 * */
-#[update(name = "trigger_call", guard = "is_authorized")]
+// #[update(name = "trigger_call", guard = "is_authorized")]
+#[update(name = "trigger_call")]
 #[candid_method(update, rename = "trigger_call")]
 async fn trigger_call(
     eth_addr: Nat,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-
     let to_nat = to.to_nat();
     let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
 
@@ -178,7 +178,8 @@ async fn trigger_call(
  * @todo: once Eth integration is available on the IC, we should not store messages here.
  * Instead we'll check state against Eth contract directly.
  * */
-#[update(name = "store_message", guard = "is_authorized")]
+// #[update(name = "store_message", guard = "is_authorized")]
+#[update(name = "store_message")]
 #[candid_method(update, rename = "store_message")]
 async fn store_message(
     eth_addr: Nat,
