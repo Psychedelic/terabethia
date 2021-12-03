@@ -89,7 +89,7 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
 async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     let eth_addr_slice = hex::decode(WETH_ADDRESS_ETH.trim_start_matches("0x")).unwrap();
     let eth_addr = Nat::from(num_bigint::BigUint::from_bytes_be(&eth_addr_slice[..]));
- 
+
     // Is it feasible to make these inter cansiter calls?
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
@@ -98,7 +98,7 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     )
     .await
     .expect("consuming message from L1 failed!");
-    
+
     // this is redundant on prupose for now
     // expect will panic
     if consume.0.unwrap() {
@@ -137,7 +137,7 @@ async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
             let send_message: (bool,) = ic::call(
                 Principal::from_str(TERA_ADDRESS).unwrap(),
                 "send_message",
-                (&eth_addr, &payload, ),
+                (&eth_addr, &payload),
             )
             .await
             .expect("sending message to L1 failed!");
@@ -177,7 +177,7 @@ mod tests {
     use candid::Principal;
     use hex::ToHex;
     use ic_cdk::export::candid::{decode_args, encode_args, Nat};
-    use std::{str::FromStr, convert::TryFrom};
+    use std::{convert::TryFrom, str::FromStr};
 
     #[test]
     fn test_decode_eth_payload() {
@@ -221,13 +221,17 @@ mod tests {
         let (from, payload): (Vec<u8>, Vec<Nat>) =
             decode_args(&args).expect("Message decode failed");
 
-        let from_principal = Principal::from_slice(&hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap());
+        let from_principal = Principal::from_slice(
+            &hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
+        );
         println!("{}", hex::encode(from_principal));
     }
 
     #[test]
     fn test_pid_to_ether_hex() {
-        let from_principal = Principal::from_slice(&hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap());
+        let from_principal = Principal::from_slice(
+            &hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
+        );
 
         let ether_addr = hex::encode(from_principal);
         let expected_ether_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";

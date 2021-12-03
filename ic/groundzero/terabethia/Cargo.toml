@@ -1,4 +1,6 @@
 [workspace]
 members = [
+    "src/tera",
+    "src/eth_proxy",
     "src/token"
 ]
