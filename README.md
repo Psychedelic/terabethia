@@ -1,4 +1,4 @@
-![og-tera-image](https://user-images.githubusercontent.com/73345016/144492052-88f41a6c-9578-4d02-861c-f9e655467330.png)
+![Frame 644 (1)](https://user-images.githubusercontent.com/73345016/144523142-e67d4d3e-ae29-4e52-921e-b74fb64a57bb.png)
 # Terabethia - A Bridge Between Ethereum & the Internet Computer
 
 Terabethia is a bridge between Ethereum & the Internet Computer  that contracts in both chains can use to message each other, and that Ethereum assets (ERC20, ERC721, & ERC1155) can use to be automatically mirrored & used on the IC through Terabethia's Magic Proxy & Token Factory, which will deploy wrapped versions of those assets programmatically with equivalent standards on the IC (DIP20, DIP721, DIP1155).
