@@ -3,10 +3,7 @@ node_modules
 coverage
 coverage.json
 typechain
-data
 
 #Hardhat files
 cache
 artifacts
-
-.openzeppelin
