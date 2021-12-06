@@ -272,7 +272,7 @@ fn authorize(other: Principal) {
 #[export_name = "canister_inspect_message"]
 fn inspect_message() {
     if is_authorized().is_ok() {
-        // @todo accept message
+        api::call::accept_message();
     }
 }
 
