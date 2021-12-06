@@ -219,7 +219,7 @@ fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
             *message_counter -= 1;
         }
 
-        return Ok(true);
+        Ok(true)
     });
 
     if res.is_ok() {
@@ -229,7 +229,7 @@ fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
         }
     }
 
-    return res;
+    res
 }
 
 // send message to Layer 1
@@ -253,7 +253,22 @@ fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
         let msg = (hash, msg_type);
         map.insert(*index, msg);
 
-        return Ok(true);
+        Ok(true)
+    })
+}
+
+#[update(name = "remove_messages", guard = "is_authorized")]
+#[candid_method(update, rename = "remove_messages")]
+fn remove_messages(ids: Vec<Nat>) -> Result<bool, String> {
+    STATE.with(|s| {
+        let mut map = s.messages_out.borrow_mut();
+
+        ids.into_iter().for_each(|n| {
+            let i = &u64::from_str_radix(&n.0.to_str_radix(16), 16).unwrap();
+            map.remove(&i).expect("Message does not exist");
+        });
+
+        Ok(true)
     })
 }
 
