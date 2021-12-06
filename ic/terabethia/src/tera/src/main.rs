@@ -9,8 +9,7 @@ use serde::Deserialize;
 use sha3::{Digest, Keccak256};
 use std::collections::HashMap; // 1.2.7
 
-const MESSAGE_CONSUMED: u8 = 0;
-const MESSAGE_PRODUCED: u8 = 1;
+const MESSAGE_PRODUCED: bool = true;
 
 thread_local! {
     static STATE: TerabetiaState = TerabetiaState::default();
@@ -22,16 +21,23 @@ pub struct TerabetiaState {
     pub messages: RefCell<HashMap<String, u32>>,
 
     // outgoing messages
-    pub messages_out: RefCell<HashMap<u64, (String, u8)>>,
+    pub messages_out: RefCell<HashMap<u64, (String, bool)>>,
     pub message_index: RefCell<u64>,
 
     pub authorized: RefCell<Vec<Principal>>,
 }
 
+#[derive(Clone, Debug, CandidType, Deserialize)]
+struct OutgoingMessage {
+    id: Nat,
+    hash: String,
+    produced: bool,
+}
+
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableTerabetiaState {
     pub messages: HashMap<String, u32>,
-    pub messages_out: HashMap<u64, (String, u8)>,
+    pub messages_out: HashMap<u64, (String, bool)>,
     pub message_index: u64,
     pub authorized: Vec<Principal>,
 }
@@ -223,7 +229,7 @@ fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
     });
 
     if res.is_ok() {
-        match store_outgoing_message(msg_hash, MESSAGE_CONSUMED) {
+        match store_outgoing_message(msg_hash, !MESSAGE_PRODUCED) {
             Err(e) => panic!("{:?}", e),
             _ => (),
         }
@@ -243,7 +249,7 @@ fn send(to: Principal, payload: Vec<Nat>) -> Result<bool, String> {
     store_outgoing_message(msg_hash, MESSAGE_PRODUCED)
 }
 
-fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
+fn store_outgoing_message(hash: String, msg_type: bool) -> Result<bool, String> {
     STATE.with(|s| {
         // we increment outgoing message counter
         let mut index = s.message_index.borrow_mut();
@@ -269,6 +275,23 @@ fn remove_messages(ids: Vec<Nat>) -> Result<bool, String> {
         });
 
         Ok(true)
+    })
+}
+
+#[update(name = "get_messages", guard = "is_authorized")]
+#[candid_method(update, rename = "get_messages")]
+fn get_messages() -> Vec<OutgoingMessage> {
+    STATE.with(|s| {
+        let map = s.messages_out.borrow();
+
+        map.clone()
+            .into_iter()
+            .map(|f| OutgoingMessage {
+                produced: f.1 .1,
+                id: Nat::from(f.0),
+                hash: f.1 .0,
+            })
+            .collect()
     })
 }
 
