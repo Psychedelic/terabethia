@@ -1,6 +1,7 @@
 {
   "headers": {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "Authorization": "Bearer {}"
   },
-  "body": "{\"hash\": \"0xbaa8a94cfe52db7bf84c64e90e1da1fb225080897a13d4bb361c15fe3ecf60f7\"}"
+  "body": "{\"to\":\"0xdAC17F958D2ee523a2206206994597C13D831ec7\",\"from\":\"0x043f7881cF9a656f5E69d1F56C6A09Dd9f083A41\",\"hash\":\"0x40152136f0f63a38674774eb485c89fb849af242c1279b99e7ffec0a4e2da15c\",\"nonce\":2,\"direction\":\"incoming\",\"timeStamp\":\"2021-12-06T11:42:44.225Z\",\"status\":\"pending\",\"dispatchTimestamp\":\"2021-12-06T11:42:44.667Z\"}"
 }

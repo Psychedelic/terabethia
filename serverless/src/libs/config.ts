@@ -1,6 +1,10 @@
 export const config = {
-  NODE_ENV: process.env.NODE_ENV,
+  SNS_URL: process.env.SNS_URL,
+  AWS_STAGE: process.env.AWS_STAGE,
+  IS_OFFLINE: process.env.IS_OFFLINE,
+  AWS_ACCOUNT_ID_LOCAL: "123456789012",
   TERA_QUEUE_URL: process.env.QUEUE_URL,
+  AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
   INFURA_KEY: "8328044ef20647ca8cf95216e364e9cb",
   ALCHEMY_KEY: "8uppuN2k88ZIrJleq7uVcQLqIuedvAO6",
   AWS_REGION: process.env.AWS_REGION || "us-west-2",

@@ -7,16 +7,9 @@ export default {
     {
       http: {
         method: "post",
-        path: "blockNativeEventHook",
+        path: "sync",
         cors: true,
         request: {
-          parameters: {
-            headers: {
-              Authorization: {
-                required: true,
-              },
-            },
-          },
           schema: {
             "application/json": schema,
           },

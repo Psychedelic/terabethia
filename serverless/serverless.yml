@@ -5,46 +5,48 @@ provider:
   name: aws
   runtime: nodejs14.x
   stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-2'}
+  region: ${opt:region, 'us-west-2'}
   apiGateway:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     DEBUG: '*'
-    # QUEUE_URL: !Ref TeraQueue
-    NODE_ENV: ${self:provider.stage}
+    SNS_URL: ${self:custom.serverless-offline-sns.sns-endpoint}
+    QUEUE_URL: !Ref TeraQueue
+    AWS_STAGE: ${self:provider.stage}
+    AWS_ACCOUNT_ID: "#{AWS::AccountId}"
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
-    # ETH_L1_MESSAGE_TOPIC_NAME: !Ref EthL1MessageTopic
-    # ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
+    ETH_L1_MESSAGE_TOPIC_NAME: ${self:custom.EthL1MessageTopic}
+    ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
     DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
-  # iam:
-  #   role:
-  #     statements:
-  #       - Effect: 'Allow'
-  #         Action:
-  #           - "sqs:SendMessage"
-  #           - "sqs:DeleteMessage"
-  #         Resource:
-  #           - !GetAtt
-  #             - TeraQueue
-  #             - Arn
-  #       - Effect: Allow
-  #         Action:
-  #           - sns:Publish
-  #           - sns:Subscribe
-  #         Resource: ${self:custom.snsTopicArn.${self:provider.stage}}
-  #       - Effect: 'Allow'
-  #         Action:
-  #           - dynamodb:Query
-  #           - dynamodb:Scan
-  #           - dynamodb:GetItem
-  #           - dynamodb:PutItem
-  #           - dynamodb:UpdateItem
-  #           - dynamodb:DeleteItem
-  #           - dynamodb:BatchWriteItem
-  #         Resource: 
-  #           - !GetAtt 
-  #             - TeraStateTable  
-  #             - Arn
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - "sqs:SendMessage"
+            - "sqs:DeleteMessage"
+          Resource:
+            - !GetAtt
+              - TeraQueue
+              - Arn
+        - Effect: Allow
+          Action:
+            - SNS:Publish
+            - SNS:Subscribe
+          Resource: "*"
+        - Effect: 'Allow'
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
+          Resource: 
+            - !GetAtt 
+              - TeraStateTable  
+              - Arn
 
 custom:
   region: ${opt:region, self:provider.region}
@@ -80,6 +82,10 @@ custom:
       migrate: true
     stages:
       - dev
+  serverless-offline-sns:
+    port: 4002
+    debug: true
+    sns-endpoint: http://127.0.0.1:4002
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
@@ -94,12 +100,12 @@ custom:
       foo: "bar"
 
 plugins:
-  - serverless-offline
   - serverless-webpack
   - serverless-stack-termination-protection
   - serverless-iam-roles-per-function
   - serverless-prune-plugin
   - serverless-offline-sns
+  - serverless-offline
 
 package:
   individually: true
@@ -113,92 +119,108 @@ functions:
       - http:
           method: POST
           path: /hook
-#   ReceiveMessageFromL1:
-#     timeout: 10
-#     memorySize: 128
-#     handler: src/functions/teraQueue/handler.main
-#     events:
-#       - sqs:
-#           batchSize: 10
-#           maximumRetryAttempts: 10
-#           arn:
-#             Fn::GetAtt:
-#               - TereaQueue
-#               - Arn
-#   StoreMessageFromL1:
-#     timeout: 10
-#     memorySize: 128
-#     handler: src/functions/store/handler.main
-#     events:
-#       - sns:
-#           arn: !Ref EthL1MessageTopic
-#           topicName: ${self:custom.EthL1MessageTopic}
+  ReceiveMessageFromL1:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/teraQueue/handler.main
+    events:
+      - sqs:
+          batchSize: 10
+          maximumRetryAttempts: 10
+          arn:
+            Fn::GetAtt:
+              - TeraQueue
+              - Arn
+  StoreMessageFromL1:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/store/handler.main
+    events:
+      - sns:
+          arn: !Ref EthL1MessageTopic
+          topicName: ${self:custom.EthL1MessageTopic}
+  # SyncL1ToL2Messages:
+  #   timeout: 10
+  #   memorySize: 128
+  #   handler: src/functions/sync/handler.main
+  #   events:
+  #     - http:
+  #         method: POST
+  #         path: /sync
 
-# resources:
-#   - Resources:
-#       TeraQueue:
-#         Type: 'AWS::SQS::Queue'
-#         Properties:
-#           QueueName: tera-queue-${self:custom.resourceSuffix}
-#           RedrivePolicy:
-#             maxReceiveCount: 10
-#             deadLetterTargetArn: !GetAtt
-#               - TeraDeadLetterQueue
-#               - Arn
-#       TeraDeadLetterQueue:
-#         Type: AWS::SQS::Queue
-#         Properties:
-#           QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}
+  # Every Min, poll messages from Tera Canister and process them
+  # SyncL2ToL1Messages:
+  #   timeout: 10
+  #   memorySize: 128
+  #   handler: src/functions/sync/handler.main
+  #   events:
+  #     - schedule: rate(1 minute)
 
-#       TeraL1StateTable:
-#         Type: AWS::DynamoDB::Table
-#         DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
-#         UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
-#         Properties:
-#           TableName: tera_l1_state_${self:provider.stage}
-#           BillingMode: PAY_PER_REQUEST
-#           AttributeDefinitions:
-#             - AttributeName: pk
-#               AttributeType: S
-#             - AttributeName: sk
-#               AttributeType: S
-#           KeySchema:
-#             - AttributeName: pk
-#               KeyType: HASH
-#             - AttributeName: sk
-#               KeyType: RANGE
+resources:
+  - Resources:
+      TeraQueue:
+        Type: 'AWS::SQS::Queue'
+        Properties:
+          QueueName: tera-queue-${self:custom.resourceSuffix}
+          RedrivePolicy:
+            maxReceiveCount: 10
+            deadLetterTargetArn: !GetAtt
+              - TeraDeadLetterQueue
+              - Arn
+      TeraDeadLetterQueue:
+        Type: AWS::SQS::Queue
+        Properties:
+          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}
 
-#       EthL1MessageTopic:
-#         Type: AWS::SNS::Topic
-#         Properties:
-#           DisplayName: ETH L1 Message
-#           TopicName: ${self:custom.EthL1MessageTopic}
+      TeraL1StateTable:
+        Type: AWS::DynamoDB::Table
+        DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
+        UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
+        Properties:
+          TableName: tera_l1_state_${self:provider.stage}
+          BillingMode: PAY_PER_REQUEST
+          AttributeDefinitions:
+            - AttributeName: pk
+              AttributeType: S
+            - AttributeName: sk
+              AttributeType: S
+          KeySchema:
+            - AttributeName: pk
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
 
-#       SnsToTeraQueuePolicy:
-#         Type: AWS::SQS::QueuePolicy
-#         Properties:
-#           PolicyDocument:
-#             Version: "2012-10-17"
-#             Statement:
-#               - Sid: "allow-sns-messages"
-#                 Effect: Allow
-#                 Principal: "*"
-#                 Resource: !GetAtt
-#                   - TeraQueue
-#                   - Arn
-#                 Action: "SQS:SendMessage"
-#                 Condition:
-#                   ArnEquals:
-#                     "aws:SourceArn": !Ref EthL1MessageTopic
-#           Queues:
-#             - !Ref TeraQueue
+      EthL1MessageTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+          DisplayName: ETH L1 Message
+          TopicName: ${self:custom.EthL1MessageTopic}
 
-#         TeraQueueSubscription:
-#           Type: 'AWS::SNS::Subscription'
-#           Properties:
-#             TopicArn: !Ref EthL1MessageTopic
-#             Endpoint: !GetAtt
-#               - TeraQueue
-#               - Arn
-#             Protocol: sqs
-#             RawMessageDelivery: 'true'
+      SnsToTeraQueuePolicy:
+        Type: AWS::SQS::QueuePolicy
+        Properties:
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "allow-sns-messages"
+                Effect: Allow
+                Principal: "*"
+                Resource: !GetAtt
+                  - TeraQueue
+                  - Arn
+                Action: "SQS:SendMessage"
+                Condition:
+                  ArnEquals:
+                    "aws:SourceArn": !Ref EthL1MessageTopic
+          Queues:
+            - !Ref TeraQueue
+
+        TeraQueueSubscription:
+          Type: 'AWS::SNS::Subscription'
+          Properties:
+            TopicArn: !Ref EthL1MessageTopic
+            Endpoint: !GetAtt
+              - TeraQueue
+              - Arn
+            Protocol: sqs
+            RawMessageDelivery: 'true'

@@ -8,7 +8,16 @@ export default {
       http: {
         method: "post",
         path: "storeL1Message",
+        cors: true,
         request: {
+          // If we encapsulate this store event handler to our vpc we don't need auth
+          // parameters: {
+          //   headers: {
+          //     Authorization: {
+          //       required: true,
+          //     },
+          //   },
+          // },
           schema: {
             "application/json": schema,
           },

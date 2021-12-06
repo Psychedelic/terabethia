@@ -1,4 +1,4 @@
-import { config } from "@src/libs/config";
+import { config } from "@libs/config";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
@@ -6,13 +6,14 @@ import {
   PutCommandInput,
   PutCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
+import { IMessages } from "./IMessages";
 import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
 
-const STAGE = config.NODE_ENV || "local";
+const STAGE = config.AWS_STAGE || "local";
 const TERA_TABLE = `tera_l1_state_${STAGE}`;
 const DYNAMO_LOCAL_PORT = config.DYNAMO_LOCAL_PORT || "8002";
 
-export class DynamoDb {
+export class DynamoDb implements IMessages {
   private db: DynamoDBDocumentClient;
 
   private teraTableName: string;
@@ -39,15 +40,12 @@ export class DynamoDb {
     this.db = DynamoDBDocumentClient.from(client, { marshallOptions });
   }
 
-  private async put(
-    tableName: string,
-    data: {
-      [key: string]: NativeAttributeValue;
-    }
-  ): Promise<PutCommandOutput | undefined> {
+  public async put(item: {
+    [key: string]: NativeAttributeValue;
+  }): Promise<PutCommandOutput | undefined> {
     const params: PutCommandInput = {
-      TableName: tableName,
-      Item: data,
+      TableName: this.teraTableName,
+      Item: item,
     };
 
     try {
@@ -58,4 +56,6 @@ export class DynamoDb {
       return undefined;
     }
   }
+
+  // ToDo: udpate method for messages
 }
