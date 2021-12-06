@@ -137,12 +137,11 @@ fn init() {
 #[update(name = "trigger_call", guard = "is_authorized")]
 #[candid_method(update, rename = "trigger_call")]
 async fn trigger_call(
-    eth_addr: Nat,
+    from: Principal,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let to_nat = to.to_nat();
-    let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
+    let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
 
     let message_exists = STATE.with(|s| {
         let map = s.messages.borrow();
@@ -159,7 +158,7 @@ async fn trigger_call(
         return Err(message_exists.err().unwrap());
     }
 
-    let args_raw = encode_args((&eth_addr, &payload)).unwrap();
+    let args_raw = encode_args((&from, &payload)).unwrap();
 
     match api::call::call_raw(to, "handle_message", args_raw, 0).await {
         Ok(x) => Ok(CallResult { r#return: x }),
@@ -180,28 +179,28 @@ async fn trigger_call(
 #[update(name = "store_message", guard = "is_authorized")]
 #[candid_method(update, rename = "store_message")]
 async fn store_message(
-    eth_addr: Nat,
+    from: Principal,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let msg_hash = calculate_hash(eth_addr.clone(), to.to_nat(), payload.clone());
+    let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
 
     STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
         *map.entry(msg_hash).or_insert(0) += 1;
     });
 
-    trigger_call(eth_addr, to, payload).await
+    trigger_call(from, to, payload).await
 }
 
 // consume message from Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
+fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::caller();
 
-    let msg_hash = calculate_hash(eth_addr, caller.to_nat(), payload.clone());
+    let msg_hash = calculate_hash(from.to_nat(), caller.to_nat(), payload.clone());
 
     let res = STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
@@ -237,9 +236,9 @@ fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
 // @todo: this should be only called by a canister
 #[update(name = "send_message")]
 #[candid_method(update, rename = "send_message")]
-fn send(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
-    let caller = api::id();
-    let msg_hash = calculate_hash(caller.to_nat(), eth_addr, payload.clone());
+fn send(to: Principal, payload: Vec<Nat>) -> Result<bool, String> {
+    let caller = api::caller();
+    let msg_hash = calculate_hash(caller.to_nat(), to.to_nat(), payload.clone());
 
     store_outgoing_message(msg_hash, MESSAGE_PRODUCED)
 }
@@ -268,6 +267,13 @@ fn authorize(other: Principal) {
             s.authorized.borrow_mut().push(other);
         }
     })
+}
+
+#[export_name = "canister_inspect_message"]
+fn inspect_message() {
+    if is_authorized().is_ok() {
+        // @todo accept message
+    }
 }
 
 // Approach #1
