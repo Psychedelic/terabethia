@@ -4,7 +4,7 @@ use candid::{candid_method, encode_args, Nat};
 use ic_cdk::export::candid::{CandidType, Principal};
 // use ic_cdk::export::Principal;
 use ic_cdk::{api, caller, storage};
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, update};
+use ic_cdk_macros::{init, inspect_message, post_upgrade, pre_upgrade, update};
 use serde::Deserialize;
 use sha3::{Digest, Keccak256};
 use std::collections::HashMap; // 1.2.7
@@ -269,7 +269,7 @@ fn authorize(other: Principal) {
     })
 }
 
-#[export_name = "canister_inspect_message"]
+#[inspect_message]
 fn inspect_message() {
     if is_authorized().is_ok() {
         api::call::accept_message();
