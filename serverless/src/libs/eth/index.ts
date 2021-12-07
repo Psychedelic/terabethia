@@ -1,4 +1,4 @@
-import ethers from 'ethers';
+import * as ethers from 'ethers';
 
 export { createPayload } from './createPayload';
 
@@ -20,8 +20,13 @@ export const updateState = async (privateKey: string, contractAddress: string, p
     const contractWithSigner = contract.connect(wallet);
 
     const sequenceNumber = await contract.stateSequenceNumber();
+    const nextSequence = sequenceNumber.add(1);
 
+    
     console.log('current sequence number', sequenceNumber);
+    console.log('next sequence number', nextSequence);
+    console.log('payload', payload);
+    console.log('wallet addr', wallet.address);
 
-    return contractWithSigner.updateState(sequenceNumber + 1, payload);
+    return contractWithSigner.updateState(nextSequence, payload);
 }

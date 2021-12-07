@@ -41,9 +41,10 @@ const createActor = <T>({
   let identity = Ed25519KeyIdentity.generate();
 
   if (config.TERA_AGENT_KEY_PAIR) {
-    const jsonKeyPair = JSON.parse(config.TERA_AGENT_KEY_PAIR);
-    identity = Ed25519KeyIdentity.fromJSON(jsonKeyPair);
+    identity = Ed25519KeyIdentity.fromJSON(config.TERA_AGENT_KEY_PAIR);
   }
+
+  console.log('id pid', identity.getPrincipal().toText());
 
   const agent = new HttpAgent({
     host,
