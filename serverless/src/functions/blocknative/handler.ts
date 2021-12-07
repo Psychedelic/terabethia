@@ -37,15 +37,15 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
 
   const teraL1Txn = teraL1MockTxn;
 
-  const snsTopicPayload = {
+  const messageTopicPayload = {
     TopicArn: `arn:aws:sns:${AWS_REGION}:${
       IS_OFFLINE ? AWS_ACCOUNT_ID_LOCAL : AWS_ACCOUNT_ID
     }:${ETH_L1_MESSAGE_TOPIC_NAME}`,
-    Message: JSON.stringify(teraL1Txn.hash),
+    Message: JSON.stringify(teraL1Txn.hash /** event.body */),
   };
 
   try {
-    const command = new PublishCommand(snsTopicPayload);
+    const command = new PublishCommand(messageTopicPayload);
     const response = await snsClient.send(command);
 
     return formatJSONResponse({

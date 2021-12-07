@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 import middy from "@middy/core";
 import { Tera } from "@libs/dfinity";
 import { config } from "@libs/config";
-import type { SQSEvent } from "aws-lambda";
+import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { Principal } from "@dfinity/principal";
 import { formatJSONResponse } from "@libs/apiGateway";
 import { BlockNativePayload } from "@libs/blocknative";
@@ -34,8 +34,8 @@ const getProvider = (url: string) =>
   new ethers.providers.StaticJsonRpcProvider(url);
 
 const receiveMessageFromL1 = async (event: SQSEvent) => {
-  const promises = event.Records.map(async ({ body }) => {
-    const data = body as unknown as BlockNativePayload;
+  const promises = event.Records.map(async ({ body }: SQSRecord) => {
+    const data = JSON.parse(body) as BlockNativePayload;
 
     let provider;
 
