@@ -4,13 +4,12 @@ use candid::{candid_method, encode_args, Nat};
 use ic_cdk::export::candid::{CandidType, Principal};
 // use ic_cdk::export::Principal;
 use ic_cdk::{api, caller, storage};
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, update};
+use ic_cdk_macros::{init, inspect_message, post_upgrade, pre_upgrade, update};
 use serde::Deserialize;
 use sha3::{Digest, Keccak256};
 use std::collections::HashMap; // 1.2.7
 
-const MESSAGE_CONSUMED: u8 = 0;
-const MESSAGE_PRODUCED: u8 = 1;
+const MESSAGE_PRODUCED: bool = true;
 
 thread_local! {
     static STATE: TerabetiaState = TerabetiaState::default();
@@ -22,16 +21,23 @@ pub struct TerabetiaState {
     pub messages: RefCell<HashMap<String, u32>>,
 
     // outgoing messages
-    pub messages_out: RefCell<HashMap<u64, (String, u8)>>,
+    pub messages_out: RefCell<HashMap<u64, (String, bool)>>,
     pub message_index: RefCell<u64>,
 
     pub authorized: RefCell<Vec<Principal>>,
 }
 
+#[derive(Clone, Debug, CandidType, Deserialize)]
+struct OutgoingMessage {
+    id: Nat,
+    hash: String,
+    produced: bool,
+}
+
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableTerabetiaState {
     pub messages: HashMap<String, u32>,
-    pub messages_out: HashMap<u64, (String, u8)>,
+    pub messages_out: HashMap<u64, (String, bool)>,
     pub message_index: u64,
     pub authorized: Vec<Principal>,
 }
@@ -134,16 +140,14 @@ fn init() {
 * @todo: add controller/operator guard
 
 * */
-// #[update(name = "trigger_call", guard = "is_authorized")]
-#[update(name = "trigger_call")]
+#[update(name = "trigger_call", guard = "is_authorized")]
 #[candid_method(update, rename = "trigger_call")]
 async fn trigger_call(
-    eth_addr: Nat,
+    from: Principal,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let to_nat = to.to_nat();
-    let msg_hash = calculate_hash(eth_addr.clone(), to_nat, payload.clone());
+    let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
 
     let message_exists = STATE.with(|s| {
         let map = s.messages.borrow();
@@ -160,7 +164,7 @@ async fn trigger_call(
         return Err(message_exists.err().unwrap());
     }
 
-    let args_raw = encode_args((&eth_addr, &payload)).unwrap();
+    let args_raw = encode_args((&from, &payload)).unwrap();
 
     match api::call::call_raw(to, "handle_message", args_raw, 0).await {
         Ok(x) => Ok(CallResult { r#return: x }),
@@ -178,32 +182,31 @@ async fn trigger_call(
  * @todo: once Eth integration is available on the IC, we should not store messages here.
  * Instead we'll check state against Eth contract directly.
  * */
-// #[update(name = "store_message", guard = "is_authorized")]
-#[update(name = "store_message")]
+#[update(name = "store_message", guard = "is_authorized")]
 #[candid_method(update, rename = "store_message")]
 async fn store_message(
-    eth_addr: Nat,
+    from: Principal,
     to: Principal,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let msg_hash = calculate_hash(eth_addr.clone(), to.to_nat(), payload.clone());
+    let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
 
     STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
         *map.entry(msg_hash).or_insert(0) += 1;
     });
 
-    trigger_call(eth_addr, to, payload).await
+    trigger_call(from, to, payload).await
 }
 
 // consume message from Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
+fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::caller();
 
-    let msg_hash = calculate_hash(eth_addr, caller.to_nat(), payload.clone());
+    let msg_hash = calculate_hash(from.to_nat(), caller.to_nat(), payload.clone());
 
     let res = STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
@@ -222,31 +225,31 @@ fn consume(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
             *message_counter -= 1;
         }
 
-        return Ok(true);
+        Ok(true)
     });
 
     if res.is_ok() {
-        match store_outgoing_message(msg_hash, MESSAGE_CONSUMED) {
+        match store_outgoing_message(msg_hash, !MESSAGE_PRODUCED) {
             Err(e) => panic!("{:?}", e),
             _ => (),
         }
     }
 
-    return res;
+    res
 }
 
 // send message to Layer 1
 // @todo: this should be only called by a canister
 #[update(name = "send_message")]
 #[candid_method(update, rename = "send_message")]
-fn send(eth_addr: Nat, payload: Vec<Nat>) -> Result<bool, String> {
-    let caller = api::id();
-    let msg_hash = calculate_hash(caller.to_nat(), eth_addr, payload.clone());
+fn send(to: Principal, payload: Vec<Nat>) -> Result<bool, String> {
+    let caller = api::caller();
+    let msg_hash = calculate_hash(caller.to_nat(), to.to_nat(), payload.clone());
 
     store_outgoing_message(msg_hash, MESSAGE_PRODUCED)
 }
 
-fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
+fn store_outgoing_message(hash: String, msg_type: bool) -> Result<bool, String> {
     STATE.with(|s| {
         // we increment outgoing message counter
         let mut index = s.message_index.borrow_mut();
@@ -256,7 +259,39 @@ fn store_outgoing_message(hash: String, msg_type: u8) -> Result<bool, String> {
         let msg = (hash, msg_type);
         map.insert(*index, msg);
 
-        return Ok(true);
+        Ok(true)
+    })
+}
+
+#[update(name = "remove_messages", guard = "is_authorized")]
+#[candid_method(update, rename = "remove_messages")]
+fn remove_messages(ids: Vec<Nat>) -> Result<bool, String> {
+    STATE.with(|s| {
+        let mut map = s.messages_out.borrow_mut();
+
+        ids.into_iter().for_each(|n| {
+            let i = &u64::from_str_radix(&n.0.to_str_radix(16), 16).unwrap();
+            map.remove(&i).expect("Message does not exist");
+        });
+
+        Ok(true)
+    })
+}
+
+#[update(name = "get_messages", guard = "is_authorized")]
+#[candid_method(update, rename = "get_messages")]
+fn get_messages() -> Vec<OutgoingMessage> {
+    STATE.with(|s| {
+        let map = s.messages_out.borrow();
+
+        map.clone()
+            .into_iter()
+            .map(|f| OutgoingMessage {
+                produced: f.1 .1,
+                id: Nat::from(f.0),
+                hash: f.1 .0,
+            })
+            .collect()
     })
 }
 
@@ -270,6 +305,13 @@ fn authorize(other: Principal) {
             s.authorized.borrow_mut().push(other);
         }
     })
+}
+
+#[inspect_message]
+fn inspect_message() {
+    if is_authorized().is_ok() {
+        api::call::accept_message()
+    }
 }
 
 // Approach #1

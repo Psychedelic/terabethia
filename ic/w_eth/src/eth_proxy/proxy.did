@@ -8,7 +8,7 @@ type MessageStatus = variant {
 };
 type Result = variant { Ok : nat; Err : MessageStatus };
 service : () -> {
-  burn : (nat, nat) -> (Result);
-  handle_message : (nat, vec nat) -> (Result);
-  mint : (principal, nat, vec nat) -> (Result);
+  burn : (principal, nat) -> (Result);
+  handle_message : (principal, vec nat) -> (Result);
+  mint : (vec nat) -> (Result);
 }

@@ -31,13 +31,13 @@ pub enum MessageStatus {
 
 #[derive(Deserialize, CandidType)]
 pub struct ConsumeMessageParam {
-    pub eth_addr: Nat,
+    pub eth_addr: Principal,
     pub payload: Vec<Nat>,
 }
 
 #[derive(Deserialize, CandidType)]
 pub struct SendMessageParam {
-    pub eth_addr: Nat,
+    pub eth_addr: Principal,
     pub payload: Vec<Nat>,
 }
 
@@ -58,18 +58,24 @@ impl ToNat for Principal {
     }
 }
 
+fn only_controller(pid: &Principal) -> bool {
+    let controller = ic::get_maybe::<Principal>().expect("controller not set");
+
+    &ic::caller() != controller
+}
+
 #[init]
 #[candid_method(init)]
 fn init() {
-    ic_kit::ic::store(caller());
+    ic::store(ic::caller());
 }
 
 /// ToDo: Access control
 // #[update(name = "handle_message", guard = "only_controller")]
-#[update(name = "handle_message")]
+// #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
-async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
-    let eth_addr_hex = hex::encode(&eth_addr.0.to_bytes_be());
+async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> ProxyResponse {
+    let eth_addr_hex = hex::encode(eth_addr);
 
     if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
         panic!("Eth Contract Address is inccorrect!");
@@ -85,14 +91,14 @@ async fn handler(eth_addr: Nat, payload: Vec<Nat>) -> ProxyResponse {
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
 async fn mint(payload: Vec<Nat>) -> ProxyResponse {
-    let eth_addr_slice = hex::decode(WETH_ADDRESS_ETH.trim_start_matches("0x")).unwrap();
-    let eth_addr = Nat::from(num_bigint::BigUint::from_bytes_be(&eth_addr_slice[..]));
+    let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
+    let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
     // Is it feasible to make these inter cansiter calls?
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
-        (eth_addr, &payload),
+        (weth_eth_addr_pid, &payload),
     )
     .await
     .expect("consuming message from L1 failed!");
@@ -100,12 +106,12 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     // this is redundant on prupose for now
     // expect will panic
     if consume.0.unwrap() {
-        let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
+        let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_slice(&payload[0].0.to_bytes_be().as_slice());
 
-        let mint: (TxReceipt,) = ic::call(weth_addr_pid, "mint", (to, amount))
+        let mint: (TxReceipt,) = ic::call(weth_ic_addr_pid, "mint", (to, amount))
             .await
             .expect("minting weth failed!");
 
@@ -121,12 +127,11 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
 /// ToDo: Access control
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
-async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
-    let weth_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-    let payload = [to.clone(), amount.clone()];
-    let eth_addr = to.clone();
+async fn burn(eth_addr: Principal, amount: Nat) -> ProxyResponse {
+    let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
+    let payload = [eth_addr.clone().to_nat(), amount.clone()];
 
-    let burn_txn: (TxReceipt,) = ic::call(weth_addr_pid, "burn", (amount,))
+    let burn_txn: (TxReceipt,) = ic::call(weth_ic_addr_pid, "burn", (amount,))
         .await
         .expect("burning weth failed!");
 
@@ -152,33 +157,32 @@ async fn burn(to: Nat, amount: Nat) -> ProxyResponse {
     }
 }
 
-/// guard method for canister controller
-fn only_controller() {
-    unsafe {
-        if CONTROLLER != ic::caller() {
-            ic_cdk::trap("caller not controller!");
-        }
-    }
+candid::export_service!();
+
+#[query(name = "__get_candid_interface_tmp_hack")]
+#[candid_method(query, rename = "__get_candid_interface_tmp_hack")]
+fn __export_did_tmp_() -> String {
+    __export_service()
 }
 
 #[pre_upgrade]
 pub fn pre_upgragde() {
-    ic_kit::ic::stable_store((owner(),)).expect("unable to store data in stable storage")
+    let controller = *ic::get_maybe::<Principal>().expect("controller not set");
+    ic::stable_store((controller,)).expect("unable to store data in stable storage")
 }
 
 #[post_upgrade]
 pub fn post_upgragde() {
-    let (owner,) = ic_kit::ic::stable_restore::<(Principal,)>()
-        .expect("unable to restore data in stable storage");
-    ic_kit::ic::store(owner);
+    let (controller,) =
+        ic::stable_restore::<(Principal,)>().expect("unable to restore data in stable storage");
+    ic::store(controller);
 }
 
 #[cfg(test)]
 mod tests {
     use candid::Principal;
-    use hex::ToHex;
     use ic_cdk::export::candid::{decode_args, encode_args, Nat};
-    use std::{convert::TryFrom, str::FromStr};
+    use std::str::FromStr;
 
     #[test]
     fn test_decode_eth_payload() {
@@ -206,36 +210,13 @@ mod tests {
     }
 
     #[test]
-    fn test_handler_args_decode() {
-        let from = hex::decode("dc64a140aa3e981100a9beca4e685f962f0cf6c9").unwrap();
-
-        let trigger_payload = [
-            // amount
-            Nat::from_str("100000000000000000").unwrap(),
-            // eth_addr
-            Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
-        ]
-        .to_vec();
-
-        let args = encode_args((&from, &trigger_payload)).unwrap();
-
-        let (from, payload): (Vec<u8>, Vec<Nat>) =
-            decode_args(&args).expect("Message decode failed");
-
-        let from_principal = Principal::from_slice(
-            &hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
-        );
-        println!("{}", hex::encode(from_principal));
-    }
-
-    #[test]
     fn test_pid_to_ether_hex() {
         let from_principal = Principal::from_slice(
             &hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
         );
 
-        let ether_addr = hex::encode(from_principal);
         let expected_ether_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
-        assert_eq!(ether_addr, expected_ether_addr)
+        println!("{}", from_principal.to_string());
+        assert_eq!(hex::encode(from_principal), expected_ether_addr);
     }
 }
