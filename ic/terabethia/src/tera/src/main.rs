@@ -310,7 +310,7 @@ fn authorize(other: Principal) {
 #[inspect_message]
 fn inspect_message() {
     if is_authorized().is_ok() {
-        api::call::accept_message();
+        api::call::accept_message()
     }
 }
 
