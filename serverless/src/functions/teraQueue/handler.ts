@@ -5,8 +5,8 @@ import { ethers } from "ethers";
 import middy from "@middy/core";
 import { Tera } from "@libs/dfinity";
 import { config } from "@libs/config";
-import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { Principal } from "@dfinity/principal";
+import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { formatJSONResponse } from "@libs/apiGateway";
 import { BlockNativePayload } from "@libs/blocknative";
 import sqsBatch from "@middy/sqs-partial-batch-failure";
@@ -53,10 +53,9 @@ const receiveMessageFromL1 = async (event: SQSEvent) => {
     );
 
     try {
-      // Move pid to config/env/constants
-      // bridge canister id
-      const to = Principal.fromText("tcy4r-qaaaa-aaaab-qadyq-cai");
-      const response = await Tera.storeMessage(from, to, [
+      const fromPid = Principal.fromHex(from);
+      const toPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
+      const response = await Tera.storeMessage(fromPid, toPid, [
         // pid
         BigInt(eventProps.principal),
         // amount

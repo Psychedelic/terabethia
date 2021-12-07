@@ -10,14 +10,15 @@ provider:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     DEBUG: '*'
-    SNS_URL: ${self:custom.serverless-offline-sns.sns-endpoint}
     QUEUE_URL: !Ref TeraQueue
     AWS_STAGE: ${self:provider.stage}
-    AWS_ACCOUNT_ID: "#{AWS::AccountId}"
+    AWS_ACCOUNT_ID: ${AWS::AccountId}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
-    ETH_L1_MESSAGE_TOPIC_NAME: ${self:custom.EthL1MessageTopic}
-    ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
     DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
+    ETH_L1_MESSAGE_TOPIC_NAME: ${self:custom.EthL1MessageTopic}
+    SNS_URL: ${self:custom.serverless-offline-sns.sns-endpoint}
+    TERA_AGENT_SECRET: ${ssm:/tera-agent-identity-secret-dev~true}
+    ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
   iam:
     role:
       statements:

@@ -6,9 +6,15 @@ import {
   HttpAgentOptions,
 } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
+import { Ed25519KeyIdentity } from "@dfinity/identity";
 
-import _TERA_SERVICE, { Result_1 } from "./idls/tera/tera";
 import TERA_FACTORY from "./idls/tera/tera.did";
+import _TERA_SERVICE, {
+  OutgoingMessage,
+  Result,
+  Result_1,
+} from "./idls/tera/tera";
+import { config } from "@libs/config";
 
 export interface ActorParams {
   host: string;
@@ -32,9 +38,17 @@ const createActor = <T>({
   canisterId: string;
   idlFactory: IdlFactory;
 }): ActorSubclass<T> => {
+  let identity = Ed25519KeyIdentity.generate();
+
+  if (config.TERA_AGENT_SECRET) {
+    const buff = Buffer.from(config.TERA_AGENT_SECRET, "base64");
+    identity = Ed25519KeyIdentity.fromSecretKey(buff.slice(buff.length - 64));
+  }
+
   const agent = new HttpAgent({
     host,
     fetch,
+    identity,
   } as unknown as HttpAgentOptions);
 
   if (process.env.NODE_ENV !== "production") {
@@ -54,19 +68,24 @@ const createActor = <T>({
   });
 };
 
+const teraCanister = createActor<_TERA_SERVICE>({
+  host: Hosts.mainnet,
+  canisterId: config.TERA_CANISTER_ID,
+  idlFactory: TERA_FACTORY,
+});
+
 export const Tera = {
   storeMessage: async (
-    from: string,
+    from: Principal,
     to: Principal,
     payload: Array<bigint>
   ): Promise<Result_1> => {
-    const teraCanister = createActor<_TERA_SERVICE>({
-      host: Hosts.mainnet,
-      // tera ic bridge
-      canisterId: "s5qpg-tyaaa-aaaab-qad4a-cai",
-      idlFactory: TERA_FACTORY,
-    });
-
-    return await teraCanister.store_message(BigInt(from), to, payload);
+    return await teraCanister.store_message(from, to, payload);
+  },
+  getMessages: async (): Promise<OutgoingMessage[]> => {
+    return await teraCanister.get_messages();
+  },
+  removeMessages: async (messages: Array<bigint>): Promise<Result> => {
+    return await teraCanister.remove_messages(messages);
   },
 };
