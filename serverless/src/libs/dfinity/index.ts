@@ -40,9 +40,9 @@ const createActor = <T>({
 }): ActorSubclass<T> => {
   let identity = Ed25519KeyIdentity.generate();
 
-  if (config.TERA_AGENT_SECRET) {
-    const buff = Buffer.from(config.TERA_AGENT_SECRET, "base64");
-    identity = Ed25519KeyIdentity.fromSecretKey(buff.slice(buff.length - 64));
+  if (config.TERA_AGENT_KEY_PAIR) {
+    const jsonKeyPair = JSON.parse(config.TERA_AGENT_KEY_PAIR);
+    identity = Ed25519KeyIdentity.fromJSON(jsonKeyPair);
   }
 
   const agent = new HttpAgent({

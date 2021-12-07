@@ -17,7 +17,7 @@ provider:
     DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
     ETH_L1_MESSAGE_TOPIC_NAME: ${self:custom.EthL1MessageTopic}
     SNS_URL: ${self:custom.serverless-offline-sns.sns-endpoint}
-    TERA_AGENT_SECRET: ${ssm:/tera-agent-identity-secret-dev~true}
+    TERA_AGENT_KEY_PAIR: ${ssm:/tera-agent-identity-key-pair-dev~true}
     ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
   iam:
     role:
