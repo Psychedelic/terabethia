@@ -150,12 +150,12 @@ functions:
   #         path: /sync
 
   # Every Min, poll messages from Tera Canister and process them
-  # SyncL2ToL1Messages:
-  #   timeout: 10
-  #   memorySize: 128
-  #   handler: src/functions/sync/handler.main
-  #   events:
-  #     - schedule: rate(1 minute)
+  SyncL2ToL1Messages:
+    timeout: 15
+    memorySize: 128
+    handler: src/functions/sync/handler.main
+    events:
+      - schedule: rate(1 minute)
 
 resources:
   - Resources:
