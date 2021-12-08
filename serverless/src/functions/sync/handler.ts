@@ -32,6 +32,12 @@ export const main: ScheduledHandler = async () => {
 
   const payload = createPayload(messagesToL1, messagesToL2);
 
+  // skip empty payload
+  if(payload.length == 2) {
+    console.log('no messages in payload');
+    return;
+  } 
+
   const tx = await updateState(OPERATOR_PRIVATE_KEY, CONTRACT_ADDRESS, payload);
 
   const ids = await Promise.all(
