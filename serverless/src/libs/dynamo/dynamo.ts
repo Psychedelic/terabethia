@@ -6,7 +6,7 @@ import {
   PutCommand,
   PutCommandInput,
   PutCommandOutput,
-  GetCommand
+  GetCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { IMessages } from "./IMessages";
 import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
@@ -15,7 +15,7 @@ const STAGE = config.AWS_STAGE || "local";
 const TERA_TABLE = `tera_l1_state_${STAGE}`;
 const DYNAMO_LOCAL_PORT = config.DYNAMO_LOCAL_PORT || "8002";
 
-const PROCESSING_MESSAGE_SK = 'processing_';
+const PROCESSING_MESSAGE_SK = "processing_";
 export class DynamoDb implements IMessages {
   private db: DynamoDBDocumentClient;
 
@@ -61,48 +61,56 @@ export class DynamoDb implements IMessages {
   }
 
   public async isProcessingMessage(msgIndex: number) {
-    const item = await this.db.send(new GetCommand({
-      TableName: this.teraTableName,
-      Key: {
-        pk: `mid_${msgIndex}`,
-        sk: PROCESSING_MESSAGE_SK,
-      }
-    }));
+    const item = await this.db.send(
+      new GetCommand({
+        TableName: this.teraTableName,
+        Key: {
+          pk: `mid_${msgIndex}`,
+          sk: PROCESSING_MESSAGE_SK,
+        },
+      })
+    );
 
     return item.Item;
   }
 
   public async setProcessingMessage(msgIndex: number) {
-    return this.db.send(new PutCommand({
-      TableName: this.teraTableName,
-      Item: {
-        pk: `mid_${msgIndex}`,
-        sk: PROCESSING_MESSAGE_SK,
-      }
-    }));
+    return this.db.send(
+      new PutCommand({
+        TableName: this.teraTableName,
+        Item: {
+          pk: `mid_${msgIndex}`,
+          sk: PROCESSING_MESSAGE_SK,
+        },
+      })
+    );
   }
 
   public async storeEthTransaction(txHash: string, messages: number[]) {
-    return this.db.send(new PutCommand({
-      TableName: this.teraTableName,
-      Item: {
-        pk: txHash,
-        sk: `messages`,
-        messages: JSON.stringify(messages),
-      }
-    }));
+    return this.db.send(
+      new PutCommand({
+        TableName: this.teraTableName,
+        Item: {
+          pk: txHash,
+          sk: `messages`,
+          messages: JSON.stringify(messages),
+        },
+      })
+    );
   }
 
   public async getMessagesFromEthTransaction(txHash: string) {
-    const res = await this.db.send(new GetCommand({
-      TableName: this.teraTableName,
-      Key: {
-        pk: txHash,
-        sk: `messages`,
-      }
-    }));
+    const res = await this.db.send(
+      new GetCommand({
+        TableName: this.teraTableName,
+        Key: {
+          pk: txHash,
+          sk: `messages`,
+        },
+      })
+    );
 
-    if(res.Item && res.Item.messages) {
+    if (res.Item && res.Item.messages) {
       return JSON.parse(res.Item.messages);
     }
 

@@ -1,10 +1,10 @@
+use candid::{candid_method, CandidType, Deserialize, Nat};
+use ic_cdk::api;
+use ic_kit::{ic, macros::*, Principal};
 use std::str::FromStr;
 
-use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{ic, macros::*, Principal};
-
-const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
-const WETH_ADDRESS_IC: &str = "tq6li-4qaaa-aaaab-qad3q-cai";
+const TERA_ADDRESS: &str = "r7inp-6aaaa-aaaaa-aaabq-cai";
+const WETH_ADDRESS_IC: &str = "rno2w-sqaaa-aaaaa-aaacq-cai";
 const WETH_ADDRESS_ETH: &str = "0xdf2b596d8a47adebe2ab2491f52d2b5ec32f80e0";
 
 pub type TxReceipt = Result<Nat, TxError>;
@@ -58,7 +58,7 @@ impl ToNat for Principal {
     }
 }
 
-fn only_controller(pid: &Principal) -> bool {
+fn only_controller() -> bool {
     let controller = ic::get_maybe::<Principal>().expect("controller not set");
 
     &ic::caller() != controller
@@ -72,7 +72,6 @@ fn init() {
 
 /// ToDo: Access control
 // #[update(name = "handle_message", guard = "only_controller")]
-// #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> ProxyResponse {
     let eth_addr_hex = hex::encode(eth_addr);
@@ -86,8 +85,6 @@ async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> ProxyResponse {
     mint(payload).await
 }
 
-/// ToDo: Access control
-// #[update(name = "mint", guard = "only_controller")]
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
 async fn mint(payload: Vec<Nat>) -> ProxyResponse {
@@ -115,6 +112,8 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
             .await
             .expect("minting weth failed!");
 
+        // ToDo: extend this with some locks, and remove it later
+        // ToDo: add to local buffer on the eth_proxy, if message flusher
         match mint {
             (Ok(txn_id),) => Ok(txn_id),
             (Err(_),) => Err(MessageStatus::MintFailed),
@@ -124,14 +123,28 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     }
 }
 
-/// ToDo: Access control
+// ToDo: atmoicty of these calls
+// WETH burn should only be allowed to get called by eth_proxy
+// check approved list before spending
 #[update(name = "burn")]
-#[candid_method(update, rename = "burn")]
+// #[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Principal, amount: Nat) -> ProxyResponse {
+    let caller = ic::caller();
+    let canister_id = api::id();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [eth_addr.clone().to_nat(), amount.clone()];
 
-    let burn_txn: (TxReceipt,) = ic::call(weth_ic_addr_pid, "burn", (amount,))
+    // Transfer from caller to eth_proxy address
+    let _: () = ic::call(
+        weth_ic_addr_pid,
+        "transfer_from",
+        (&caller, &canister_id, &amount),
+    )
+    .await
+    .expect("transfer failed!");
+
+    // Burn those tokens
+    let burn_txn: (TxReceipt,) = ic::call(weth_ic_addr_pid, "burn", (&amount,))
         .await
         .expect("burning weth failed!");
 
@@ -218,5 +231,8 @@ mod tests {
         let expected_ether_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
         println!("{}", from_principal.to_string());
         assert_eq!(hex::encode(from_principal), expected_ether_addr);
+
+        let amount_weth = 25000000 / 1000000000;
+        println!("{}", amount_weth);
     }
 }

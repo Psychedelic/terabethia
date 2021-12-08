@@ -6,11 +6,11 @@ import middy from "@middy/core";
 import { Tera } from "@libs/dfinity";
 import { config } from "@libs/config";
 import { Principal } from "@dfinity/principal";
-import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { formatJSONResponse } from "@libs/apiGateway";
-import { BlockNativePayload } from "@libs/blocknative";
+import { BlockNativePayload, BlockNativeSchema } from "@libs/blocknative";
 import sqsBatch from "@middy/sqs-partial-batch-failure";
 import sqsJsonBodyParser from "@middy/sqs-json-body-parser";
+import { ValidatedEventSQSEvent } from "@libs/sqs";
 
 const web3 = new Web3();
 const { INFURA_KEY, ALCHEMY_KEY } = config;
@@ -33,51 +33,52 @@ const providers = {
 const getProvider = (url: string) =>
   new ethers.providers.StaticJsonRpcProvider(url);
 
-const receiveMessageFromL1 = async (event: SQSEvent) => {
-  const promises = event.Records.map(async ({ body }: SQSRecord) => {
-    const data = JSON.parse(body) as BlockNativePayload;
+const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> =
+  async (event): Promise<any> => {
+    const promises = event.Records.map(async (record) => {
+      const { hash } = record.body as unknown as BlockNativePayload;
 
-    let provider;
+      let provider;
 
-    try {
-      provider = await Promise.any(providers["Goerli"].map(getProvider));
-    } catch (error) {
-      throw new Error(error);
-    }
+      try {
+        provider = await Promise.any(providers["Goerli"].map(getProvider));
+      } catch (error) {
+        throw new Error(error);
+      }
 
-    const eventRecipt = await provider.getTransactionReceipt(data.hash);
-    const { to: from, logs } = eventRecipt;
-    const eventProps = web3.eth.abi.decodeParameters(
-      typesArray,
-      logs[0]?.data as string
-    );
-
-    try {
-      const fromPid = Principal.fromHex(from);
-      const toPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
-      const response = await Tera.storeMessage(fromPid, toPid, [
-        // pid
-        BigInt(eventProps.principal),
-        // amount
-        BigInt(eventProps.amount),
-        // ethAddr
-        BigInt(from),
-      ]);
-
-      return Promise.resolve(
-        formatJSONResponse({
-          statusCode: 200,
-          body: { message: "success", response },
-        })
+      const eventRecipt = await provider.getTransactionReceipt(hash);
+      const { to: from, logs } = eventRecipt;
+      const eventProps = web3.eth.abi.decodeParameters(
+        typesArray,
+        logs[0]?.data as string
       );
-    } catch (error) {
-      console.error(`Error SendMessageTera: ${(error as Error).message}`);
-      return Promise.reject(error);
-    }
-  });
 
-  return Promise.allSettled(promises);
-};
+      try {
+        const fromPid = Principal.fromHex(from);
+        const toPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
+        const response = await Tera.storeMessage(fromPid, toPid, [
+          // pid
+          BigInt(eventProps.principal),
+          // amount
+          BigInt(eventProps.amount),
+          // ethAddr
+          BigInt(from),
+        ]);
+
+        return Promise.resolve(
+          formatJSONResponse({
+            statusCode: 200,
+            body: { message: "success", response },
+          })
+        );
+      } catch (error) {
+        console.error(`Error SendMessageTera: ${(error as Error).message}`);
+        return Promise.reject(error);
+      }
+    });
+
+    return Promise.allSettled(promises);
+  };
 
 export const main = middy(receiveMessageFromL1)
   .use(sqsJsonBodyParser())

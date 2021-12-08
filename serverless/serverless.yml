@@ -12,12 +12,11 @@ provider:
     DEBUG: '*'
     QUEUE_URL: !Ref TeraQueue
     AWS_STAGE: ${self:provider.stage}
-    AWS_ACCOUNT_ID: ${AWS::AccountId}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
     DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
     ETH_L1_MESSAGE_TOPIC_NAME: ${self:custom.EthL1MessageTopic}
     SNS_URL: ${self:custom.serverless-offline-sns.sns-endpoint}
-    # TERA_AGENT_KEY_PAIR: "${ssm:/tera-agent-identity-key-pair-dev~true}"
+    # TERA_AGENT_KEY_PAIR: "${ssm:/tera-agent-identity-key-pair-dev}"
     ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
   iam:
     role:
@@ -46,7 +45,7 @@ provider:
             - dynamodb:BatchWriteItem
           Resource: 
             - !GetAtt 
-              - TeraStateTable  
+              - TeraL1StateTable  
               - Arn
 
 custom:
@@ -116,6 +115,8 @@ functions:
     timeout: 10
     memorySize: 128
     handler: src/functions/blocknative/handler.main
+    environment:
+      AWS_ACCOUNT_ID: ${aws:accountId}
     events:
       - http:
           method: POST
@@ -124,6 +125,8 @@ functions:
     timeout: 10
     memorySize: 128
     handler: src/functions/teraQueue/handler.main
+    environment:
+      TERA_AGENT_KEY_PAIR: '["302a300506032b657003210098f4f7199b8c6d4adeb9f70baef934db75934f3c2bd6b040ba0277f861bc65ba","308e2a165c0fc91efbd43462db036fbee7691f020c7925493538dc06f101117b98f4f7199b8c6d4adeb9f70baef934db75934f3c2bd6b040ba0277f861bc65ba"]'
     events:
       - sqs:
           batchSize: 10
@@ -158,8 +161,8 @@ functions:
       OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
       CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
       TERA_AGENT_KEY_PAIR: '["302a300506032b657003210098f4f7199b8c6d4adeb9f70baef934db75934f3c2bd6b040ba0277f861bc65ba","308e2a165c0fc91efbd43462db036fbee7691f020c7925493538dc06f101117b98f4f7199b8c6d4adeb9f70baef934db75934f3c2bd6b040ba0277f861bc65ba"]'
-    events:
-      - schedule: rate(1 minute)
+    # events:
+    #   - schedule: rate(1 minute)
 
 resources:
   - Resources:
@@ -220,12 +223,12 @@ resources:
           Queues:
             - !Ref TeraQueue
 
-        TeraQueueSubscription:
-          Type: 'AWS::SNS::Subscription'
-          Properties:
-            TopicArn: !Ref EthL1MessageTopic
-            Endpoint: !GetAtt
-              - TeraQueue
-              - Arn
-            Protocol: sqs
-            RawMessageDelivery: 'true'
+      TeraQueueSubscription:
+        Type: 'AWS::SNS::Subscription'
+        Properties:
+          TopicArn: !Ref EthL1MessageTopic
+          Endpoint: !GetAtt
+            - TeraQueue
+            - Arn
+          Protocol: sqs
+          RawMessageDelivery: 'true'

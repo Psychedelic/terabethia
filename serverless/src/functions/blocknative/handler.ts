@@ -7,7 +7,6 @@ import {
 import schema from "./schema";
 import { config } from "@libs/config";
 import { middyfy } from "@libs/lambda";
-import { BlockNativePayload } from "@libs/blocknative";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
 const {
@@ -19,11 +18,7 @@ const {
   ETH_L1_MESSAGE_TOPIC_NAME,
 } = config;
 
-const teraL1MockTxn: BlockNativePayload = {
-  hash: "0xe83bbfbebfd35f5e44a246372605edcdff2d087e3c89007a86404c1403170f3c",
-};
-
-const snsClient = new SNSClient({ endpoint: SNS_URL });
+const snsClient = new SNSClient({ region: AWS_REGION });
 
 export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
   typeof schema
@@ -35,13 +30,11 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
     });
   }
 
-  const teraL1Txn = teraL1MockTxn;
-
   const messageTopicPayload = {
     TopicArn: `arn:aws:sns:${AWS_REGION}:${
       IS_OFFLINE ? AWS_ACCOUNT_ID_LOCAL : AWS_ACCOUNT_ID
     }:${ETH_L1_MESSAGE_TOPIC_NAME}`,
-    Message: JSON.stringify(teraL1Txn.hash /** event.body */),
+    Message: JSON.stringify(event.body),
   };
 
   try {
