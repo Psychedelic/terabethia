@@ -108,14 +108,14 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
 
         match mint {
             Ok(result) => match result {
-                (Ok(value),) => Ok(value),
+                (Ok(txn_id),) => Ok(txn_id),
                 (Err(err),) => Err(err),
             },
             Err(_) => Err(TxError::MintUnknown),
-        }
-    } else {
-        Err(TxError::ConsumeMessageFailed)
+        };
     }
+
+    Err(TxError::ConsumeMessageFailed)
 }
 
 // ToDo: atmoicty of these calls
@@ -143,28 +143,29 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
         Err(_) => Err(TxError::NotApproved),
     };
 
-    let send_message: Result<(bool,), _> = ic::call(
+    let send_message: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "send_message",
         (&eth_addr, &payload),
     )
-    .await;
+    .await
+    .expect("sending message to L2 failed!");
 
-    match send_message {
-        Ok(_) => Ok(Nat::from_str("1").unwrap()),
-        Err(_) => Err(TxError::SendMessageFailed),
-    };
+    if send_message.0.unwrap() {
+        // // Burn those tokens
+        let burn_txn: Result<(TxReceipt,), _> =
+            ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
 
-    // // Burn those tokens
-    let burn_txn: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
-
-    match burn_txn {
-        Ok(result) => match result {
-            (Ok(txn_id),) => Ok(txn_id),
-            (Err(error),) => Err(error),
-        },
-        Err(_) => Err(TxError::BurnUnknown),
+        match burn_txn {
+            Ok(result) => match result {
+                (Ok(txn_id),) => Ok(txn_id),
+                (Err(error),) => Err(error),
+            },
+            Err(_) => Err(TxError::BurnUnknown),
+        };
     }
+
+    Err(TxError::SendMessageFailed)
 }
 
 candid::export_service!();
