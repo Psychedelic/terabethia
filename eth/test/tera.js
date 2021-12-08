@@ -4,7 +4,7 @@ const { soliditySha3 } = require("web3-utils");
 
 const BN = require('bn.js');
 
-const ethValue1 = ethers.utils.parseEther("5");
+const ethValue1 = ethers.utils.parseEther("0.069");
 const ethValue2 = ethers.utils.parseEther("0.1");
 const ethValue3 = ethers.utils.parseEther("4.9");
 
@@ -84,8 +84,8 @@ describe("Terabethia", function () {
     // 5oynr-yl472-mav57-c2oxo-g7woc-yytib-mp5bo-kzg3b-622pu-uatef-uqe
 
     // principal id hex form
-    const canisterId = '0x00000000003000ea0101';
-    const principalId = '0x7cfe980af7e2d3aee37ece163134058fe85cac9b61f6b4fa5013216902';
+    const canisterId = '0x00000000003000f10101';
+    const principalId = '0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802';
 
     // deposit validation
     const depositTx = await ethProxy.deposit(principalId, overrides);
@@ -136,7 +136,7 @@ describe("Terabethia", function () {
       { t: 'uint256', v: withdrawPayload }
     );
 
-    expect(withdrawMessageHash).equals('0x33ccbcf525a78f667fbac0ffe776d6e1dd28e23bef3c33563b43a45d6b50c1d4');
+    expect(withdrawMessageHash).equals('0xceb0c9e3cd46a643b206ecb20bdf18f436166aff9823fedb8f8ee02cc5561fba');
 
     const updateStateTx = await tera.updateState(2, [
       // @todo do we need merkle states at all?

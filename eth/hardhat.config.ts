@@ -68,7 +68,7 @@ task("deploy", "Deploy the smart contracts", async (taskArgs, hre) => {
 });
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.4",
+  solidity: "0.6.12",
   networks: {
     goerli: {
       url: process.env.ALCHEMY_ENDPOINT,
