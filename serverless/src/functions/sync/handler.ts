@@ -17,18 +17,17 @@ export const main: ScheduledHandler = async () => {
   const db = new DynamoDb();
 
   const rawMessages = await Tera.getMessages();
-
-  // @todo bigint -> hex string?
-
+  
   const messages = await Promise.all(
     rawMessages.map(async (m) => {
-      const isProcessing = await db.isProcessingMessage(m.id);
+      const isProcessing = await db.isProcessingMessage(m.id.toString(16));
+      console.log({isProcessing, hid: m.id.toString(16) })
       return { ...m, isProcessing };
     })
   ).then((messages) => messages.filter((m) => !m.isProcessing));
 
-  const messagesToL1 = messages.filter((a) => a.produced).map((m) => m.hash);
-  const messagesToL2 = messages.filter((a) => !a.produced).map((m) => m.hash);
+  const messagesToL1 = messages.filter((a) => a.produced).map((m) => `0x${m.hash}`);
+  const messagesToL2 = messages.filter((a) => !a.produced).map((m) => `0x${m.hash}`);
 
   const payload = createPayload(messagesToL1, messagesToL2);
 
@@ -40,14 +39,18 @@ export const main: ScheduledHandler = async () => {
 
   const tx = await updateState(OPERATOR_PRIVATE_KEY, CONTRACT_ADDRESS, payload);
 
-  const ids = await Promise.all(
-    messages.map(async (m) => {
-      await db.setProcessingMessage(m.id);
-      return m.id;
-    })
-  );
+  // write lock on each message id when tx is submitted
+  if(tx.hash) {
+    const ids = await Promise.all(
+      messages.map(async (m) => {
+        const hid = m.id.toString(16);
+        await db.setProcessingMessage(hid);
+        return hid;
+      })
+    );
 
-  await db.storeEthTransaction(tx.hash, ids);
+    await db.storeEthTransaction(tx.hash, ids);
+  }
   // publish event that'll monitor tx
   // once the tx succeeds we should remove messages from the canister
 };

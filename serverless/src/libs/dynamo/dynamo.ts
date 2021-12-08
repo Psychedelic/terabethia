@@ -2,7 +2,7 @@ import { config } from "@libs/config";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
-  QueryCommand,
+  // QueryCommand,
   PutCommand,
   PutCommandInput,
   PutCommandOutput,
@@ -15,7 +15,7 @@ const STAGE = config.AWS_STAGE || "local";
 const TERA_TABLE = `tera_l1_state_${STAGE}`;
 const DYNAMO_LOCAL_PORT = config.DYNAMO_LOCAL_PORT || "8002";
 
-const PROCESSING_MESSAGE_SK = "processing_";
+const PROCESSING_MESSAGE_SK = "processing";
 export class DynamoDb implements IMessages {
   private db: DynamoDBDocumentClient;
 
@@ -23,11 +23,11 @@ export class DynamoDb implements IMessages {
 
   constructor() {
     const client = new DynamoDBClient({
-      // region: "us-west-2",
+      region: "us-west-2",
       // ...(STAGE === "local" && {
       //   endpoint: `http://localhost:${DYNAMO_LOCAL_PORT}`,
       // }),
-      endpoint: `http://localhost:${DYNAMO_LOCAL_PORT}`,
+      // endpoint: `http://localhost:${DYNAMO_LOCAL_PORT}`,
     });
 
     const marshallOptions = {
@@ -60,7 +60,7 @@ export class DynamoDb implements IMessages {
     }
   }
 
-  public async isProcessingMessage(msgIndex: number) {
+  public async isProcessingMessage(msgIndex: string) {
     const item = await this.db.send(
       new GetCommand({
         TableName: this.teraTableName,
@@ -74,7 +74,7 @@ export class DynamoDb implements IMessages {
     return item.Item;
   }
 
-  public async setProcessingMessage(msgIndex: number) {
+  public async setProcessingMessage(msgIndex: string) {
     return this.db.send(
       new PutCommand({
         TableName: this.teraTableName,
@@ -86,7 +86,7 @@ export class DynamoDb implements IMessages {
     );
   }
 
-  public async storeEthTransaction(txHash: string, messages: number[]) {
+  public async storeEthTransaction(txHash: string, messages: string[]) {
     return this.db.send(
       new PutCommand({
         TableName: this.teraTableName,
