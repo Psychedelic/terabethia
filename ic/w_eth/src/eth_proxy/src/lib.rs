@@ -116,23 +116,6 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
     } else {
         Err(TxError::ConsumeMessageFailed)
     }
-
-    // let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-
-    // let amount = Nat::from_str("10000").unwrap();
-    // let to =
-    //     Principal::from_text("avesb-mgo2l-ds25i-g7kd4-3he5l-z7ary-3biiq-sojiw-xjgbk-ich5l-mae")
-    //         .unwrap();
-
-    // let mint: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
-
-    // match mint {
-    //     Ok(result) => match result {
-    //         (Ok(value),) => Ok(value),
-    //         (Err(error),) => Err(error),
-    //     },
-    //     Err(_) => Err(TxError::MintUnknown),
-    // }
 }
 
 // ToDo: atmoicty of these calls
@@ -160,24 +143,24 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
         Err(_) => Err(TxError::NotApproved),
     };
 
-    // Burn those tokens
+    let send_message: Result<(bool,), _> = ic::call(
+        Principal::from_str(TERA_ADDRESS).unwrap(),
+        "send_message",
+        (&eth_addr, &payload),
+    )
+    .await;
+
+    match send_message {
+        Ok(_) => Ok(Nat::from_str("1").unwrap()),
+        Err(_) => Err(TxError::SendMessageFailed),
+    };
+
+    // // Burn those tokens
     let burn_txn: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
 
     match burn_txn {
         Ok(result) => match result {
-            (Ok(txn_id),) => {
-                let send_message: Result<(bool,), _> = ic::call(
-                    Principal::from_str(TERA_ADDRESS).unwrap(),
-                    "send_message",
-                    (&eth_addr, &payload),
-                )
-                .await;
-
-                match send_message {
-                    Ok(_) => Ok(txn_id),
-                    Err(_) => Err(TxError::SendMessageFailed),
-                }
-            }
+            (Ok(txn_id),) => Ok(txn_id),
             (Err(error),) => Err(error),
         },
         Err(_) => Err(TxError::BurnUnknown),
