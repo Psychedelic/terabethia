@@ -6,11 +6,11 @@ import middy from "@middy/core";
 import { Tera } from "@libs/dfinity";
 import { config } from "@libs/config";
 import { Principal } from "@dfinity/principal";
+import { ValidatedEventSQSEvent } from "@libs/sqs";
 import { formatJSONResponse } from "@libs/apiGateway";
-import { BlockNativePayload, BlockNativeSchema } from "@libs/blocknative";
 import sqsBatch from "@middy/sqs-partial-batch-failure";
 import sqsJsonBodyParser from "@middy/sqs-json-body-parser";
-import { ValidatedEventSQSEvent } from "@libs/sqs";
+import { BlockNativePayload, BlockNativeSchema } from "@libs/blocknative";
 
 const web3 = new Web3();
 const { INFURA_KEY, ALCHEMY_KEY } = config;
@@ -37,14 +37,14 @@ const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> =
   async (event): Promise<any> => {
     const promises = event.Records.map(async (record) => {
       const { hash } = record.body as unknown as BlockNativePayload;
+      const provider = getProvider(providers["Goerli"][0] as string);
 
-      let provider;
-
-      try {
-        provider = await Promise.any(providers["Goerli"].map(getProvider));
-      } catch (error) {
-        throw new Error(error);
-      }
+      // not supported until node v 15
+      // try {
+      //   provider = await Promise.any(providers["Goerli"].map(getProvider));
+      // } catch (error) {
+      //   throw new Error(error);
+      // }
 
       const eventRecipt = await provider.getTransactionReceipt(hash);
       const { to: from, logs } = eventRecipt;
@@ -54,8 +54,18 @@ const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> =
       );
 
       try {
-        const fromPid = Principal.fromHex(from);
+        const fromPid = Principal.fromHex(from.substring(2));
         const toPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
+
+        console.log(fromPid.toString(), toPid.toString(), [
+          // pid
+          BigInt(eventProps.principal),
+          // amount
+          BigInt(eventProps.amount),
+          // ethAddr
+          BigInt(from),
+        ])
+
         const response = await Tera.storeMessage(fromPid, toPid, [
           // pid
           BigInt(eventProps.principal),

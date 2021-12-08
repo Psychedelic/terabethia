@@ -38,6 +38,7 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
   };
 
   try {
+    console.log(messageTopicPayload);
     const command = new PublishCommand(messageTopicPayload);
     const response = await snsClient.send(command);
 

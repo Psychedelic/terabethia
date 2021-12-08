@@ -1,32 +1,26 @@
 use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_cdk::api;
 use ic_kit::{ic, macros::*, Principal};
 use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
 const WETH_ADDRESS_IC: &str = "tq6li-4qaaa-aaaab-qad3q-cai";
-const WETH_ADDRESS_ETH: &str = "0xdf2b596d8a47adebe2ab2491f52d2b5ec32f80e0";
+const WETH_ADDRESS_ETH: &str = "0x1b864e1ca9189cfbd8a14a53a02e26b00ab5e91a";
 
 pub type TxReceipt = Result<Nat, TxError>;
-
-pub type ProxyResponse = Result<Nat, MessageStatus>;
 
 #[derive(Deserialize, CandidType, Debug, PartialEq)]
 pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
     Unauthorized,
-    Other,
-}
-
-#[derive(Debug, CandidType)]
-pub enum MessageStatus {
-    Succeeded,
-    BurnFailed,
+    NotApproved,
     MintFailed,
+    MintUnknown,
+    TransferFailed,
+    BurnFailed,
+    BurnUnknown,
     SendMessageFailed,
     ConsumeMessageFailed,
-    MessageHandlerFailed,
 }
 
 #[derive(Deserialize, CandidType)]
@@ -72,8 +66,9 @@ fn init() {
 
 /// ToDo: Access control
 // #[update(name = "handle_message", guard = "only_controller")]
+#[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
-async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> ProxyResponse {
+async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = hex::encode(eth_addr);
 
     if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
@@ -87,7 +82,7 @@ async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> ProxyResponse {
 
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
-async fn mint(payload: Vec<Nat>) -> ProxyResponse {
+async fn mint(payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
@@ -95,7 +90,7 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
-        (weth_eth_addr_pid, &payload),
+        (&weth_eth_addr_pid, &payload),
     )
     .await
     .expect("consuming message from L1 failed!");
@@ -105,69 +100,87 @@ async fn mint(payload: Vec<Nat>) -> ProxyResponse {
     if consume.0.unwrap() {
         let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
-        let amount_gewi = Nat::from(payload[1].0.clone());
-        let amount_weth = 25000000 / 10^9;
+        let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_slice(&payload[0].0.to_bytes_be().as_slice());
 
-        let mint: (TxReceipt,) = ic::call(weth_ic_addr_pid, "mint", (to, amount))
-            .await
-            .expect("minting weth failed!");
+        let mint: Result<(TxReceipt,), _> =
+            ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
 
-        // ToDo: extend this with some locks, and remove it later
-        // ToDo: add to local buffer on the eth_proxy, if message flusher
         match mint {
-            (Ok(txn_id),) => Ok(txn_id),
-            (Err(_),) => Err(MessageStatus::MintFailed),
+            Ok(result) => match result {
+                (Ok(value),) => Ok(value),
+                (Err(err),) => Err(err),
+            },
+            Err(_) => Err(TxError::MintUnknown),
         }
     } else {
-        Err(MessageStatus::ConsumeMessageFailed)
+        Err(TxError::ConsumeMessageFailed)
     }
+
+    // let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
+
+    // let amount = Nat::from_str("10000").unwrap();
+    // let to =
+    //     Principal::from_text("avesb-mgo2l-ds25i-g7kd4-3he5l-z7ary-3biiq-sojiw-xjgbk-ich5l-mae")
+    //         .unwrap();
+
+    // let mint: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
+
+    // match mint {
+    //     Ok(result) => match result {
+    //         (Ok(value),) => Ok(value),
+    //         (Err(error),) => Err(error),
+    //     },
+    //     Err(_) => Err(TxError::MintUnknown),
+    // }
 }
 
 // ToDo: atmoicty of these calls
 // WETH burn should only be allowed to get called by eth_proxy
-// check approved list before spending
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
-async fn burn(eth_addr: Principal, amount: Nat) -> ProxyResponse {
+async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
-    let canister_id = api::id();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [eth_addr.clone().to_nat(), amount.clone()];
 
     // Transfer from caller to eth_proxy address
-    let _: () = ic::call(
+    let transfer: Result<(TxReceipt,), _> = ic::call(
         weth_ic_addr_pid,
-        "transfer_from",
-        (&caller, &canister_id, &amount),
+        "transferFrom",
+        (&caller, &weth_ic_addr_pid, &amount),
     )
-    .await
-    .expect("transfer failed!");
+    .await;
+
+    match transfer {
+        Ok(result) => match result {
+            (Ok(value),) => Ok(value),
+            (Err(error),) => Err(error),
+        },
+        Err(_) => Err(TxError::NotApproved),
+    };
 
     // Burn those tokens
-    let burn_txn: (TxReceipt,) = ic::call(weth_ic_addr_pid, "burn", (&amount,))
-        .await
-        .expect("burning weth failed!");
+    let burn_txn: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
 
     match burn_txn {
-        (Ok(txn_id),) => {
-            let send_message: (bool,) = ic::call(
-                Principal::from_str(TERA_ADDRESS).unwrap(),
-                "send_message",
-                (&eth_addr, &payload),
-            )
-            .await
-            .expect("sending message to L1 failed!");
+        Ok(result) => match result {
+            (Ok(txn_id),) => {
+                let send_message: Result<(bool,), _> = ic::call(
+                    Principal::from_str(TERA_ADDRESS).unwrap(),
+                    "send_message",
+                    (&eth_addr, &payload),
+                )
+                .await;
 
-            // this is redundant on prupose for now
-            // expect will panic
-            if send_message.0 {
-                Ok(txn_id)
-            } else {
-                Err(MessageStatus::BurnFailed)
+                match send_message {
+                    Ok(_) => Ok(txn_id),
+                    Err(_) => Err(TxError::SendMessageFailed),
+                }
             }
-        }
-        (Err(_),) => Err(MessageStatus::SendMessageFailed),
+            (Err(error),) => Err(error),
+        },
+        Err(_) => Err(TxError::BurnUnknown),
     }
 }
 

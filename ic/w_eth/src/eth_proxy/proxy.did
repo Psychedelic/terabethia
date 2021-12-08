@@ -1,12 +1,17 @@
-type MessageStatus = variant {
-  MessageHandlerFailed;
+type Result = variant { Ok : nat; Err : TxError };
+type TxError = variant {
+  InsufficientAllowance;
+  BurnUnknown;
+  InsufficientBalance;
   BurnFailed;
-  Succeeded;
+  Unauthorized;
   ConsumeMessageFailed;
+  NotApproved;
   SendMessageFailed;
+  TransferFailed;
+  MintUnknown;
   MintFailed;
 };
-type Result = variant { Ok : nat; Err : MessageStatus };
 service : () -> {
   burn : (principal, nat) -> (Result);
   handle_message : (principal, vec nat) -> (Result);

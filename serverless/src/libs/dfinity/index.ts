@@ -14,6 +14,12 @@ import _TERA_SERVICE, {
   Result,
   Result_1,
 } from "./idls/tera/tera";
+
+import PROXY_FACTORY from "./idls/proxy/proxy.did";
+import _PROXY_SERVICE, {
+  Result as PRresult,
+} from "./idls/proxy/proxy";
+
 import { config } from "@libs/config";
 
 export interface ActorParams {
@@ -73,6 +79,12 @@ const teraCanister = createActor<_TERA_SERVICE>({
   host: Hosts.mainnet,
   canisterId: config.TERA_CANISTER_ID,
   idlFactory: TERA_FACTORY,
+});
+
+const proxyCanister = createActor<_PROXY_SERVICE>({
+  host: Hosts.mainnet,
+  canisterId: config.ETH_PROXY_CANISTER_ID,
+  idlFactory: PROXY_FACTORY,
 });
 
 export const Tera = {
