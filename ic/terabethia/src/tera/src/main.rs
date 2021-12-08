@@ -390,4 +390,25 @@ mod tests {
 
         assert_eq!(msg_hash, msg_hash_expected);
     }
+
+    fn deposit_message_hash() {
+        let to_principal = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
+        let to = to_principal.to_nat();
+
+        // eth address
+        let from_slice = hex::decode("1b864e1CA9189CFbD8A14a53A02E26B00AB5e91a").unwrap();
+        let from = Nat::from(num_bigint::BigUint::from_bytes_be(&from_slice[..]));
+
+        let payload = [
+            Nat::from_str("5575946531581959547228116840874869615988566799087422752926889285441538")
+                .unwrap(),
+            Nat::from_str("69000000").unwrap(),
+        ]
+        .to_vec();
+
+        let msg_hash = calculate_hash(from, to, payload);
+        let msg_hash_expected = "bc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45";
+
+        assert_eq!(msg_hash, msg_hash_expected);
+    }
 }
