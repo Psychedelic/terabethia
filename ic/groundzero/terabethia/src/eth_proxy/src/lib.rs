@@ -1,9 +1,9 @@
 use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{ic, macros::*, Principal};
+use ic_kit::{ic, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
-const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
-const WETH_ADDRESS_IC: &str = "tq6li-4qaaa-aaaab-qad3q-cai";
+const TERA_ADDRESS: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+const WETH_ADDRESS_IC: &str = "rkp4c-7iaaa-aaaaa-aaaca-cai";
 const WETH_ADDRESS_ETH: &str = "0x1b864e1ca9189cfbd8a14a53a02e26b00ab5e91a";
 
 pub type TxReceipt = Result<Nat, TxError>;
@@ -13,14 +13,13 @@ pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
     Unauthorized,
-    NotApproved,
-    MintFailed,
-    MintUnknown,
-    TransferFailed,
-    BurnFailed,
-    BurnUnknown,
-    SendMessageFailed,
-    ConsumeMessageFailed,
+    LedgerTrap,
+    AmountTooSmall,
+    BlockUsed,
+    ErrorOperationStyle,
+    ErrorTo,
+    Other,
+    Canister(String),
 }
 
 #[derive(Deserialize, CandidType)]
@@ -34,13 +33,6 @@ pub struct SendMessageParam {
     pub eth_addr: Principal,
     pub payload: Vec<Nat>,
 }
-
-/// Explore inter canister calls with tera bridge & weth
-// #[import(canister = "tera")]
-// struct Tera;
-
-// #[import(canister = "weth")]
-// struct WETH;
 
 pub trait ToNat {
     fn to_nat(&self) -> Nat;
@@ -103,36 +95,25 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_slice(&payload[0].0.to_bytes_be().as_slice());
 
-        let mint: Result<(TxReceipt,), _> =
+        let mint: Result<(TxReceipt,), (RejectionCode, String)> =
             ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
 
         match mint {
             Ok(result) => match result {
                 (Ok(value),) => Ok(value),
-                (Err(err),) => Err(err),
+                (Err(error),) => Err(error),
             },
-            Err(_) => Err(TxError::MintUnknown),
+            Err((code, err)) => Err(TxError::Canister(format!(
+                "RejectionCode: {:?}\n{}",
+                code, err
+            ))),
         }
     } else {
-        Err(TxError::ConsumeMessageFailed)
+        Err(TxError::Canister(format!(
+            "Consume Message: {:?}\n{}",
+            "Cannister: ", "message consumption failed!"
+        )))
     }
-
-    // let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-
-    // let amount = Nat::from_str("10000").unwrap();
-    // let to =
-    //     Principal::from_text("avesb-mgo2l-ds25i-g7kd4-3he5l-z7ary-3biiq-sojiw-xjgbk-ich5l-mae")
-    //         .unwrap();
-
-    // let mint: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
-
-    // match mint {
-    //     Ok(result) => match result {
-    //         (Ok(value),) => Ok(value),
-    //         (Err(error),) => Err(error),
-    //     },
-    //     Err(_) => Err(TxError::MintUnknown),
-    // }
 }
 
 // ToDo: atmoicty of these calls
@@ -154,10 +135,13 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
 
     match transfer {
         Ok(result) => match result {
-            (Ok(value),) => Ok(value),
-            (Err(error),) => Err(error),
+            (Ok(value),) => value,
+            (Err(error),) => return Err(error),
         },
-        Err(_) => Err(TxError::NotApproved),
+        Err((code, err)) => return Err(TxError::Canister(format!(
+            "RejectionCode: {:?}\n{}",
+            code, err
+        ))),
     };
 
     // Burn those tokens
@@ -175,12 +159,18 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
 
                 match send_message {
                     Ok(_) => Ok(txn_id),
-                    Err(_) => Err(TxError::SendMessageFailed),
+                    Err((code, err)) => Err(TxError::Canister(format!(
+                        "RejectionCode: {:?}\n{}",
+                        code, err
+                    ))),
                 }
             }
             (Err(error),) => Err(error),
         },
-        Err(_) => Err(TxError::BurnUnknown),
+        Err((code, err)) => Err(TxError::Canister(format!(
+            "RejectionCode: {:?}\n{}",
+            code, err
+        ))),
     }
 }
 

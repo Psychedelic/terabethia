@@ -1,16 +1,15 @@
 type Result = variant { Ok : nat; Err : TxError };
 type TxError = variant {
   InsufficientAllowance;
-  BurnUnknown;
   InsufficientBalance;
-  BurnFailed;
+  Canister : text;
+  ErrorOperationStyle;
   Unauthorized;
-  ConsumeMessageFailed;
-  NotApproved;
-  SendMessageFailed;
-  TransferFailed;
-  MintUnknown;
-  MintFailed;
+  LedgerTrap;
+  ErrorTo;
+  Other;
+  BlockUsed;
+  AmountTooSmall;
 };
 service : () -> {
   burn : (principal, nat) -> (Result);

@@ -73,6 +73,11 @@ pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
     Unauthorized,
+    LedgerTrap,
+    AmountTooSmall,
+    BlockUsed,
+    ErrorOperationStyle,
+    ErrorTo,
     Other,
 }
 pub type TxReceipt = Result<Nat, TxError>;
@@ -317,6 +322,14 @@ async fn burn(amount: Nat) -> TxReceipt {
         TransactionStatus::Succeeded,
     )
     .await
+}
+
+#[update(name = "setName")]
+#[candid_method(update, rename = "setName")]
+fn set_name(name: String) {
+    let metadata = ic::get_mut::<Metadata>();
+    assert_eq!(ic::caller(), metadata.owner);
+    metadata.name = name;
 }
 
 #[update(name = "setLogo")]

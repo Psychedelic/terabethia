@@ -73,6 +73,11 @@ pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
     Unauthorized,
+    LedgerTrap,
+    AmountTooSmall,
+    BlockUsed,
+    ErrorOperationStyle,
+    ErrorTo,
     Other,
 }
 pub type TxReceipt = Result<Nat, TxError>;
@@ -319,6 +324,14 @@ async fn burn(amount: Nat) -> TxReceipt {
     .await
 }
 
+#[update(name = "setName")]
+#[candid_method(update, rename = "setName")]
+fn set_name(name: String) {
+    let metadata = ic::get_mut::<Metadata>();
+    assert_eq!(ic::caller(), metadata.owner);
+    metadata.name = name;
+}
+
 #[update(name = "setLogo")]
 #[candid_method(update, rename = "setLogo")]
 fn set_logo(logo: String) {
@@ -530,22 +543,23 @@ async fn add_record(
     timestamp: u64,
     status: TransactionStatus,
 ) -> TxReceipt {
-    insert_into_cap(Into::<IndefiniteEvent>::into(Into::<Event>::into(Into::<
-        TypedEvent<DIP20Details>,
-    >::into(
-        TxRecord {
-            caller: Some(caller),
-            index: Nat::from(0),
-            from,
-            to,
-            amount: Nat::from(amount),
-            fee: Nat::from(fee),
-            timestamp: Int::from(timestamp),
-            status,
-            operation: op,
-        },
-    ))))
-    .await
+    // insert_into_cap(Into::<IndefiniteEvent>::into(Into::<Event>::into(Into::<
+    //     TypedEvent<DIP20Details>,
+    // >::into(
+    //     TxRecord {
+    //         caller: Some(caller),
+    //         index: Nat::from(0),
+    //         from,
+    //         to,
+    //         amount: Nat::from(amount),
+    //         fee: Nat::from(fee),
+    //         timestamp: Int::from(timestamp),
+    //         status,
+    //         operation: op,
+    //     },
+    // ))))
+    // .await
+    Ok(Nat::from(1))
 }
 
 pub async fn insert_into_cap(ie: IndefiniteEvent) -> TxReceipt {

@@ -1,5 +1,5 @@
 use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{ic, macros::*, Principal};
+use ic_kit::{ic, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
@@ -13,14 +13,13 @@ pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
     Unauthorized,
-    NotApproved,
-    MintFailed,
-    MintUnknown,
-    TransferFailed,
-    BurnFailed,
-    BurnUnknown,
-    SendMessageFailed,
-    ConsumeMessageFailed,
+    LedgerTrap,
+    AmountTooSmall,
+    BlockUsed,
+    ErrorOperationStyle,
+    ErrorTo,
+    Other,
+    Canister(String),
 }
 
 #[derive(Deserialize, CandidType)]
@@ -34,13 +33,6 @@ pub struct SendMessageParam {
     pub eth_addr: Principal,
     pub payload: Vec<Nat>,
 }
-
-/// Explore inter canister calls with tera bridge & weth
-// #[import(canister = "tera")]
-// struct Tera;
-
-// #[import(canister = "weth")]
-// struct WETH;
 
 pub trait ToNat {
     fn to_nat(&self) -> Nat;
@@ -103,19 +95,25 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_slice(&payload[0].0.to_bytes_be().as_slice());
 
-        let mint: Result<(TxReceipt,), _> =
+        let mint: Result<(TxReceipt,), (RejectionCode, String)> =
             ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
 
         match mint {
             Ok(result) => match result {
-                (Ok(txn_id),) => Ok(txn_id),
-                (Err(err),) => Err(err),
+                (Ok(value),) => Ok(value),
+                (Err(error),) => Err(error),
             },
-            Err(_) => Err(TxError::MintUnknown),
-        };
+            Err((code, err)) => Err(TxError::Canister(format!(
+                "RejectionCode: {:?}\n{}",
+                code, err
+            ))),
+        }
+    } else {
+        Err(TxError::Canister(format!(
+            "Consume Message: {:?}\n{}",
+            "Cannister: ", "message consumption failed!"
+        )))
     }
-
-    Err(TxError::ConsumeMessageFailed)
 }
 
 // ToDo: atmoicty of these calls
@@ -137,35 +135,45 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
 
     match transfer {
         Ok(result) => match result {
-            (Ok(value),) => Ok(value),
-            (Err(error),) => Err(error),
+            (Ok(value),) => value,
+            (Err(error),) => return Err(error),
         },
-        Err(_) => Err(TxError::NotApproved),
+        Err((code, err)) => {
+            return Err(TxError::Canister(format!(
+                "RejectionCode: {:?}\n{}",
+                code, err
+            )))
+        }
     };
 
-    let send_message: (Result<bool, String>,) = ic::call(
-        Principal::from_str(TERA_ADDRESS).unwrap(),
-        "send_message",
-        (&eth_addr, &payload),
-    )
-    .await
-    .expect("sending message to L2 failed!");
+    // Burn those tokens
+    let burn_txn: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
 
-    if send_message.0.unwrap() {
-        // // Burn those tokens
-        let burn_txn: Result<(TxReceipt,), _> =
-            ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
+    match burn_txn {
+        Ok(result) => match result {
+            (Ok(txn_id),) => {
+                let send_message: Result<(bool,), _> = ic::call(
+                    Principal::from_str(TERA_ADDRESS).unwrap(),
+                    "send_message",
+                    (&eth_addr, &payload),
+                )
+                .await;
 
-        match burn_txn {
-            Ok(result) => match result {
-                (Ok(txn_id),) => Ok(txn_id),
-                (Err(error),) => Err(error),
-            },
-            Err(_) => Err(TxError::BurnUnknown),
-        };
+                match send_message {
+                    Ok(_) => Ok(txn_id),
+                    Err((code, err)) => Err(TxError::Canister(format!(
+                        "RejectionCode: {:?}\n{}",
+                        code, err
+                    ))),
+                }
+            }
+            (Err(error),) => Err(error),
+        },
+        Err((code, err)) => Err(TxError::Canister(format!(
+            "RejectionCode: {:?}\n{}",
+            code, err
+        ))),
     }
-
-    Err(TxError::SendMessageFailed)
 }
 
 candid::export_service!();
