@@ -84,7 +84,7 @@ custom:
       - dev
   serverless-offline-sns:
     port: 4002
-    debug: true
+    debug: false
     sns-endpoint: http://127.0.0.1:4002
   webpack:
     webpackConfig: ./webpack.config.js
@@ -104,6 +104,7 @@ plugins:
   - serverless-stack-termination-protection
   - serverless-iam-roles-per-function
   - serverless-prune-plugin
+  - serverless-dynamodb-local
   - serverless-offline-sns
   - serverless-offline
 

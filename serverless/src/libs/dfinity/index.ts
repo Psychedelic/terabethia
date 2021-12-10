@@ -16,9 +16,7 @@ import _TERA_SERVICE, {
 } from "./idls/tera/tera";
 
 import PROXY_FACTORY from "./idls/proxy/proxy.did";
-import _PROXY_SERVICE, {
-  Result as PRresult,
-} from "./idls/proxy/proxy";
+import _PROXY_SERVICE, { Result as PRresult } from "./idls/proxy/proxy";
 
 import { config } from "@libs/config";
 

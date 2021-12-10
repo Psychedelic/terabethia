@@ -7,6 +7,7 @@ import {
   PutCommandInput,
   PutCommandOutput,
   GetCommand,
+  GetCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { IMessages } from "./IMessages";
 import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
@@ -56,6 +57,27 @@ export class DynamoDb implements IMessages {
       return putData;
     } catch (error) {
       console.error("Error put: ", error);
+      return undefined;
+    }
+  }
+
+  public async get(
+    pk: string,
+    sk: string
+  ): Promise<GetCommandOutput | undefined> {
+    const params = {
+      TableName: this.teraTableName,
+      Key: {
+        pk,
+        ...(sk && { sk }),
+      },
+    };
+
+    try {
+      const data = await this.db.send(new GetCommand(params));
+      return data;
+    } catch (error) {
+      console.error("Error getItem: ", error);
       return undefined;
     }
   }
@@ -116,6 +138,4 @@ export class DynamoDb implements IMessages {
 
     return [];
   }
-
-  // ToDo: udpate method for messages
 }

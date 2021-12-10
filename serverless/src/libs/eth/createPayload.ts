@@ -10,7 +10,7 @@ export const createPayload = (
   messagesToL1: string[],
   messagesToL2: string[]
 ): string[] => {
-    console.log(messagesToL2);
+  console.log(messagesToL2);
   const p = [
     ethers.utils.hexZeroPad(ethers.utils.hexlify(messagesToL1.length), 32),
     ...messagesToL1,

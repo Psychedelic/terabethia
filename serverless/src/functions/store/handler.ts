@@ -8,13 +8,14 @@ const bridgeMessage = new BridgeMessage();
 
 const storeL1Message = async (event: SNSEvent) => {
   try {
-    const addMessagesPromise = event.Records.map((message) =>
-      bridgeMessage.put({
-        pk: message.Sns.Message,
-      })
-    );
+    console.log(event);
+    // const addMessagesPromise = event.Records.map((message) =>
+    //   bridgeMessage.put({
+    //     pk: message.Sns.Message,
+    //   })
+    // );
 
-    return Promise.all(addMessagesPromise);
+    // return Promise.all(addMessagesPromise);
   } catch (error) {
     console.error(error);
     return undefined;
