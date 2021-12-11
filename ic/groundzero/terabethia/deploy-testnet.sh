@@ -5,7 +5,7 @@ ic-cdk-optimizer target/wasm32-unknown-unknown/release/token.wasm -o target/wasm
 dfx build --network ic token
 
 OWNER="principal \"$( \dfx identity get-principal)\""
-CAP_ID="principal \"e22n6-waaaa-aaaah-qcd2q-cai\""
+CAP_ID="principal \"s2rjs-6aaaa-aaaab-qad4q-cai\""
 ETH_PROXY_ID="principal \"tcy4r-qaaaa-aaaab-qadyq-cai\""
 
 dfx canister --network=ic install token --argument "(

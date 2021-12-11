@@ -1,9 +1,10 @@
+use bigdecimal::BigDecimal;
 use candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::{ic, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
-const WETH_ADDRESS_IC: &str = "tq6li-4qaaa-aaaab-qad3q-cai";
+const WETH_ADDRESS_IC: &str = "sute2-fqaaa-aaaab-qad5q-cai";
 const WETH_ADDRESS_ETH: &str = "0x1b864e1ca9189cfbd8a14a53a02e26b00ab5e91a";
 
 pub type TxReceipt = Result<Nat, TxError>;
@@ -78,7 +79,6 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
-    // Is it feasible to make these inter cansiter calls?
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
@@ -87,9 +87,7 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
     .await
     .expect("consuming message from L1 failed!");
 
-    // this is redundant on prupose for now
-    // expect will panic
-    if consume.0.unwrap() {
+    if consume.0.is_ok() {
         let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
         let amount = Nat::from(payload[1].0.clone());
@@ -107,13 +105,13 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
                 "RejectionCode: {:?}\n{}",
                 code, err
             ))),
-        }
-    } else {
-        Err(TxError::Canister(format!(
-            "Consume Message: {:?}\n{}",
-            "Cannister: ", "message consumption failed!"
-        )))
+        };
     }
+
+    Err(TxError::Canister(format!(
+        "Consume Message: {:?}\n{}",
+        "Canister: ", "message consumption failed!"
+    )))
 }
 
 // ToDo: atmoicty of these calls
@@ -122,45 +120,45 @@ async fn mint(payload: Vec<Nat>) -> TxReceipt {
 #[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
+    let canister_id = ic::id();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [eth_addr.clone().to_nat(), amount.clone()];
 
-    // Transfer from caller to eth_proxy address
     let transfer: Result<(TxReceipt,), _> = ic::call(
         weth_ic_addr_pid,
         "transferFrom",
-        (&caller, &weth_ic_addr_pid, &amount),
+        (&caller, &canister_id, &amount),
     )
     .await;
 
     match transfer {
         Ok(result) => match result {
-            (Ok(value),) => value,
-            (Err(error),) => return Err(error),
-        },
-        Err((code, err)) => {
-            return Err(TxError::Canister(format!(
-                "RejectionCode: {:?}\n{}",
-                code, err
-            )))
-        }
-    };
+            (Ok(_),) => {
+                let burn_txn: Result<(TxReceipt,), _> =
+                    ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
 
-    // Burn those tokens
-    let burn_txn: Result<(TxReceipt,), _> = ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
+                match burn_txn {
+                    Ok(result) => match result {
+                        (Ok(txn_id),) => {
+                            let send_message: (Result<bool, String>,) = ic::call(
+                                Principal::from_str(TERA_ADDRESS).unwrap(),
+                                "send_message",
+                                (&eth_addr, &payload),
+                            )
+                            .await
+                            .expect("sending message to L1 failed!");
 
-    match burn_txn {
-        Ok(result) => match result {
-            (Ok(txn_id),) => {
-                let send_message: Result<(bool,), _> = ic::call(
-                    Principal::from_str(TERA_ADDRESS).unwrap(),
-                    "send_message",
-                    (&eth_addr, &payload),
-                )
-                .await;
+                            if send_message.0.is_ok() {
+                                return Ok(txn_id);
+                            }
 
-                match send_message {
-                    Ok(_) => Ok(txn_id),
+                            Err(TxError::Canister(format!(
+                                "Send Message: {:?}\n{}",
+                                "Canister: ", "sending message failed!"
+                            )))
+                        }
+                        (Err(error),) => Err(error),
+                    },
                     Err((code, err)) => Err(TxError::Canister(format!(
                         "RejectionCode: {:?}\n{}",
                         code, err
@@ -199,9 +197,10 @@ pub fn post_upgragde() {
 
 #[cfg(test)]
 mod tests {
+    use bigdecimal::BigDecimal;
     use candid::Principal;
     use ic_cdk::export::candid::{decode_args, encode_args, Nat};
-    use std::str::FromStr;
+    use std::{ops::Mul, str::FromStr};
 
     #[test]
     fn test_decode_eth_payload() {
@@ -237,5 +236,16 @@ mod tests {
         let expected_ether_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
         println!("{}", from_principal.to_string());
         assert_eq!(hex::encode(from_principal), expected_ether_addr);
+    }
+
+    #[test]
+    fn test_gwei_to_eth() {
+        let gwei = "0.000000001";
+        let value = BigDecimal::from_str(&"20000000".to_string()).unwrap();
+
+        let result = value.mul(&BigDecimal::from_str(gwei).unwrap());
+        let expected_eth_value = BigDecimal::from_str(&"0.02".to_string()).unwrap();
+
+        assert_eq!(result, expected_eth_value);
     }
 }

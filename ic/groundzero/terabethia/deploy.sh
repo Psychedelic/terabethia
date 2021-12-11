@@ -5,6 +5,7 @@ ic-cdk-optimizer target/wasm32-unknown-unknown/release/token.wasm -o target/wasm
 dfx build token
 
 OWNER="principal \"$( \dfx identity get-principal)\""
+# we need a local call
 CAP_ID="principal \"e22n6-waaaa-aaaah-qcd2q-cai\""
 ETH_PROXY_ID="principal \"$( \dfx canister id eth_proxy)\""
 
