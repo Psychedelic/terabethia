@@ -7,7 +7,11 @@ import {
 import schema from "./schema";
 import { config } from "@libs/config";
 import { middyfy } from "@libs/lambda";
-import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import {
+  SNSClient,
+  PublishCommand,
+  PublishCommandInput,
+} from "@aws-sdk/client-sns";
 
 const {
   SNS_URL,
@@ -30,11 +34,12 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
     });
   }
 
-  const messageTopicPayload = {
+  const messageTopicPayload: PublishCommandInput = {
     TopicArn: `arn:aws:sns:${AWS_REGION}:${
       IS_OFFLINE ? AWS_ACCOUNT_ID_LOCAL : AWS_ACCOUNT_ID
     }:${ETH_L1_MESSAGE_TOPIC_NAME}`,
     Message: JSON.stringify(event.body),
+    MessageGroupId: event.body.hash,
   };
 
   try {

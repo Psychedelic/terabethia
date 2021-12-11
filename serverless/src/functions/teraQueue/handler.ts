@@ -6,12 +6,12 @@ import middy from "@middy/core";
 import { Tera } from "@libs/dfinity";
 import { config } from "@libs/config";
 import { Principal } from "@dfinity/principal";
-import { ValidatedEventSQSEvent } from "@libs/sqs";
 import { SQSRecord } from "aws-lambda/trigger/sqs";
+import { ValidatedEventSQSEvent } from "@libs/sqs";
 import { BridgeMessage } from "@libs/dynamo/bridgeMessage";
 import sqsJsonBodyParser from "@middy/sqs-json-body-parser";
-import { BlockNativePayload, BlockNativeSchema } from "@libs/blocknative";
 import sqsBatchFailureMiddleware from "@middy/sqs-partial-batch-failure";
+import { BlockNativePayload, BlockNativeSchema } from "@libs/blocknative";
 
 const web3 = new Web3();
 const bridgeMessage = new BridgeMessage();
@@ -36,11 +36,17 @@ const providers = {
 
 const handleL1Message = async (record: SQSRecord) => {
   const { body } = record;
-  const { hash } = JSON.parse(body) as unknown as BlockNativePayload;
-  const provider = getProvider(providers["Goerli"][0] as string);
+  const { hash } = body as unknown as BlockNativePayload;
+  console.log(`hash: ${hash}`);
 
+  const provider = getProvider(providers["Goerli"][0] as string);
   const eventRecipt = await provider.getTransactionReceipt(hash);
   const { to: from, logs } = eventRecipt;
+
+  if (!Array.isArray(logs) || !logs.length) {
+    Promise.reject(record);
+  }
+
   const eventProps = web3.eth.abi.decodeParameters(
     typesArray,
     logs[0]?.data as string
@@ -55,13 +61,12 @@ const handleL1Message = async (record: SQSRecord) => {
       storedMessage.Item &&
       Object.keys(storedMessage.Item).length
     ) {
-      return Promise.reject(record);
+      return Promise.resolve(record);
     }
 
     const fromPid = Principal.fromHex(from.substring(2));
     const toPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
 
-    // Store Message To Tera
     const storeTeraBridge = await Tera.storeMessage(fromPid, toPid, [
       // pid
       BigInt(eventProps.principal),
@@ -82,7 +87,7 @@ const handleL1Message = async (record: SQSRecord) => {
 };
 
 const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> =
-  async (event: any): Promise<any> => {
+  async (event): Promise<any> => {
     const messageProcessingPromises = event.Records.map(handleL1Message);
     return Promise.allSettled(messageProcessingPromises);
   };

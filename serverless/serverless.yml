@@ -50,7 +50,7 @@ provider:
 
 custom:
   region: ${opt:region, self:provider.region}
-  EthL1MessageTopic: eth-l1-message-${self:service.name}-${self:provider.stage}-topic
+  EthL1MessageTopic: eth-l1-message-${self:service.name}-${self:provider.stage}-topic.fifo
   resourceSuffix: ${self:service.name}-${self:provider.stage}
   deletionPolicy:
     default: Delete
@@ -136,24 +136,6 @@ functions:
             Fn::GetAtt:
               - TeraQueue
               - Arn
-  StoreMessageFromL1:
-    timeout: 10
-    memorySize: 128
-    handler: src/functions/store/handler.main
-    events:
-      - sns:
-          arn: !Ref EthL1MessageTopic
-          topicName: ${self:custom.EthL1MessageTopic}
-  # SyncL1ToL2Messages:
-  #   timeout: 10
-  #   memorySize: 128
-  #   handler: src/functions/sync/handler.main
-  #   events:
-  #     - http:
-  #         method: POST
-  #         path: /sync
-
-  # Every Min, poll messages from Tera Canister and process them
   SyncL2ToL1Messages:
     timeout: 15
     memorySize: 128
@@ -170,16 +152,20 @@ resources:
       TeraQueue:
         Type: 'AWS::SQS::Queue'
         Properties:
-          QueueName: tera-queue-${self:custom.resourceSuffix}
+          QueueName: tera-queue-${self:custom.resourceSuffix}.fifo
+          ContentBasedDeduplication: true
+          FifoQueue: true
+          VisibilityTimeout: 300 # 5 minutes
           RedrivePolicy:
-            maxReceiveCount: 10
+            maxReceiveCount: 5
             deadLetterTargetArn: !GetAtt
               - TeraDeadLetterQueue
               - Arn
       TeraDeadLetterQueue:
         Type: AWS::SQS::Queue
         Properties:
-          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}
+          FifoQueue: true
+          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}.fifo
 
       TeraL1StateTable:
         Type: AWS::DynamoDB::Table
@@ -204,6 +190,8 @@ resources:
         Properties:
           DisplayName: ETH L1 Message
           TopicName: ${self:custom.EthL1MessageTopic}
+          ContentBasedDeduplication: true
+          FifoTopic: true
 
       SnsToTeraQueuePolicy:
         Type: AWS::SQS::QueuePolicy

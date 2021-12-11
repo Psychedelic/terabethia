@@ -5,6 +5,7 @@ import {
   HttpAgent,
   HttpAgentOptions,
 } from "@dfinity/agent";
+import { config } from "@libs/config";
 import { Principal } from "@dfinity/principal";
 import { Ed25519KeyIdentity } from "@dfinity/identity";
 
@@ -14,11 +15,6 @@ import _TERA_SERVICE, {
   Result,
   Result_1,
 } from "./idls/tera/tera";
-
-import PROXY_FACTORY from "./idls/proxy/proxy.did";
-import _PROXY_SERVICE, { Result as PRresult } from "./idls/proxy/proxy";
-
-import { config } from "@libs/config";
 
 export interface ActorParams {
   host: string;
@@ -79,17 +75,11 @@ const teraCanister = createActor<_TERA_SERVICE>({
   idlFactory: TERA_FACTORY,
 });
 
-const proxyCanister = createActor<_PROXY_SERVICE>({
-  host: Hosts.mainnet,
-  canisterId: config.ETH_PROXY_CANISTER_ID,
-  idlFactory: PROXY_FACTORY,
-});
-
 export const Tera = {
   storeMessage: async (
     from: Principal,
     to: Principal,
-    payload: Array<bigint>
+    payload: bigint[],
   ): Promise<Result_1> => {
     return await teraCanister.store_message(from, to, payload);
   },
