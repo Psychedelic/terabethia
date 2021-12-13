@@ -363,7 +363,7 @@ dependencies = [
 [[package]]
 name = "cap-common"
 version = "0.1.0"
-source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+source = "git+https://github.com/Psychedelic/cap.git?branch=main#caf6e873ab3111f7557a2b45c82b33482dff2665"
 dependencies = [
  "async-std",
  "ic-cdk",
@@ -378,7 +378,7 @@ dependencies = [
 [[package]]
 name = "cap-sdk"
 version = "0.1.0-alpha1"
-source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+source = "git+https://github.com/Psychedelic/cap.git?branch=main#caf6e873ab3111f7557a2b45c82b33482dff2665"
 dependencies = [
  "async-stream",
  "cap-sdk-core",
@@ -393,7 +393,7 @@ dependencies = [
 [[package]]
 name = "cap-sdk-core"
 version = "0.1.0-alpha1"
-source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+source = "git+https://github.com/Psychedelic/cap.git?branch=main#caf6e873ab3111f7557a2b45c82b33482dff2665"
 dependencies = [
  "cap-common",
  "ic-cdk",
@@ -405,7 +405,7 @@ dependencies = [
 [[package]]
 name = "cap-standards"
 version = "0.1.0-alpha1"
-source = "git+https://github.com/flyq/cap.git?branch=sdk-fix#b4810ce9819152e353e5ea38289f9a8ca4d7c366"
+source = "git+https://github.com/Psychedelic/cap.git?branch=main#caf6e873ab3111f7557a2b45c82b33482dff2665"
 dependencies = [
  "bincode",
  "candid",
