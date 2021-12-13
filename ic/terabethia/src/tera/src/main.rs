@@ -2,12 +2,17 @@ use std::cell::RefCell;
 
 use candid::{candid_method, encode_args, Nat};
 use ic_cdk::export::candid::{CandidType, Principal};
-// use ic_cdk::export::Principal;
-use ic_cdk::{api, caller, storage};
-use ic_cdk_macros::{init, inspect_message, post_upgrade, pre_upgrade, update};
+use ic_cdk::{api, caller};
+use ic_cdk_macros::{init, update};
 use serde::Deserialize;
-use sha3::{Digest, Keccak256};
-use std::collections::HashMap; // 1.2.7
+use std::collections::HashMap;
+use tera::OutgoingMessage;
+use crate::utils::calculate_hash;
+
+mod inspect_message;
+mod tera;
+mod upgrade;
+mod utils;
 
 const MESSAGE_PRODUCED: bool = true;
 
@@ -27,89 +32,9 @@ pub struct TerabetiaState {
     pub authorized: RefCell<Vec<Principal>>,
 }
 
-#[derive(Clone, Debug, CandidType, Deserialize)]
-struct OutgoingMessage {
-    id: Nat,
-    hash: String,
-    produced: bool,
-}
-
-#[derive(CandidType, Deserialize, Default)]
-pub struct StableTerabetiaState {
-    pub messages: HashMap<String, u32>,
-    pub messages_out: HashMap<u64, (String, bool)>,
-    pub message_index: u64,
-    pub authorized: Vec<Principal>,
-}
-
-impl TerabetiaState {
-    pub fn take_all(&self) -> StableTerabetiaState {
-        STATE.with(|tera| StableTerabetiaState {
-            messages: tera.messages.take(),
-            messages_out: tera.messages_out.take(),
-            message_index: tera.message_index.take(),
-            authorized: tera.authorized.take(),
-        })
-    }
-
-    pub fn clear_all(&self) {
-        STATE.with(|tera| {
-            tera.messages.borrow_mut().clear();
-            tera.messages_out.borrow_mut().clear();
-            tera.authorized.borrow_mut().clear();
-
-            // ToDo unsfe set this back to 0
-            // self.message_index.borrow_mut();
-        })
-    }
-
-    pub fn replace_all(&self, stable_tera_state: StableTerabetiaState) {
-        STATE.with(|tera| {
-            tera.messages.replace(stable_tera_state.messages);
-            tera.messages_out.replace(stable_tera_state.messages_out);
-            tera.message_index.replace(stable_tera_state.message_index);
-            tera.authorized.replace(stable_tera_state.authorized);
-        })
-    }
-}
-
-fn calculate_hash(from: Nat, to: Nat, payload: Vec<Nat>) -> String {
-    let mut data = vec![from, to, Nat::from(payload.len())];
-    data.extend(payload);
-
-    let data_encoded: Vec<Vec<u8>> = data
-        .clone()
-        .into_iter()
-        .map(|x| {
-            // take a slice of 32
-            let f = [0u8; 32];
-            let slice = &x.0.to_bytes_be()[..];
-            // calculate zero values padding
-            let l = 32 - slice.len();
-            [&f[..l], &slice].concat()
-        })
-        .collect();
-
-    let concated = data_encoded.concat().to_vec();
-
-    let mut hasher = Keccak256::new();
-
-    hasher.update(concated);
-
-    let result = hasher.finalize();
-
-    hex::encode(result.to_vec())
-}
-
 // guard func
 fn is_authorized() -> Result<(), String> {
-    STATE.with(|s| {
-        s.authorized
-            .borrow()
-            .contains(&caller())
-            .then(|| ())
-            .ok_or("Caller is not authorized".to_string())
-    })
+    STATE.with(|s| s.is_authorized())
 }
 
 pub trait ToNat {
@@ -148,17 +73,7 @@ async fn trigger_call(
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
     let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
-
-    let message_exists = STATE.with(|s| {
-        let map = s.messages.borrow();
-        let message = map.get(&msg_hash);
-
-        if message.is_none() {
-            return Err("Message does not exist.".to_string());
-        }
-
-        Ok(true)
-    });
+    let message_exists = STATE.with(|s| s.message_exists(msg_hash));
 
     if message_exists.is_err() {
         return Err(message_exists.err().unwrap());
@@ -191,10 +106,7 @@ async fn store_message(
 ) -> Result<CallResult, String> {
     let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
 
-    STATE.with(|s| {
-        let mut map = s.messages.borrow_mut();
-        *map.entry(msg_hash).or_insert(0) += 1;
-    });
+    STATE.with(|s| s.store_incoming_message(msg_hash));
 
     trigger_call(from, to, payload).await
 }
@@ -229,7 +141,8 @@ fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
     });
 
     if res.is_ok() {
-        match store_outgoing_message(msg_hash, !MESSAGE_PRODUCED) {
+        let store = STATE.with(|s| s.store_outgoing_message(msg_hash, !MESSAGE_PRODUCED));
+        match store {
             Err(e) => panic!("{:?}", e),
             _ => (),
         }
@@ -246,110 +159,25 @@ fn send(to: Principal, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::caller();
     let msg_hash = calculate_hash(caller.to_nat(), to.to_nat(), payload.clone());
 
-    store_outgoing_message(msg_hash, MESSAGE_PRODUCED)
-}
-
-fn store_outgoing_message(hash: String, msg_type: bool) -> Result<bool, String> {
-    STATE.with(|s| {
-        // we increment outgoing message counter
-        let mut index = s.message_index.borrow_mut();
-        *index += 1;
-
-        let mut map = s.messages_out.borrow_mut();
-        let msg = (hash, msg_type);
-        map.insert(*index, msg);
-
-        Ok(true)
-    })
+    STATE.with(|s| s.store_outgoing_message(msg_hash, MESSAGE_PRODUCED))
 }
 
 #[update(name = "remove_messages", guard = "is_authorized")]
 #[candid_method(update, rename = "remove_messages")]
 fn remove_messages(ids: Vec<Nat>) -> Result<bool, String> {
-    STATE.with(|s| {
-        let mut map = s.messages_out.borrow_mut();
-
-        ids.into_iter().for_each(|n| {
-            let i = &u64::from_str_radix(&n.0.to_str_radix(16), 16).unwrap();
-            map.remove(&i).expect("Message does not exist");
-        });
-
-        Ok(true)
-    })
+    STATE.with(|s| s.remove_messages(ids))
 }
 
 #[update(name = "get_messages", guard = "is_authorized")]
 #[candid_method(update, rename = "get_messages")]
 fn get_messages() -> Vec<OutgoingMessage> {
-    STATE.with(|s| {
-        let map = s.messages_out.borrow();
-
-        map.clone()
-            .into_iter()
-            .map(|f| OutgoingMessage {
-                produced: f.1 .1,
-                id: Nat::from(f.0),
-                hash: f.1 .0,
-            })
-            .collect()
-    })
+    STATE.with(|s| s.get_messages())
 }
 
 #[update(name = "authorize")]
 #[candid_method(update)]
 fn authorize(other: Principal) {
-    let caller = caller();
-    STATE.with(|s| {
-        let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
-        if caller_autorized {
-            s.authorized.borrow_mut().push(other);
-        }
-    })
-}
-
-#[inspect_message]
-fn inspect_message() {
-    if is_authorized().is_ok() {
-        api::call::accept_message()
-    }
-}
-
-// Approach #1
-// ToDo {Botch}
-// #[pre_upgrade]
-// fn pre_upgrade() {
-//     let stable_tera_state = STATE.with(|state| candid::encode_one(&state.borrow()).unwrap());
-
-//     storage::stable_save((stable_tera_state,)).expect("failed to save tera state");
-// }
-
-// #[post_upgrade]
-// fn post_upgrade() {
-//     let (stable_tera_state,): (Vec<u8>,) = storage::stable_restore().expect("failed to restore stable tera state");
-
-//     STATE.with(|state| {
-//         let data = candid::decode_one(&stable_tera_state).expect("failed to deserialize tera state");
-
-//         *state.borrow_mut() = data
-//     });
-// }
-
-// Approach #2
-#[pre_upgrade]
-fn pre_upgrade() {
-    let stable_tera_state = STATE.with(|s| s.take_all());
-
-    storage::stable_save((stable_tera_state,)).expect("failed to save tera state");
-}
-
-#[post_upgrade]
-fn post_upgrade() {
-    STATE.with(|s| s.clear_all());
-
-    let (stable_tera_state,): (StableTerabetiaState,) =
-        storage::stable_restore().expect("failed to restore stable tera state");
-
-    STATE.with(|s| s.replace_all(stable_tera_state));
+    STATE.with(|s| s.authorize(other))
 }
 
 #[cfg(any(target_arch = "wasm32", test))]
@@ -391,6 +219,7 @@ mod tests {
         assert_eq!(msg_hash, msg_hash_expected);
     }
 
+    #[test]
     fn deposit_message_hash() {
         let to_principal = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
         let to = to_principal.to_nat();
