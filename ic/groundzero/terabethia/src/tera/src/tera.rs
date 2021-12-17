@@ -88,11 +88,10 @@ impl TerabetiaState {
     pub fn authorize(&self, other: Principal) {
         let caller = caller();
         STATE.with(|s| {
-            s.authorized.borrow_mut().push(other);
-            // let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
-            // if caller_autorized {
-            //     s.authorized.borrow_mut().push(other);
-            // }
+            let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
+            if caller_autorized {
+                s.authorized.borrow_mut().push(other);
+            }
         })
     }
 
