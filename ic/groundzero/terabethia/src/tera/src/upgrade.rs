@@ -1,7 +1,7 @@
-use crate::{tera::StableTerabetiaState, STATE};
-
 use ic_cdk::storage;
 use ic_cdk_macros::{post_upgrade, pre_upgrade};
+
+use crate::{tera::StableTerabetiaState, STATE};
 
 #[pre_upgrade]
 fn pre_upgrade() {

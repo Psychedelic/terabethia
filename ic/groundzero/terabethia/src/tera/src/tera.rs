@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{TerabetiaState, STATE};
+use crate::{common::types::OutgoingMessage, TerabetiaState, STATE};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::caller;
 
@@ -10,13 +10,6 @@ pub struct StableTerabetiaState {
     pub messages_out: HashMap<u64, (String, bool)>,
     pub message_index: u64,
     pub authorized: Vec<Principal>,
-}
-
-#[derive(Clone, Debug, CandidType, Deserialize)]
-pub struct OutgoingMessage {
-    id: Nat,
-    hash: String,
-    produced: bool,
 }
 
 impl TerabetiaState {
@@ -36,10 +29,10 @@ impl TerabetiaState {
     }
 
     pub fn store_incoming_message(&self, msg_hash: String) {
-      STATE.with(|s| {
-        let mut map = s.messages.borrow_mut();
-        *map.entry(msg_hash).or_insert(0) += 1;
-      })
+        STATE.with(|s| {
+            let mut map = s.messages.borrow_mut();
+            *map.entry(msg_hash).or_insert(0) += 1;
+        })
     }
 
     pub fn store_outgoing_message(&self, hash: String, msg_type: bool) -> Result<bool, String> {
@@ -83,22 +76,23 @@ impl TerabetiaState {
     }
 
     pub fn is_authorized(&self) -> Result<(), String> {
-      STATE.with(|s| {
-        s.authorized
-            .borrow()
-            .contains(&caller())
-            .then(|| ())
-            .ok_or("Caller is not authorized".to_string())
-      })
+        STATE.with(|s| {
+            s.authorized
+                .borrow()
+                .contains(&caller())
+                .then(|| ())
+                .ok_or("Caller is not authorized".to_string())
+        })
     }
 
     pub fn authorize(&self, other: Principal) {
         let caller = caller();
         STATE.with(|s| {
-            let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
-            if caller_autorized {
-                s.authorized.borrow_mut().push(other);
-            }
+            s.authorized.borrow_mut().push(other);
+            // let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
+            // if caller_autorized {
+            //     s.authorized.borrow_mut().push(other);
+            // }
         })
     }
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{TerabetiaState, STATE};
+use crate::{common::types::OutgoingMessage, TerabetiaState, STATE};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::caller;
 
@@ -10,13 +10,6 @@ pub struct StableTerabetiaState {
     pub messages_out: HashMap<u64, (String, bool)>,
     pub message_index: u64,
     pub authorized: Vec<Principal>,
-}
-
-#[derive(Clone, Debug, CandidType, Deserialize)]
-pub struct OutgoingMessage {
-    id: Nat,
-    hash: String,
-    produced: bool,
 }
 
 impl TerabetiaState {
@@ -95,10 +88,11 @@ impl TerabetiaState {
     pub fn authorize(&self, other: Principal) {
         let caller = caller();
         STATE.with(|s| {
-            let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
-            if caller_autorized {
-                s.authorized.borrow_mut().push(other);
-            }
+            s.authorized.borrow_mut().push(other);
+            // let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
+            // if caller_autorized {
+            //     s.authorized.borrow_mut().push(other);
+            // }
         })
     }
 
