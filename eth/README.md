@@ -1,6 +1,8 @@
 # Terabethia - Messaging between Ethereum and Internet Computer
 
-# Deploying Contract to Goerli
+Terabethia's Ethereum-side contracts and infrastructure.
+
+## Deploying Contract to Goerli
 
 ```sh
 # deploy to the testnet
