@@ -4,7 +4,7 @@ use ic_kit::{ic, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
-const WETH_ADDRESS_IC: &str = "sute2-fqaaa-aaaab-qad5q-cai";
+const WETH_ADDRESS_IC: &str = "sbuvx-eyaaa-aaaab-qad6a-cai";
 const WETH_ADDRESS_ETH: &str = "0x1b864e1ca9189cfbd8a14a53a02e26b00ab5e91a";
 
 pub type TxReceipt = Result<Nat, TxError>;

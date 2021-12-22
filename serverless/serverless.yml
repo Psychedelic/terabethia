@@ -144,8 +144,8 @@ functions:
       OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
       CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
       TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
-    # events:
-    #   - schedule: rate(1 minute)
+    events:
+      - schedule: rate(1 minute)
 
 resources:
   - Resources:
