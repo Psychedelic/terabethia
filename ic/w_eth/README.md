@@ -1,29 +1,35 @@
-# w_eth 
+# Wrapped Ethereum Example - IC-side Contracts
+
+We have created an example of mirroring assets using the Terabethia bridge with an ETH to Wrapped ETH flow. Where a contract proxy on Ethereum receives and locks ETH deposits, and utilizes Terabethia and a secondary proxy contract on the IC to mint an equivalent WETH balance by calling the WETH token IC canister.
+
+Learn more at: [ETH WETH Documentation](https://docs.terabethia.ooo/terabethia-testnet/eth-weth/)
+
+## w_eth 
 canisterId: **tq6li-4qaaa-aaaab-qad3q-cai**
 - wrapped ether on IC using DIP20
 
-# eth_proxy
+## eth_proxy
 canisterId: **ttcy4r-qaaaa-aaaab-qadyq-cai**
 - weth proxy on IC
 
-# Deploy eth_proxy to mainnet
+## Deploy eth_proxy to mainnet
 ```sh
 dfx deploy --network ic --with-cycles 12000000000000 eth_proxy
 ```
 
-# Deploy weth to mainnet/loca
+## Deploy weth to mainnet/loca
 
 ```sh
 bash deploy.sh
 bash deploy-prod.sh
 ```
 
-# Get holders
+## Get holders
 ```sh
 dfx canister --network ic call token getHolders "(0:nat64, 10:nat64)"
 ```
 
-# Token Standard Spec
+## Token Standard Spec
 
 A fungible token standard for the DFINITY Internet Computer.
 

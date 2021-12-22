@@ -9,13 +9,22 @@ Terabethia is a bridge between Ethereum & the Internet Computer  that contracts 
 - [DIP20](https://github.com/Psychedelic/DIP20)
 - [DIP721](https://github.com/Psychedelic/DIP721)
 
-> Important: This is an early look at Terabethia's repository, but it does not reference the final or upcoming test-net implementation. Don't consider the repository as a stable or complete release yet. We will further document, polish, and add-in key pieces to the Magic Proxy, the bridge, and more soon.
-
 On this repository you can find early iterations of:
 
 - **eth:** The Ethereum side of the Terabethia bridge and its contract.
 - **ic:** The Internet Computer side of the Terabethia bridge and its contract.
 - **serverless**: The base serverless AWS service utilized by the bridge.
+
+----
+
+## Terabethia's Testnet - Getting Started
+
+**Terabethia's Testnet is live for any developer to test!** This testnet uses the Ethereum Goerli testnet network in tandem with the Internet Computer to host the contracts for Terabethia's communication protocol.
+
+You can start building on top of this testnet, communicating contracts across both chains. We've created an example of mirroring Goerli Ethereum to Wrapped Ethereum on the Internet Computer as a sample integration and potential showcase of Terabethia as an asset bridge:
+
+- [Visit our Documentation to get started](https://docs.terabethia.ooo/)
+- [View our ETH/WETH Example](https://docs.terabethia.ooo/terabethia-testnet/eth-weth/)
 
 ## Terabethia's Bridge Protocol Architecture 
 ![Group 5972 (3)](https://user-images.githubusercontent.com/73345016/144625840-621cbbed-d723-4624-be89-5f8aa69ce1f0.png)
