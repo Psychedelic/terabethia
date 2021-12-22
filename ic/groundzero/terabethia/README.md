@@ -1,4 +1,4 @@
-# Terabethia's IC-side Contracts
+# Terabethia's GroundZero Local Testing Env
 
 The following are the contracts involved in the bridge on the Internet Computer side.
 
