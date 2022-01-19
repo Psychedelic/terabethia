@@ -1,5 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
         "ic/terabethia/Cargo.toml"
-    ]
+    ],
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveTimeout": 1500
 }
