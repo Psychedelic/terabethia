@@ -4,7 +4,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./IStarknetCore.sol";
 import "./ITerabethiaCore.sol";
 
-contract TerabethiaV2 is Initializable, ITerabethiaCore {
+contract Terabethia is Initializable, ITerabethiaCore {
     // The StarkNet core contract.
     IStarknetCore starknetCore;
 
