@@ -29,19 +29,21 @@ export const main: ScheduledHandler = async () => {
   const messagesToL1 = messages
     .filter((a) => a.produced)
     .map((m) => `0x${m.hash}`);
-  const messagesToL2 = messages
-    .filter((a) => !a.produced)
-    .map((m) => `0x${m.hash}`);
 
-  const payload = createPayload(messagesToL1, messagesToL2);
 
+  
   // skip empty payload
-  if (payload.length == 2) {
+  if (messagesToL1.length == 0) {
     console.log("no messages in payload");
     return;
   }
 
-  const tx = await updateState(OPERATOR_PRIVATE_KEY, CONTRACT_ADDRESS, payload);
+  // we no longer handle consumed L2 messages thanks to nonce implementation
+  
+  // @todo: get nonce from Cairo contract
+  // @todo: invoke Cairo send_message with arguments like:
+  // send_message(nonce + 1, messagesToL1.length, messagesToL1)
+  // write down tx hash, monitor for acceptance on L1
 
   // write lock on each message id when tx is submitted
   if (tx.hash) {
