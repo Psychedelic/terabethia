@@ -2,6 +2,7 @@
 %builtins pedersen range_check
 
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.math import assert_nn
 from starkware.starknet.common.messages import send_message_to_l1
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
@@ -59,26 +60,41 @@ end
 
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        msg_nonce : felt, msg : felt):
+        tx_nonce : felt, hashes_len : felt, hashes : felt*):
     let (res) = nonce.read()
 
-    let next_nonce = res + 1
+    tempvar next_nonce = res + 1
 
     # Verify nonce
-    assert msg_nonce = next_nonce
+    assert tx_nonce = next_nonce
 
     let (caller_address) = get_caller_address()
     let (current_operator) = operator.read()
 
     assert caller_address = current_operator
 
-    let (message_payload : felt*) = alloc()
-    assert message_payload[0] = msg
+    tempvar iterator = hashes_len - 1
+
+    assert_nn(iterator)
 
     let (contract_addr) = l1_contract.read()
+
+    # here we loop through the messages
+    # and we forward them to the L1
+    loop_start:
+    let (message_payload : felt*) = alloc()
+    assert message_payload[0] = hashes[iterator]
+    tempvar iterator = iterator - 1
     send_message_to_l1(to_address=contract_addr, payload_size=1, payload=message_payload)
+    jmp loop_start if iterator != 0
 
     # Save nonce
     nonce.write(next_nonce)
     return ()
+end
+
+@view
+func get_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res : felt):
+    let (res) = nonce.read()
+    return (res)
 end
