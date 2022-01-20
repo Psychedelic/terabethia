@@ -31,12 +31,7 @@ end
 @external
 func set_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         operator_address : felt):
-    let (res) = nonce.read()
-
-    let (caller_address) = get_caller_address()
-    let (current_operator) = operator.read()
-
-    assert caller_address = current_operator
+    require_operator()
 
     # Save new operator
     operator.write(value=operator_address)
@@ -46,14 +41,9 @@ end
 @external
 func set_l1_contract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         contract_addr : felt):
-    let (res) = nonce.read()
+    require_operator()
 
-    let (caller_address) = get_caller_address()
-    let (current_operator) = operator.read()
-
-    assert caller_address = current_operator
-
-    # Save new contract addr
+    # save new contract addr
     l1_contract.write(value=contract_addr)
     return ()
 end
@@ -61,17 +51,14 @@ end
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         tx_nonce : felt, hashes_len : felt, hashes : felt*):
+    require_operator()
+
     let (res) = nonce.read()
 
     tempvar next_nonce = res + 1
 
     # Verify nonce
     assert tx_nonce = next_nonce
-
-    let (caller_address) = get_caller_address()
-    let (current_operator) = operator.read()
-
-    assert caller_address = current_operator
 
     tempvar iterator = hashes_len - 1
 
@@ -97,4 +84,12 @@ end
 func get_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res : felt):
     let (res) = nonce.read()
     return (res)
+end
+
+@view
+func require_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+    let (caller_address : felt) = get_caller_address()
+    let (approved_caller) = operator.read()
+    assert caller_address = approved_caller
+    return ()
 end
