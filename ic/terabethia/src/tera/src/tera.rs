@@ -1,14 +1,34 @@
-use std::collections::HashMap;
-
-use crate::{common::types::OutgoingMessage, TerabetiaState, STATE};
-use candid::{CandidType, Deserialize, Nat, Principal};
+use crate::{common::types::OutgoingMessage, STATE};
+use candid::{CandidType, Nat, Principal};
 use ic_cdk::caller;
+use serde::Deserialize;
+use std::{cell::RefCell, collections::HashMap};
+
+#[derive(CandidType, Deserialize, Default)]
+pub struct TerabetiaState {
+    /// incoming messages from L1
+    pub messages: RefCell<HashMap<String, u32>>,
+    /// incoming message nonce
+    pub nonce: RefCell<Vec<u64>>,
+    /// outgoing messages
+    pub messages_out: RefCell<HashMap<u64, (String, bool)>>,
+    /// outgoinging message index
+    pub message_index: RefCell<u64>,
+    /// List of authorized pids
+    pub authorized: RefCell<Vec<Principal>>,
+}
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableTerabetiaState {
+    /// incoming messages from L1
     pub messages: HashMap<String, u32>,
+    /// incoming message nonce
+    pub nonce: Vec<u64>,
+    /// outgoing messages
     pub messages_out: HashMap<u64, (String, bool)>,
+    /// outgoinging message index
     pub message_index: u64,
+    /// List of authorized pids
     pub authorized: Vec<Principal>,
 }
 
@@ -98,6 +118,7 @@ impl TerabetiaState {
     pub fn take_all(&self) -> StableTerabetiaState {
         STATE.with(|tera| StableTerabetiaState {
             messages: tera.messages.take(),
+            nonce: tera.nonce.take(),
             messages_out: tera.messages_out.take(),
             message_index: tera.message_index.take(),
             authorized: tera.authorized.take(),
@@ -107,17 +128,17 @@ impl TerabetiaState {
     pub fn clear_all(&self) {
         STATE.with(|tera| {
             tera.messages.borrow_mut().clear();
+            tera.nonce.borrow_mut().clear();
             tera.messages_out.borrow_mut().clear();
             tera.authorized.borrow_mut().clear();
-
-            // ToDo unsfe set this back to 0
-            // self.message_index.borrow_mut();
+            *self.message_index.borrow_mut() = 0;
         })
     }
 
     pub fn replace_all(&self, stable_tera_state: StableTerabetiaState) {
         STATE.with(|tera| {
             tera.messages.replace(stable_tera_state.messages);
+            tera.nonce.replace(stable_tera_state.nonce);
             tera.messages_out.replace(stable_tera_state.messages_out);
             tera.message_index.replace(stable_tera_state.message_index);
             tera.authorized.replace(stable_tera_state.authorized);

@@ -1,9 +1,6 @@
-use candid::Nat;
-use ic_cdk::export::candid::{CandidType, Principal};
-use serde::Deserialize;
-use std::{cell::RefCell, collections::HashMap};
-
 use crate::common::types::{CallResult, OutgoingMessage};
+use candid::{export_service, Nat, Principal};
+use tera::TerabetiaState;
 
 pub mod api;
 mod common;
@@ -16,24 +13,12 @@ thread_local! {
 
 const MESSAGE_PRODUCED: bool = true;
 
-#[derive(CandidType, Deserialize, Default)]
-pub struct TerabetiaState {
-    // incoming messages from L1
-    pub messages: RefCell<HashMap<String, u32>>,
-
-    // outgoing messages
-    pub messages_out: RefCell<HashMap<u64, (String, bool)>>,
-    pub message_index: RefCell<u64>,
-
-    pub authorized: RefCell<Vec<Principal>>,
-}
-
 #[cfg(any(target_arch = "wasm32", test))]
 fn main() {}
 
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
-    candid::export_service!();
+    export_service!();
     std::print!("{}", __export_service());
 }
 
@@ -41,6 +26,8 @@ fn main() {
 mod tests {
     use candid::{Nat, Principal};
     use std::str::FromStr;
+
+    use crate::common::utils::calculate_hash;
 
     pub trait ToNat {
         fn to_nat(&self) -> Nat;
