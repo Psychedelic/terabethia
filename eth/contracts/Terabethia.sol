@@ -29,7 +29,6 @@ contract Terabethia is Initializable, ITerabethiaCore {
 
     function initialize(IStarknetCore starknetCore_) public initializer {
         starknetCore = starknetCore_;
-        SimpleStorage storage ds = simpleStorage();
     }
 
     function simpleStorage() internal pure returns (SimpleStorage storage ds) {
@@ -63,14 +62,13 @@ contract Terabethia is Initializable, ITerabethiaCore {
         external
         returns (bytes32)
     {
-        uint256 nonce = simpleStorage().nonce;
-        nonce += 1;
+        simpleStorage().nonce += 1;
 
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 uint256(uint160(msg.sender)),
                 to_address,
-                nonce,
+                simpleStorage().nonce,
                 payload.length,
                 payload
             )
@@ -79,7 +77,12 @@ contract Terabethia is Initializable, ITerabethiaCore {
         simpleStorage().messages[msgHash] += 1;
 
         // we only emit event, so we can auto-trigger message consumption on the IC
-        emit LogMessageToL2(msg.sender, to_address, nonce, payload);
+        emit LogMessageToL2(
+            msg.sender,
+            to_address,
+            simpleStorage().nonce,
+            payload
+        );
 
         return msgHash;
     }

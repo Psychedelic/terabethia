@@ -8,7 +8,7 @@ async function main() {
   console.log("using deployer", deployer);
 
   // We get the contract to deploy
-  const Terabethia = await ethers.getContractFactory("TerabethiaV2");
+  const Terabethia = await ethers.getContractFactory("Terabethia");
 
   const impl = await Terabethia.deploy();
   await impl.deployed();

@@ -102,6 +102,11 @@
       "address": "0x34537711dd2892CB8C2fF98d302656dc5F52636E",
       "txHash": "0x6bec31c1bf379b3498e270c5ad119a8a96c140aef5b164ae814c9bbbeec1d058",
       "kind": "transparent"
+    },
+    {
+      "address": "0x60DC1a1FD50F1cdA1D44dFf69Cec3E5C065417e8",
+      "txHash": "0xb8962f3742dc2062dc68aad1125fe06b91d96cfcf29d6eb3c5a5cdb211f13942",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -151,6 +156,40 @@
             "label": "starknetCore",
             "type": "t_contract(IStarknetCore)345",
             "src": "contracts/TerabethiaV2.sol:9"
+          }
+        ],
+        "types": {
+          "t_contract(IStarknetCore)345": {
+            "label": "contract IStarknetCore"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        }
+      }
+    },
+    "e2eca2eb53190f11663c380b0928276a5bc6bdd7f796a13eb08cc3225e4826fa": {
+      "address": "0x2F9952723F05280872C4EFE89EFaB04D29D4f8Cc",
+      "txHash": "0x7c84ca4472d15c0d99f631af4f61b2ad28dd90f10cd7f6ad3bd457cea5e3e249",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "Terabethia",
+            "label": "starknetCore",
+            "type": "t_contract(IStarknetCore)345",
+            "src": "contracts/Terabethia.sol:9"
           }
         ],
         "types": {
