@@ -13,7 +13,7 @@ contract Terabethia is Initializable, ITerabethiaCore {
 
     // Terabethia Contract on Starknet
     uint256 constant STARKNET_CONTRACT =
-        0x1c98eaf471519d5c8c4acc0d074b41d26c33834e764946783a655a815a135fa;
+        0x011215026475fe87b55d6638ee97b0113427d667f4a1d8a6cc8d0b573ea702af;
 
     struct SimpleStorage {
         mapping(bytes32 => uint256) messages;

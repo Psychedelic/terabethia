@@ -235,6 +235,40 @@
           }
         }
       }
+    },
+    "1a77bf26424245bd5711c541b90084285283c63149b86281c6d2090fd1245a5f": {
+      "address": "0x5aB12638cA5C551F8f2a806b7d5DfC71b56A0468",
+      "txHash": "0xd9de553234b04d96b2ef8dd4db528d5ac01d16014f435aa00b4abfd127cb4067",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "Terabethia",
+            "label": "starknetCore",
+            "type": "t_contract(IStarknetCore)345",
+            "src": "contracts/Terabethia.sol:9"
+          }
+        ],
+        "types": {
+          "t_contract(IStarknetCore)345": {
+            "label": "contract IStarknetCore"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        }
+      }
     }
   }
 }

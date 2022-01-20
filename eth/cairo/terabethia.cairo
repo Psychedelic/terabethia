@@ -4,14 +4,9 @@
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.messages import send_message_to_l1
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.starknet.common.syscalls import get_caller_address
 
 @storage_var
 func nonce() -> (res : felt):
-end
-
-@storage_var
-func operator() -> (res : felt):
 end
 
 # Terabethia Ethereum Address
@@ -19,29 +14,9 @@ end
 func l1_contract() -> (res : felt):
 end
 
-# Initialise operator address
-@constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
-    let (caller_address) = get_caller_address()
-    operator.write(value=caller_address)
-    return ()
-end
-
-@external
-func set_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        operator_address : felt):
-    require_operator()
-
-    # Save new operator
-    operator.write(value=operator_address)
-    return ()
-end
-
 @external
 func set_l1_contract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         contract_addr : felt):
-    require_operator()
-
     # save new contract addr
     l1_contract.write(value=contract_addr)
     return ()
@@ -50,8 +25,6 @@ end
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         tx_nonce : felt, msg_hash : felt):
-    require_operator()
-
     let (res) = nonce.read()
 
     let next_nonce = res + 1
@@ -74,8 +47,6 @@ end
 @external
 func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
-    require_operator()
-
     # @todo: loop through msg_hashes
     # https://github.com/starkware-libs/cairo-lang/blob/fc97bdd8322a7df043c87c371634b26c15ed6cee/src/starkware/cairo/common/hash_state.cairo#L50
 
@@ -86,12 +57,4 @@ end
 func get_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res : felt):
     let (res) = nonce.read()
     return (res)
-end
-
-@view
-func require_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
-    let (caller_address : felt) = get_caller_address()
-    let (approved_caller) = operator.read()
-    assert caller_address = approved_caller
-    return ()
 end
