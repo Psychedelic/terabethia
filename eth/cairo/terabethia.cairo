@@ -24,7 +24,7 @@ end
 
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        tx_nonce : felt, msg_hash : felt):
+        tx_nonce : felt, msg_1 : felt, msg_2 : felt):
     let (res) = nonce.read()
 
     let next_nonce = res + 1
@@ -34,10 +34,12 @@ func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 
     let (contract_addr) = l1_contract.read()
 
-    let (arr : felt*) = alloc()
-    assert arr[0] = msg_hash
+    let (message_payload : felt*) = alloc()
 
-    send_message_to_l1(to_address=contract_addr, payload_size=1, payload=arr)
+    assert message_payload[0] = msg_1
+    assert message_payload[1] = msg_2
+
+    send_message_to_l1(to_address=contract_addr, payload_size=2, payload=message_payload)
 
     # Save nonce
     nonce.write(next_nonce)

@@ -11,7 +11,7 @@ namespace ITerabethiaContract:
     func set_l1_contract(contract_addr : felt):
     end
 
-    func send_message(tx_nonce : felt, msg_hash : felt):
+    func send_message(tx_nonce : felt, msg_1 : felt, msg_2 : felt):
     end
 
     # func send_message_batch(tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
@@ -78,12 +78,12 @@ end
 
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        tx_nonce : felt, msg_hash : felt):
+        tx_nonce : felt, msg_1 : felt, msg_2 : felt):
     require_operator()
     let (impl_contract_address) = impl_contract.read()
 
     ITerabethiaContract.delegate_send_message(
-        contract_address=impl_contract_address, tx_nonce=tx_nonce, msg_hash=msg_hash)
+        contract_address=impl_contract_address, tx_nonce=tx_nonce, msg_1=msg_1, msg_2=msg_2)
 
     return ()
 end
