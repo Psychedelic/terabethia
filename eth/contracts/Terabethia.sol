@@ -13,7 +13,7 @@ contract Terabethia is Initializable, ITerabethiaCore {
 
     // Terabethia Contract on Starknet
     uint256 constant STARKNET_CONTRACT =
-        0x011215026475fe87b55d6638ee97b0113427d667f4a1d8a6cc8d0b573ea702af;
+        0x07040f0aece287dcfaf02093cce14c6db7234ed3e939756b82a7e63d8acd13ba;
 
     struct SimpleStorage {
         mapping(bytes32 => uint256) messages;
@@ -52,8 +52,13 @@ contract Terabethia is Initializable, ITerabethiaCore {
             )
         );
 
-        uint256[] memory payload = new uint256[](1);
-        payload[0] = uint256(msgHash);
+        uint256[] memory payload = new uint256[](2);
+
+        // Starknet works with 251 bit words
+        // so we cant pass uint256 as inputs
+        uint256 msgInt = uint256(msgHash);
+        payload[0] = uint256(uint128(msgInt));
+        payload[1] = uint256(uint128(msgInt >> 128));
 
         return starknetCore.consumeMessageFromL2(STARKNET_CONTRACT, payload);
     }

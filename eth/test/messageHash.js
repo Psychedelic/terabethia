@@ -26,7 +26,7 @@ describe("Message hash", function () {
     it("Should return correct withdrawal message hash", async function () {
         // principal id hex form
         const canisterId = "0x00000000003000f10101";
-        const ethProxyAddr = "0x60DC1a1FD50F1cdA1D44dFf69Cec3E5C065417e8";
+        const ethProxyAddr = "0xFa7FC33D0D5984d33e33AF5d3f504E33a251d52a";
         const receiverAddr = '0xfd82d7abAbC1461798deB5a5d9812603fdd650cc';
 
         // reconstruct the withdraw message hash
@@ -39,8 +39,22 @@ describe("Message hash", function () {
             [canisterId, ethProxyAddr, withdrawPayload.length, ...withdrawPayload]
         );
 
+        // this is the hash we should send from the IC -> L1
         expect(withdrawMessageHash).equals(
-            "0x3c478b7a95e4b23fc1af0c5367296ec78f4d4b47382e7e3e2a37b46ad73fbaee"
+            "0xd0379be15bb6f33737b756e512dad1e71226b31fa648da57811f930badf6c163"
         );
+
+        const cairoTerabethia = '0x07040f0aece287dcfaf02093cce14c6db7234ed3e939756b82a7e63d8acd13ba';
+        const terabethiaProxy = "0x60DC1a1FD50F1cdA1D44dFf69Cec3E5C065417e8";
+
+        const starknetMessageHash = ethers.utils.solidityKeccak256(
+            ["uint256", "uint256", "uint256", "uint256", "uint256"],
+            [cairoTerabethia, terabethiaProxy, 2, "24127044263607486132772889641222586723", "276768161078691357748506014484008718823"]
+        );
+
+        expect(starknetMessageHash).equals(
+            "0xbebedf4dff2fec23e14c1f9d715bd8bae1b2ca404bd0507097c7bee45223e371"
+        );
+
     });
 });
