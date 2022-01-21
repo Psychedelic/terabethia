@@ -31,4 +31,4 @@ async def test_send_message():
 
     await contract.send_message_batch(3, [3,4,5,6]).invoke()
     batch_execution_info = await contract.get_nonce().call()
-    assert batch_execution_info.result == (4,)
+    assert batch_execution_info.result == (3,)

@@ -26,12 +26,8 @@ end
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         tx_nonce : felt, msg_1 : felt, msg_2 : felt):
-    let (res) = nonce.read()
-
-    let next_nonce = res + 1
-
-    # Verify nonce
-    assert tx_nonce = next_nonce
+    alloc_locals
+    verify_nonce(tx_nonce)
 
     let (contract_addr) = l1_contract.read()
 
@@ -43,7 +39,7 @@ func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     send_message_to_l1(to_address=contract_addr, payload_size=2, payload=message_payload)
 
     # Save nonce
-    nonce.write(next_nonce)
+    nonce.write(tx_nonce)
     return ()
 end
 
@@ -51,18 +47,19 @@ end
 func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
     alloc_locals
-
     assert_nn(msg_hashes_len)
+    verify_nonce(tx_nonce)
 
+    # msg_hashes are in pairs like [msg1a, msg1b, msg2a, msg2b]
     tempvar iterator = msg_hashes_len / 2
-    tempvar nonce = tx_nonce
 
-    send_loop:
-    tempvar it = iterator * 2 - 1
-    send_message(nonce, msg_hashes[it - 1], msg_hashes[it])
-    tempvar iterator = iterator - 1
-    tempvar nonce = nonce + 1
-    jmp send_loop if iterator != 0
+    # send_loop:
+    # tempvar it = iterator * 2 - 1
+    # tempvar iterator = iterator - 1
+    # send_message_to_l1(to_address=contract_addr, payload_size=2, payload=message_payload)
+    # jmp send_loop if iterator != 0
+
+    nonce.write(tx_nonce)
 
     return ()
 end
@@ -71,4 +68,17 @@ end
 func get_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res : felt):
     let (res) = nonce.read()
     return (res)
+end
+
+@view
+func verify_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        tx_nonce : felt):
+    let (res) = nonce.read()
+
+    let next_nonce = res + 1
+
+    # Verify nonce
+    assert tx_nonce = next_nonce
+
+    return ()
 end
