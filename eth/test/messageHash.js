@@ -52,6 +52,7 @@ describe("Message hash", function () {
             [cairoTerabethia, terabethiaProxy, 2, "24127044263607486132772889641222586723", "276768161078691357748506014484008718823"]
         );
 
+        // this is the final hash that appears on Starknet L1 Contract
         expect(starknetMessageHash).equals(
             "0xbebedf4dff2fec23e14c1f9d715bd8bae1b2ca404bd0507097c7bee45223e371"
         );

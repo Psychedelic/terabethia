@@ -57,8 +57,8 @@ contract Terabethia is Initializable, ITerabethiaCore {
         // Starknet works with 251 bit words
         // so we cant pass uint256 as inputs
         uint256 msgInt = uint256(msgHash);
-        payload[0] = uint256(uint128(msgInt));
-        payload[1] = uint256(uint128(msgInt >> 128));
+        payload[0] = uint256(uint128(msgInt >> 128));
+        payload[1] = uint256(uint128(msgInt));
 
         return starknetCore.consumeMessageFromL2(STARKNET_CONTRACT, payload);
     }
