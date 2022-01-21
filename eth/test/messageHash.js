@@ -44,7 +44,7 @@ describe("Message hash", function () {
             "0xd0379be15bb6f33737b756e512dad1e71226b31fa648da57811f930badf6c163"
         );
 
-        const cairoTerabethia = '0x07040f0aece287dcfaf02093cce14c6db7234ed3e939756b82a7e63d8acd13ba';
+        const cairoTerabethia = '0x07147c37056a60424a7edaff294847f706979c6d3a53eef2b4412d3dbf9eb77c';
         const terabethiaProxy = "0x60DC1a1FD50F1cdA1D44dFf69Cec3E5C065417e8";
 
         const starknetMessageHash = ethers.utils.solidityKeccak256(

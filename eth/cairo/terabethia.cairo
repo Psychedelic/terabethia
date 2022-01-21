@@ -2,6 +2,7 @@
 %builtins pedersen range_check
 
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.math import assert_nn
 from starkware.starknet.common.messages import send_message_to_l1
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
@@ -49,8 +50,19 @@ end
 @external
 func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
-    # @todo: loop through msg_hashes
-    # https://github.com/starkware-libs/cairo-lang/blob/fc97bdd8322a7df043c87c371634b26c15ed6cee/src/starkware/cairo/common/hash_state.cairo#L50
+    alloc_locals
+
+    assert_nn(msg_hashes_len)
+
+    tempvar iterator = msg_hashes_len / 2
+    tempvar nonce = tx_nonce
+
+    send_loop:
+    tempvar it = iterator * 2 - 1
+    send_message(nonce, msg_hashes[it - 1], msg_hashes[it])
+    tempvar iterator = iterator - 1
+    tempvar nonce = nonce + 1
+    jmp send_loop if iterator != 0
 
     return ()
 end

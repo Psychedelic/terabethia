@@ -14,8 +14,8 @@ namespace ITerabethiaContract:
     func send_message(tx_nonce : felt, msg_1 : felt, msg_2 : felt):
     end
 
-    # func send_message_batch(tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
-    # end
+    func send_message_batch(tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
+    end
 
     func get_nonce() -> (res : felt):
     end
@@ -89,21 +89,22 @@ func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 end
 
 # this is causing the issues, skipping
-# @external
-# func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-#         tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
-#     require_operator()
+@external
+func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
+    alloc_locals
+    require_operator()
 
-# let (impl_contract_address) = impl_contract.read()
+    let (impl_contract_address) = impl_contract.read()
 
-# ITerabethiaContract.delegate_send_message_batch(
-#         contract_address=impl_contract_address,
-#         tx_nonce=tx_nonce,
-#         msg_hashes_len=msg_hashes_len,
-#         msg_hashes=msg_hashes)
+    ITerabethiaContract.delegate_send_message_batch(
+        contract_address=impl_contract_address,
+        tx_nonce=tx_nonce,
+        msg_hashes_len=msg_hashes_len,
+        msg_hashes=msg_hashes)
 
-# return ()
-# end
+    return ()
+end
 
 @view
 func get_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res : felt):
