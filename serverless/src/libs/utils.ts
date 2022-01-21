@@ -1,8 +1,12 @@
+const sliceToBigInt = (buff: Buffer, ...args: number[]): BigInt => {
+    return BigInt(`0x${buff.slice(...args).toString('hex')}`);
+}
+
 /**
- * Splits Uint256 into two Uint128
+ * Splits Uint256 hex string into two Uint128 BigInts
  * 
- * @param hash 
- * @returns
+ * @param hash string
+ * @returns BigInt[]
  */
 export const splitUint256 = (hexString: string): BigInt[]=> {
     const buff = Buffer.from(hexString, 'hex');
@@ -12,9 +16,9 @@ export const splitUint256 = (hexString: string): BigInt[]=> {
     }
 
     // uint256(uint128(msgInt >> 128))
-    const a = BigInt(`0x${buff.slice(0, 16).toString('hex')}`);
+    const a = sliceToBigInt(buff, 0, 16);
 
     // uint256(uint128(msgInt))
-    const b = BigInt(`0x${buff.slice(16, 32).toString('hex')}`);
+    const b = sliceToBigInt(buff, -16);
     return [a, b];
 }
