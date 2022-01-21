@@ -1,7 +1,9 @@
 import { ScheduledHandler } from "aws-lambda";
 import { Tera } from "@libs/dfinity";
-import { createPayload, updateState } from "@libs/eth";
+import { splitUint256 } from "@libs/utils";
 import { DynamoDb } from "@libs/dynamo";
+import TerabethiaStarknet from "@libs/starknet";
+import bluebird from "bluebird";
 
 const { OPERATOR_PRIVATE_KEY, CONTRACT_ADDRESS } = process.env;
 
@@ -12,6 +14,10 @@ if (!OPERATOR_PRIVATE_KEY) {
 if (!CONTRACT_ADDRESS) {
   throw new Error("CONTRACT_ADDRESS must be set");
 }
+
+const terabethia = new TerabethiaStarknet(
+  "0x011215026475fe87b55d6638ee97b0113427d667f4a1d8a6cc8d0b573ea702af"
+);
 
 export const main: ScheduledHandler = async () => {
   const db = new DynamoDb();
@@ -28,35 +34,41 @@ export const main: ScheduledHandler = async () => {
 
   const messagesToL1 = messages
     .filter((a) => a.produced)
-    .map((m) => `0x${m.hash}`);
+    .map((m) => ({
+      ...m,
+      payload: splitUint256(m.hash),
+    }));
 
-
-  
   // skip empty payload
   if (messagesToL1.length == 0) {
     console.log("no messages in payload");
     return;
   }
 
-  // we no longer handle consumed L2 messages thanks to nonce implementation
+  let nonce = await terabethia.getNonce();
+
+  for (let message of messagesToL1) {
+    nonce += 1;
+
+    const [a, b] = message.payload;
+    const hid = message.id.toString(16);
+    let tx;
   
-  // @todo: get nonce from Cairo contract
-  // @todo: invoke Cairo send_message with arguments like:
-  // send_message(nonce + 1, messagesToL1.length, messagesToL1)
-  // write down tx hash, monitor for acceptance on L1
+    try {
+      tx = await terabethia.sendMessage(nonce.toString(), a, b);
+    } catch (e) {
+      console.log('error during starknet call');
+      console.log(e);
+      console.log(JSON.stringify(e.response));
+      continue;
+    }
 
-  // write lock on each message id when tx is submitted
-  if (tx.hash) {
-    const ids = await Promise.all(
-      messages.map(async (m) => {
-        const hid = m.id.toString(16);
-        await db.setProcessingMessage(hid);
-        return hid;
-      })
-    );
+    if (tx.transaction_hash) {
+      await db.setProcessingMessage(hid);
+      await db.storeTransaction(tx.transaction_hash, [hid]);
 
-    await db.storeEthTransaction(tx.hash, ids);
+      // @todo: do we need to check for acceptance here?
+      await bluebird.delay(2000);
+    }
   }
-  // publish event that'll monitor tx
-  // once the tx succeeds we should remove messages from the canister
 };

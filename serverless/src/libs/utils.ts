@@ -8,7 +8,7 @@ const sliceToBigInt = (buff: Buffer, ...args: number[]): BigInt => {
  * @param hash string
  * @returns BigInt[]
  */
-export const splitUint256 = (hexString: string): BigInt[]=> {
+export const splitUint256 = (hexString: string): [BigInt, BigInt]=> {
     const buff = Buffer.from(hexString, 'hex');
 
     if(buff.length !== 32) {

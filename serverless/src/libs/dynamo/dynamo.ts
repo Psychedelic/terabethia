@@ -108,7 +108,7 @@ export class DynamoDb implements IMessages {
     );
   }
 
-  public async storeEthTransaction(txHash: string, messages: string[]) {
+  public async storeTransaction(txHash: string, messages: string[]) {
     return this.db.send(
       new PutCommand({
         TableName: this.teraTableName,
@@ -121,7 +121,7 @@ export class DynamoDb implements IMessages {
     );
   }
 
-  public async getMessagesFromEthTransaction(txHash: string) {
+  public async getMessagesFromTransaction(txHash: string) {
     const res = await this.db.send(
       new GetCommand({
         TableName: this.teraTableName,
