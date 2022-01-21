@@ -47,52 +47,52 @@ export default ({ IDL }: { IDL: any }) => {
     amount: IDL.Nat64,
   });
   return IDL.Service({
-    allowance: IDL.Func([IDL.Principal, IDL.Principal], [IDL.Nat64], ["query"]),
+    allowance: IDL.Func([IDL.Principal, IDL.Principal], [IDL.Nat64], ['query']),
     approve: IDL.Func([IDL.Principal, IDL.Nat64], [Result], []),
-    balanceOf: IDL.Func([IDL.Principal], [IDL.Nat64], ["query"]),
+    balanceOf: IDL.Func([IDL.Principal], [IDL.Nat64], ['query']),
     burn: IDL.Func([IDL.Nat64], [Result], []),
-    decimals: IDL.Func([], [IDL.Nat8], ["query"]),
-    getAllowanceSize: IDL.Func([], [IDL.Nat64], ["query"]),
+    decimals: IDL.Func([], [IDL.Nat8], ['query']),
+    getAllowanceSize: IDL.Func([], [IDL.Nat64], ['query']),
     getHolders: IDL.Func(
       [IDL.Nat64, IDL.Nat64],
       [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Nat64))],
-      ["query"]
+      ['query'],
     ),
-    getLogo: IDL.Func([], [IDL.Text], ["query"]),
-    getMetadta: IDL.Func([], [Metadata], ["query"]),
-    getTokenInfo: IDL.Func([], [TokenInfo], ["query"]),
-    getTransaction: IDL.Func([IDL.Nat64], [OpRecord], ["query"]),
+    getLogo: IDL.Func([], [IDL.Text], ['query']),
+    getMetadta: IDL.Func([], [Metadata], ['query']),
+    getTokenInfo: IDL.Func([], [TokenInfo], ['query']),
+    getTransaction: IDL.Func([IDL.Nat64], [OpRecord], ['query']),
     getTransactions: IDL.Func(
       [IDL.Nat64, IDL.Nat64],
       [IDL.Vec(OpRecord)],
-      ["query"]
+      ['query'],
     ),
     getUserApprovals: IDL.Func(
       [IDL.Principal],
       [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Nat64))],
-      ["query"]
+      ['query'],
     ),
-    getUserTransactionAmount: IDL.Func([IDL.Principal], [IDL.Nat64], ["query"]),
+    getUserTransactionAmount: IDL.Func([IDL.Principal], [IDL.Nat64], ['query']),
     getUserTransactions: IDL.Func(
       [IDL.Principal, IDL.Nat64, IDL.Nat64],
       [IDL.Vec(OpRecord)],
-      ["query"]
+      ['query'],
     ),
-    historySize: IDL.Func([], [IDL.Nat64], ["query"]),
+    historySize: IDL.Func([], [IDL.Nat64], ['query']),
     mint: IDL.Func([IDL.Principal, IDL.Nat64], [Result], []),
-    name: IDL.Func([], [IDL.Text], ["query"]),
-    owner: IDL.Func([], [IDL.Principal], ["query"]),
+    name: IDL.Func([], [IDL.Text], ['query']),
+    owner: IDL.Func([], [IDL.Principal], ['query']),
     setFee: IDL.Func([IDL.Nat64], [], []),
     setFeeTo: IDL.Func([IDL.Principal], [], []),
     setLogo: IDL.Func([IDL.Text], [], []),
     setOwner: IDL.Func([IDL.Principal], [], []),
-    symbol: IDL.Func([], [IDL.Text], ["query"]),
-    totalSupply: IDL.Func([], [IDL.Nat64], ["query"]),
+    symbol: IDL.Func([], [IDL.Text], ['query']),
+    totalSupply: IDL.Func([], [IDL.Nat64], ['query']),
     transfer: IDL.Func([IDL.Principal, IDL.Nat64], [Result], []),
     transferFrom: IDL.Func(
       [IDL.Principal, IDL.Principal, IDL.Nat64],
       [Result],
-      []
+      [],
     ),
   });
 };

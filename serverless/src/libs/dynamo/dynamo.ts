@@ -1,5 +1,5 @@
-import { config } from "@libs/config";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { config } from '@libs/config';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
   // QueryCommand,
@@ -8,15 +8,15 @@ import {
   PutCommandOutput,
   GetCommand,
   GetCommandOutput,
-} from "@aws-sdk/lib-dynamodb";
-import { IMessages } from "./IMessages";
-import { NativeAttributeValue } from "@aws-sdk/util-dynamodb";
+} from '@aws-sdk/lib-dynamodb';
+import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
+import { IMessages } from './IMessages';
 
-const STAGE = config.AWS_STAGE || "local";
+const STAGE = config.AWS_STAGE || 'local';
 const TERA_TABLE = `tera_l1_state_${STAGE}`;
-const DYNAMO_LOCAL_PORT = config.DYNAMO_LOCAL_PORT || "8002";
+const DYNAMO_LOCAL_PORT = config.DYNAMO_LOCAL_PORT || '8002';
 
-const PROCESSING_MESSAGE_SK = "processing";
+const PROCESSING_MESSAGE_SK = 'processing';
 export class DynamoDb implements IMessages {
   private db: DynamoDBDocumentClient;
 
@@ -24,7 +24,7 @@ export class DynamoDb implements IMessages {
 
   constructor() {
     const client = new DynamoDBClient({
-      region: "us-west-2",
+      region: 'us-west-2',
       // ...(STAGE === "local" && {
       //   endpoint: `http://localhost:${DYNAMO_LOCAL_PORT}`,
       // }),
@@ -56,14 +56,14 @@ export class DynamoDb implements IMessages {
       const putData = await this.db.send(new PutCommand(params));
       return putData;
     } catch (error) {
-      console.error("Error put: ", error);
+      console.error('Error put: ', error);
       return undefined;
     }
   }
 
   public async get(
     pk: string,
-    sk: string
+    sk: string,
   ): Promise<GetCommandOutput | undefined> {
     const params = {
       TableName: this.teraTableName,
@@ -77,7 +77,7 @@ export class DynamoDb implements IMessages {
       const data = await this.db.send(new GetCommand(params));
       return data;
     } catch (error) {
-      console.error("Error getItem: ", error);
+      console.error('Error getItem: ', error);
       return undefined;
     }
   }
@@ -90,7 +90,7 @@ export class DynamoDb implements IMessages {
           pk: `mid_${msgIndex}`,
           sk: PROCESSING_MESSAGE_SK,
         },
-      })
+      }),
     );
 
     return item.Item;
@@ -104,7 +104,7 @@ export class DynamoDb implements IMessages {
           pk: `mid_${msgIndex}`,
           sk: PROCESSING_MESSAGE_SK,
         },
-      })
+      }),
     );
   }
 
@@ -114,10 +114,10 @@ export class DynamoDb implements IMessages {
         TableName: this.teraTableName,
         Item: {
           pk: txHash,
-          sk: `messages`,
+          sk: 'messages',
           messages: JSON.stringify(messages),
         },
-      })
+      }),
     );
   }
 
@@ -127,9 +127,9 @@ export class DynamoDb implements IMessages {
         TableName: this.teraTableName,
         Key: {
           pk: txHash,
-          sk: `messages`,
+          sk: 'messages',
         },
-      })
+      }),
     );
 
     if (res.Item && res.Item.messages) {
