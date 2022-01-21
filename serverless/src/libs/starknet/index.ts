@@ -1,4 +1,4 @@
-import { Provider, stark, AddTransactionResponse } from 'starknet';
+import { Provider, stark, AddTransactionResponse, GetTransactionStatusResponse } from 'starknet';
 
 const { getSelectorFromName } = stark;
 
@@ -28,6 +28,10 @@ class TerabethiaStarknet {
             entry_point_selector: getSelectorFromName("send_message"),
             calldata: [nonce.toString(), p1.toString(), p2.toString()],
           });
+    }
+
+    getTransactionStatus(hash: string): Promise<GetTransactionStatusResponse> {
+        return this.provider.getTransactionStatus(hash);
     }
 }
 
