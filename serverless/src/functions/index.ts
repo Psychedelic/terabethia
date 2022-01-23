@@ -1,1 +1,1 @@
-export { default as hook } from "./blocknative";
+export { default as hook } from './blocknative';

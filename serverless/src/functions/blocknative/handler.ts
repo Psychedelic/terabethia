@@ -1,17 +1,17 @@
-import "source-map-support/register";
+import 'source-map-support/register';
 
 import {
   formatJSONResponse,
   ValidatedEventAPIGatewayProxyEvent,
-} from "@libs/apiGateway";
-import schema from "./schema";
-import { config } from "@libs/config";
-import { middyfy } from "@libs/lambda";
+} from '@libs/apiGateway';
+import { config } from '@libs/config';
+import { middyfy } from '@libs/lambda';
 import {
   SNSClient,
   PublishCommand,
   PublishCommandInput,
-} from "@aws-sdk/client-sns";
+} from '@aws-sdk/client-sns';
+import schema from './schema';
 
 const {
   SNS_URL,
@@ -30,7 +30,7 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
   if (!event.body) {
     return formatJSONResponse({
       statusCode: 500,
-      body: `Error blocknative hook: no data recieved!`,
+      body: 'Error blocknative hook: no data recieved!',
     });
   }
 
@@ -49,10 +49,15 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
 
     return formatJSONResponse({
       statusCode: 200,
-      body: { message: "success", response },
+      body: { message: 'success', response },
     });
   } catch (error) {
-    console.error("Exception on sns publish", error);
+    console.error('Exception on sns publish', error);
+
+    return formatJSONResponse({
+      statusCode: 500,
+      body: 'Internal server error',
+    });
   }
 };
 

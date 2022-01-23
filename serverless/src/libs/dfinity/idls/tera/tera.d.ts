@@ -1,4 +1,5 @@
-import type { Principal } from "@dfinity/principal";
+import type { Principal } from '@dfinity/principal';
+
 export interface CallResult {
   return: Array<number>;
 }
@@ -8,8 +9,8 @@ export interface OutgoingMessage {
   produced: boolean;
 }
 export type Result = { Ok: boolean } | { Err: string };
-export type Result_1 = { Ok: CallResult } | { Err: string };
-export default interface _SERVICE {
+export type Result1 = { Ok: CallResult } | { Err: string };
+export default interface TerabethiaService {
   authorize: (arg_0: Principal) => Promise<undefined>;
   consume_message: (arg_0: Principal, arg_1: Array<bigint>) => Promise<Result>;
   get_messages: () => Promise<Array<OutgoingMessage>>;
@@ -19,10 +20,10 @@ export default interface _SERVICE {
     arg_0: Principal,
     arg_1: Principal,
     arg_2: Array<bigint>
-  ) => Promise<Result_1>;
+  ) => Promise<Result1>;
   trigger_call: (
     arg_0: Principal,
     arg_1: Principal,
     arg_2: Array<bigint>
-  ) => Promise<Result_1>;
+  ) => Promise<Result1>
 }

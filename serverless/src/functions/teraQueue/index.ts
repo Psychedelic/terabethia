@@ -1,5 +1,5 @@
-import { BlockNativeSchema } from "@libs/blocknative";
-import { handlerPath } from "@libs/handlerResolver";
+import { BlockNativeSchema } from '@libs/blocknative';
+import { handlerPath } from '@libs/handlerResolver';
 
 export default {
   handler: `${handlerPath(__dirname)}/handler.main`,
@@ -7,12 +7,12 @@ export default {
   events: [
     {
       http: {
-        method: "post",
-        path: "receiveMessageFromL1",
+        method: 'post',
+        path: 'receiveMessageFromL1',
         cors: true,
         request: {
           schema: {
-            "application/json": BlockNativeSchema,
+            'application/json': BlockNativeSchema,
           },
         },
       },

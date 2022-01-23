@@ -1,15 +1,15 @@
 export default {
-  type: "object",
+  type: 'object',
   properties: {
-    to: { type: "string" },
-    from: { type: "string" },
-    hash: { type: "string" },
-    nonce: { type: "number" },
-    direction: { type: "string" },
-    timeStamp: { type: "string" },
-    status: { type: "string" },
+    to: { type: 'string' },
+    from: { type: 'string' },
+    hash: { type: 'string' },
+    nonce: { type: 'number' },
+    direction: { type: 'string' },
+    timeStamp: { type: 'string' },
+    status: { type: 'string' },
   },
-  required: ["to", "from", "hash", "nonce", "timeStamp", "status"],
+  required: ['to', 'from', 'hash', 'nonce', 'timeStamp', 'status'],
 } as const;
 
 // {

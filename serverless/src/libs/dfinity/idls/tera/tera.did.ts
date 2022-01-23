@@ -6,7 +6,7 @@ export default ({ IDL }: { IDL: any }) => {
     produced: IDL.Bool,
   });
   const CallResult = IDL.Record({ return: IDL.Vec(IDL.Nat8) });
-  const Result_1 = IDL.Variant({ Ok: CallResult, Err: IDL.Text });
+  const Result1 = IDL.Variant({ Ok: CallResult, Err: IDL.Text });
   return IDL.Service({
     authorize: IDL.Func([IDL.Principal], [], []),
     consume_message: IDL.Func([IDL.Principal, IDL.Vec(IDL.Nat)], [Result], []),
@@ -15,13 +15,13 @@ export default ({ IDL }: { IDL: any }) => {
     send_message: IDL.Func([IDL.Principal, IDL.Vec(IDL.Nat)], [Result], []),
     store_message: IDL.Func(
       [IDL.Principal, IDL.Principal, IDL.Vec(IDL.Nat)],
-      [Result_1],
-      []
+      [Result1],
+      [],
     ),
     trigger_call: IDL.Func(
       [IDL.Principal, IDL.Principal, IDL.Vec(IDL.Nat)],
-      [Result_1],
-      []
+      [Result1],
+      [],
     ),
   });
 };

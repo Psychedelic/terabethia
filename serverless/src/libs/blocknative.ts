@@ -1,4 +1,4 @@
-import { FromSchema } from "json-schema-to-ts";
+import { FromSchema } from 'json-schema-to-ts';
 
 export interface BlockNativePayload {
   to?: string;
@@ -11,17 +11,17 @@ export interface BlockNativePayload {
 }
 
 export const BlockNativeSchema = {
-  type: "object",
+  type: 'object',
   properties: {
-    to: { type: "string" },
-    from: { type: "string" },
-    hash: { type: "string" },
-    nonce: { type: "number" },
-    direction: { type: "string" },
-    timeStamp: { type: "string" },
-    status: { type: "string" },
+    to: { type: 'string' },
+    from: { type: 'string' },
+    hash: { type: 'string' },
+    nonce: { type: 'number' },
+    direction: { type: 'string' },
+    timeStamp: { type: 'string' },
+    status: { type: 'string' },
   },
-  required: ["hash"],
+  required: ['hash'],
 } as const;
 
 export type Blocknative = FromSchema<typeof BlockNativeSchema>;

@@ -1,62 +1,70 @@
-import { ScheduledHandler } from "aws-lambda";
-import { Tera } from "@libs/dfinity";
-import { createPayload, updateState } from "@libs/eth";
-import { DynamoDb } from "@libs/dynamo";
+import { ScheduledHandler } from 'aws-lambda';
+import { Tera } from '@libs/dfinity';
+import { DynamoDb } from '@libs/dynamo';
+import {
+  SQSClient,
+  SendMessageBatchCommand,
+  SendMessageBatchRequestEntry,
+} from '@aws-sdk/client-sqs';
 
-const { OPERATOR_PRIVATE_KEY, CONTRACT_ADDRESS } = process.env;
+const { OPERATOR_PRIVATE_KEY, CONTRACT_ADDRESS, QUEUE_URL } = process.env;
 
 if (!OPERATOR_PRIVATE_KEY) {
-  throw new Error("OPERATOR_PRIVATE_KEY must be set");
+  throw new Error('OPERATOR_PRIVATE_KEY must be set');
 }
 
 if (!CONTRACT_ADDRESS) {
-  throw new Error("CONTRACT_ADDRESS must be set");
+  throw new Error('CONTRACT_ADDRESS must be set');
 }
 
-export const main: ScheduledHandler = async () => {
-  const db = new DynamoDb();
+if (!QUEUE_URL) {
+  throw new Error('QUEUE_URL must be set');
+}
 
+const sqsClient = new SQSClient({});
+const db = new DynamoDb();
+
+/**
+ * This handler grabs L2 -> L1 messages from IC,
+ * filter messages that were not processed
+ * and puts them to FIFO queue which is responsible
+ * for Starknet delivery
+ */
+export const main: ScheduledHandler = async () => {
+  // fetch messages from Tera canister
   const rawMessages = await Tera.getMessages();
 
   const messages = await Promise.all(
     rawMessages.map(async (m) => {
       const isProcessing = await db.isProcessingMessage(m.id.toString(16));
-      console.log({ isProcessing, hid: m.id.toString(16) });
-      return { ...m, isProcessing };
-    })
-  ).then((messages) => messages.filter((m) => !m.isProcessing));
+      return { ...m, isProcessing, hid: m.id.toString(16) };
+    }),
+  );
 
-  const messagesToL1 = messages
-    .filter((a) => a.produced)
-    .map((m) => `0x${m.hash}`);
+  // filter messages that needs to be processed
+  const notProcessedMessages = messages.filter((m) => !m.isProcessing);
 
+  // map message to SQS entries
+  const entries: SendMessageBatchRequestEntry[] = notProcessedMessages.map((m) => ({
+    Id: m.hid,
+    MessageBody: JSON.stringify({ hash: m.hash, id: m.hid }),
+    MessageDeduplicationId: m.hid,
+  }));
 
-  
-  // skip empty payload
-  if (messagesToL1.length == 0) {
-    console.log("no messages in payload");
-    return;
+  const command = new SendMessageBatchCommand({
+    QueueUrl: QUEUE_URL,
+    Entries: entries,
+  });
+
+  // push messages to FIFO queue
+  await sqsClient.send(command);
+
+  // store into DynamoDB (in case IC message removal fails)
+  for (const message of messages) {
+    await db.setProcessingMessage(message.hid);
   }
 
-  // we no longer handle consumed L2 messages thanks to nonce implementation
-  
-  // @todo: get nonce from Cairo contract
-  // @todo: invoke Cairo send_message with arguments like:
-  // send_message(nonce + 1, messagesToL1.length, messagesToL1)
-  // write down tx hash, monitor for acceptance on L1
-
-  // write lock on each message id when tx is submitted
-  if (tx.hash) {
-    const ids = await Promise.all(
-      messages.map(async (m) => {
-        const hid = m.id.toString(16);
-        await db.setProcessingMessage(hid);
-        return hid;
-      })
-    );
-
-    await db.storeEthTransaction(tx.hash, ids);
-  }
-  // publish event that'll monitor tx
-  // once the tx succeeds we should remove messages from the canister
+  // remove all messages from the IC, since they are processed
+  const messagesToBeRemoved = messages.map((m) => m.id);
+  await Tera.removeMessages(messagesToBeRemoved);
 };

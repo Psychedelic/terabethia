@@ -1,4 +1,4 @@
-import * as ethers from "ethers";
+import * as ethers from 'ethers';
 
 /**
  * Combines messages to L1 with messages to L2
@@ -8,7 +8,7 @@ import * as ethers from "ethers";
  */
 export const createPayload = (
   messagesToL1: string[],
-  messagesToL2: string[]
+  messagesToL2: string[],
 ): string[] => {
   console.log(messagesToL2);
   const p = [
@@ -18,5 +18,5 @@ export const createPayload = (
     ...messagesToL2,
   ];
 
-  return p.map((d) => ethers.utils.defaultAbiCoder.encode(["bytes32"], [d]));
+  return p.map((d) => ethers.utils.defaultAbiCoder.encode(['bytes32'], [d]));
 };

@@ -136,16 +136,55 @@ functions:
             Fn::GetAtt:
               - TeraQueue
               - Arn
+  
+  # grab messages from the IC and put them into FIFO StarknetQueue
   SyncL2ToL1Messages:
-    timeout: 15
+    timeout: 30
     memorySize: 128
     handler: src/functions/sync/handler.main
     environment:
       OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
       CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
       TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
+      QUEUE_URL: !Ref StarknetQueue
     events:
       - schedule: rate(1 minute)
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+            - "sqs:SendMessage"
+        Resource:
+          - !GetAtt
+            - StarknetQueue
+            - Arn
+
+  # StarknetQueue handler
+  ProcessL2ToL1Messages:
+    timeout: 30
+    memorySize: 128
+    reservedConcurrency: 1
+    handler: src/functions/sync/queue.main
+    environment:
+      OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
+      CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
+      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
+      QUEUE_URL: !Ref StarknetQueue
+    events:
+      - sqs:
+          batchSize: 1 # todo: support batches, blocked by Cairo send_message_batch
+          maximumRetryAttempts: 10
+          arn:
+            Fn::GetAtt:
+              - StarknetQueue
+              - Arn
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+            - "sqs:SendMessage"
+        Resource:
+          - !GetAtt
+            - StarknetQueue
+            - Arn
 
 resources:
   - Resources:
@@ -221,3 +260,22 @@ resources:
             - Arn
           Protocol: sqs
           RawMessageDelivery: 'true'
+
+
+      StarknetQueue:
+        Type: 'AWS::SQS::Queue'
+        Properties:
+          QueueName: terabethia-starknet-${self:custom.resourceSuffix}.fifo
+          ContentBasedDeduplication: true
+          FifoQueue: true
+          VisibilityTimeout: 120 # 5 minutes
+          RedrivePolicy:
+            maxReceiveCount: 5
+            deadLetterTargetArn: !GetAtt
+              - StarknetDeadLetterQueue
+              - Arn
+      StarknetDeadLetterQueue:
+        Type: AWS::SQS::Queue
+        Properties:
+          FifoQueue: true
+          QueueName: terabethia-starknet-dlq-${self:custom.resourceSuffix}.fifo
