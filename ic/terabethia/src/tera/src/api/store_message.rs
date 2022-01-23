@@ -4,7 +4,10 @@ use ic_cdk_macros::update;
 
 use super::admin::is_authorized;
 use crate::{
-    common::{types::CallResult, utils::calculate_hash},
+    common::{
+        types::{CallResult, IncomingMessageHashParams, Message, Nonce},
+        utils::Keccak256HashFn,
+    },
     STATE,
 };
 
@@ -23,9 +26,17 @@ impl ToNat for Principal {
 async fn trigger_call(
     from: Principal,
     to: Principal,
+    nonce: Nonce,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
+    let message = Message;
+    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        from: from.to_nat(),
+        to: to.to_nat(),
+        nonce: nonce.clone(),
+        payload: payload.clone(),
+    });
+
     let message_exists = STATE.with(|s| s.message_exists(msg_hash));
 
     if message_exists.is_err() {
@@ -48,11 +59,18 @@ async fn trigger_call(
 async fn store_message(
     from: Principal,
     to: Principal,
+    nonce: Nonce,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
-    let msg_hash = calculate_hash(from.to_nat(), to.to_nat(), payload.clone());
+    let message = Message;
+    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        from: from.to_nat(),
+        to: to.to_nat(),
+        nonce: nonce.clone(),
+        payload: payload.clone(),
+    });
 
     STATE.with(|s| s.store_incoming_message(msg_hash));
 
-    trigger_call(from, to, payload).await
+    trigger_call(from, to, nonce, payload).await
 }

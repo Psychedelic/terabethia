@@ -2,7 +2,13 @@ use candid::{candid_method, Nat, Principal};
 use ic_cdk::api;
 use ic_cdk_macros::update;
 
-use crate::{common::utils::calculate_hash, MESSAGE_PRODUCED, STATE};
+use crate::{
+    common::{
+        types::{IncomingMessageHashParams, Message, Nonce},
+        utils::Keccak256HashFn,
+    },
+    MESSAGE_PRODUCED, STATE,
+};
 
 pub trait ToNat {
     fn to_nat(&self) -> Nat;
@@ -16,10 +22,16 @@ impl ToNat for Principal {
 
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
+fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, String> {
     let caller = api::caller();
 
-    let msg_hash = calculate_hash(from.to_nat(), caller.to_nat(), payload.clone());
+    let message = Message;
+    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        from: from.to_nat(),
+        to: caller.to_nat(),
+        nonce: nonce.clone(),
+        payload: payload.clone(),
+    });
 
     let res = STATE.with(|s| {
         let mut map = s.messages.borrow_mut();

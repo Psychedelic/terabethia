@@ -1,5 +1,24 @@
 use candid::{CandidType, Deserialize, Nat};
 
+pub struct Message;
+
+pub type Nonce = u64;
+
+#[derive(CandidType, Deserialize)]
+pub struct IncomingMessageHashParams {
+    pub(crate) from: Nat,
+    pub(crate) to: Nat,
+    pub(crate) nonce: u64,
+    pub(crate) payload: Vec<Nat>,
+}
+
+#[derive(CandidType, Deserialize)]
+pub struct OutgoingMessageHashParams {
+    pub(crate) from: Nat,
+    pub(crate) to: Nat,
+    pub(crate) payload: Vec<Nat>,
+}
+
 #[derive(CandidType, Deserialize)]
 pub struct CallResult {
     #[serde(with = "serde_bytes")]

@@ -27,7 +27,10 @@ mod tests {
     use candid::{Nat, Principal};
     use std::str::FromStr;
 
-    use crate::common::utils::calculate_hash;
+    use crate::common::{
+        types::{IncomingMessageHashParams, Message},
+        utils::Keccak256HashFn,
+    };
 
     pub trait ToNat {
         fn to_nat(&self) -> Nat;
@@ -43,6 +46,7 @@ mod tests {
     fn message_hash() {
         let from_principal = Principal::from_text("rdbii-uiaaa-aaaab-qadva-cai").unwrap();
 
+        let nonce = 1;
         let from = from_principal.to_nat();
 
         // eth address
@@ -56,7 +60,14 @@ mod tests {
         ]
         .to_vec();
 
-        let msg_hash = calculate_hash(from, to, payload);
+        let message = Message;
+        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+            from,
+            to,
+            nonce,
+            payload,
+        });
+
         let msg_hash_expected = "c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3";
 
         assert_eq!(msg_hash, msg_hash_expected);
@@ -64,6 +75,7 @@ mod tests {
 
     #[test]
     fn deposit_message_hash() {
+        let nonce = 1;
         let to_principal = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
         let to = to_principal.to_nat();
 
@@ -78,7 +90,13 @@ mod tests {
         ]
         .to_vec();
 
-        let msg_hash = calculate_hash(from, to, payload);
+        let message = Message;
+        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+            from,
+            to,
+            nonce,
+            payload,
+        });
         let msg_hash_expected = "bc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45";
 
         assert_eq!(msg_hash, msg_hash_expected);
