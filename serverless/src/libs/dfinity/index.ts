@@ -78,8 +78,9 @@ export const Tera = {
   storeMessage: async (
     from: Principal,
     to: Principal,
+    nonce: bigint,
     payload: bigint[],
-  ): Promise<Result1> => teraCanister.store_message(from, to, payload),
+  ): Promise<Result1> => teraCanister.store_message(from, to, nonce, payload),
   getMessages: async (): Promise<OutgoingMessage[]> => teraCanister.get_messages(),
   removeMessages: async (messages: Array<bigint>): Promise<Result> => teraCanister.remove_messages(messages),
 };

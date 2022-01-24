@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_store_incoming_message() {
-        let nonce = 1;
+        let nonce = Nat::from(4);
         let controller_pid = Principal::from_slice(&[1, 0x00]);
         MockContext::new().with_caller(controller_pid).inject();
 
@@ -256,7 +256,7 @@ mod tests {
         let payload = [receiver, amount].to_vec();
 
         let message = Message;
-        let msg_hash_expected = "bc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45";
+        let msg_hash_expected = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
         let msg_hash = message.calculate_hash(IncomingMessageHashParams {
             from,
             to: to.clone(),
@@ -334,8 +334,8 @@ mod tests {
         let controller_pid = Principal::from_slice(&[1, 0x00]);
         MockContext::new().with_caller(controller_pid).inject();
 
-        let nonce: Nonce = 1;
-        let expected_nonce: Nonce = 1;
+        let nonce = Nat::from(1);
+        let expected_nonce = Nat::from(1);
 
         STATE.with(|s| s.update_nonce(nonce.clone()));
 
@@ -349,7 +349,7 @@ mod tests {
         let controller_pid = Principal::from_slice(&[1, 0x00]);
         MockContext::new().with_caller(controller_pid).inject();
 
-        let nonce: Nonce = 1;
+        let nonce = Nat::from(1);
 
         STATE.with(|s| s.update_nonce(nonce.clone()));
 
@@ -363,8 +363,8 @@ mod tests {
         let controller_pid = Principal::from_slice(&[1, 0x00]);
         MockContext::new().with_caller(controller_pid).inject();
 
-        let nonce1: Nonce = 1;
-        let nonce2: Nonce = 2;
+        let nonce1 = Nat::from(1);
+        let nonce2 = Nat::from(2);
 
         STATE.with(|s| s.update_nonce(nonce1.clone()));
         STATE.with(|s| s.update_nonce(nonce2.clone()));

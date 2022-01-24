@@ -2,13 +2,13 @@ use candid::{CandidType, Deserialize, Nat};
 
 pub struct Message;
 
-pub type Nonce = u64;
+pub type Nonce = Nat;
 
 #[derive(CandidType, Deserialize)]
 pub struct IncomingMessageHashParams {
     pub(crate) from: Nat,
     pub(crate) to: Nat,
-    pub(crate) nonce: u64,
+    pub(crate) nonce: Nonce,
     pub(crate) payload: Vec<Nat>,
 }
 

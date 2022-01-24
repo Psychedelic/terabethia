@@ -13,6 +13,6 @@ type TxError = variant {
 };
 service : () -> {
   burn : (principal, nat) -> (Result);
-  handle_message : (principal, vec nat) -> (Result);
-  mint : (vec nat) -> (Result);
+  handle_message : (principal, nat, vec nat) -> (Result);
+  mint : (nat, vec nat) -> (Result);
 }

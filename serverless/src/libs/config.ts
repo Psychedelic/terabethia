@@ -14,4 +14,11 @@ export const config = {
   TERA_AGENT_KEY_PAIR: process.env.TERA_AGENT_KEY_PAIR,
   ETH_L1_MESSAGE_TOPIC_ARN: process.env.ETH_L1_MESSAGE_TOPIC_ARN,
   ETH_L1_MESSAGE_TOPIC_NAME: process.env.ETH_L1_MESSAGE_TOPIC_NAME,
+  PROVIDERS: {
+    Mainnet: [
+      `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+      `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+    ],
+    Goerli: ['https://goerli.infura.io/v3/8328044ef20647ca8cf95216e364e9cb'],
+  },
 };

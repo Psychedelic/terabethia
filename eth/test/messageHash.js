@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("Message hash", function () {
     it("Should return correct deposit message hash", async function () {
+        const nonce = "0x04";
         // principal id hex form
         const canisterId = "0x00000000003000f10101";
         const principalId =
@@ -14,12 +15,12 @@ describe("Message hash", function () {
 
         // 0xdc64a140aa3e981100a9beca4e685f962f0cf6c9000000000000000000000000
         const depositMessageHash = ethers.utils.solidityKeccak256(
-            ["uint256", "uint256", "uint256", "uint256", "uint256"],
-            [ethProxyAddr, canisterId, depositPayload.length, ...depositPayload]
+            ["uint256", "uint256", "uint256", "uint256", "uint256", "uint256"],
+            [ethProxyAddr, canisterId, nonce, depositPayload.length, ...depositPayload]
         );
 
         expect(depositMessageHash).equals(
-            "0xbc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45"
+            "0xc9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1"
         );
     });
 

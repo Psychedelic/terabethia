@@ -1,4 +1,4 @@
-use crate::common::types::{CallResult, OutgoingMessage};
+use crate::common::types::{CallResult, Nonce, OutgoingMessage};
 use candid::{export_service, Nat, Principal};
 use tera::TerabetiaState;
 
@@ -46,7 +46,7 @@ mod tests {
     fn message_hash() {
         let from_principal = Principal::from_text("rdbii-uiaaa-aaaab-qadva-cai").unwrap();
 
-        let nonce = 1;
+        let nonce = Nat::from(4);
         let from = from_principal.to_nat();
 
         // eth address
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn deposit_message_hash() {
-        let nonce = 1;
+        let nonce = Nat::from(4);
         let to_principal = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
         let to = to_principal.to_nat();
 

@@ -4,10 +4,10 @@ type Result = variant { Ok : bool; Err : text };
 type Result_1 = variant { Ok : CallResult; Err : text };
 service : {
   authorize : (principal) -> ();
-  consume_message : (principal, vec nat) -> (Result);
+  consume_message : (principal, nat, vec nat) -> (Result);
   get_messages : () -> (vec OutgoingMessage);
   remove_messages : (vec nat) -> (Result);
   send_message : (principal, vec nat) -> (Result);
-  store_message : (principal, principal, vec nat) -> (Result_1);
-  trigger_call : (principal, principal, vec nat) -> (Result_1);
+  store_message : (principal, principal, nat, vec nat) -> (Result_1);
+  trigger_call : (principal, principal, nat, vec nat) -> (Result_1);
 }

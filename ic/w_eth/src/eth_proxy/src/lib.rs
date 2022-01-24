@@ -7,6 +7,8 @@ const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
 const WETH_ADDRESS_IC: &str = "sbuvx-eyaaa-aaaab-qad6a-cai";
 const WETH_ADDRESS_ETH: &str = "0x1b864e1ca9189cfbd8a14a53a02e26b00ab5e91a";
 
+pub type Nonce = Nat;
+
 pub type TxReceipt = Result<Nat, TxError>;
 
 #[derive(Deserialize, CandidType, Debug, PartialEq)]
@@ -61,7 +63,7 @@ fn init() {
 // #[update(name = "handle_message", guard = "only_controller")]
 #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
-async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> TxReceipt {
+async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = hex::encode(eth_addr);
 
     if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
@@ -70,19 +72,19 @@ async fn handler(eth_addr: Principal, payload: Vec<Nat>) -> TxReceipt {
 
     // ToDo: more validation here
 
-    mint(payload).await
+    mint(nonce, payload).await
 }
 
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
-async fn mint(payload: Vec<Nat>) -> TxReceipt {
+async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
-        (&weth_eth_addr_pid, &payload),
+        (&weth_eth_addr_pid, nonce, &payload),
     )
     .await
     .expect("consuming message from L1 failed!");

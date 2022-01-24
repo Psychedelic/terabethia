@@ -12,7 +12,7 @@ impl Keccak256HashFn<IncomingMessageHashParams> for Message {
         let mut data = vec![
             params.from,
             params.to,
-            Nat::from(params.nonce),
+            params.nonce,
             Nat::from(params.payload.len()),
         ];
         data.extend(params.payload);
