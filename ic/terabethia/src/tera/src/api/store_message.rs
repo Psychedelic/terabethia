@@ -29,6 +29,11 @@ async fn trigger_call(
     nonce: Nonce,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
+    let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
+    if nonce_exists {
+        return Err(format!("Transaction with nonce {} already exists!", nonce));
+    }
+
     let message = Message;
     let msg_hash = message.calculate_hash(IncomingMessageHashParams {
         from: from.to_nat(),
@@ -43,7 +48,7 @@ async fn trigger_call(
         return Err(message_exists.err().unwrap());
     }
 
-    let args_raw = encode_args((&from, &payload)).unwrap();
+    let args_raw = encode_args((&from, &nonce, &payload)).unwrap();
 
     match api::call::call_raw(to, "handle_message", args_raw, 0).await {
         Ok(x) => Ok(CallResult { r#return: x }),
@@ -62,6 +67,11 @@ async fn store_message(
     nonce: Nonce,
     payload: Vec<Nat>,
 ) -> Result<CallResult, String> {
+    let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
+    if nonce_exists {
+        return Err(format!("Transaction with nonce {} already exists!", nonce));
+    }
+
     let message = Message;
     let msg_hash = message.calculate_hash(IncomingMessageHashParams {
         from: from.to_nat(),

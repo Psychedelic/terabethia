@@ -114,6 +114,7 @@ impl TerabetiaState {
 
     /// Update incoming message nonce
     pub fn update_nonce(&self, nonce: Nonce) {
+        // self.nonce.borrow_mut().insert(nonce);
         STATE.with(|s| s.nonce.borrow_mut().insert(nonce));
     }
 
@@ -124,8 +125,8 @@ impl TerabetiaState {
     }
 
     /// Check if nonce exists in set
-    pub fn nonce_exists(&self, nonce: Nonce) -> bool {
-        STATE.with(|s| s.nonce.borrow().contains(&nonce))
+    pub fn nonce_exists(&self, nonce: &Nonce) -> bool {
+        STATE.with(|s| s.nonce.borrow().contains(nonce))
     }
 
     /// Get all nonces from set
@@ -353,7 +354,7 @@ mod tests {
 
         STATE.with(|s| s.update_nonce(nonce.clone()));
 
-        let nonce_exists = STATE.with(|s| s.nonce_exists(nonce));
+        let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
 
         assert_eq!(nonce_exists, true);
     }
