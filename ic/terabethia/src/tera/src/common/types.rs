@@ -27,4 +27,7 @@ pub struct CallResult {
 pub struct Message;
 
 #[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq, Hash)]
-pub struct OutgoingMessage(pub(crate) [u8; 32]);
+pub struct OutgoingMessage {
+    pub(crate) msg_key: [u8; 32],
+    pub(crate) msg_hash: String,
+}

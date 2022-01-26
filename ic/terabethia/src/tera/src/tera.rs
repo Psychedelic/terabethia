@@ -50,16 +50,32 @@ pub struct StableTerabetiaState {
 }
 
 impl OutgoingMessage {
+    #[inline(always)]
     pub fn new(msg_hash: String, index: u64) -> Self {
         let mut hasher = Sha256::new();
-        let mut output = [0u8; 32];
+        let mut msg_key = [0u8; 32];
         let index_slice = index.to_be_bytes();
         let msg_hash_slice = msg_hash.as_bytes();
 
         hasher.update(index_slice);
         hasher.update(msg_hash_slice);
-        output.copy_from_slice(&hasher.finalize());
-        OutgoingMessage(output)
+        msg_key.copy_from_slice(&hasher.finalize());
+        OutgoingMessage { msg_key, msg_hash }
+    }
+}
+
+impl From<(String, String)> for OutgoingMessage {
+    #[inline]
+    fn from(msg: (String, String)) -> Self {
+        let mut msg_key = [0u8; 32];
+        let msg_key_slice = &hex::decode(msg.0).unwrap()[..];
+
+        msg_key.copy_from_slice(&msg_key_slice);
+
+        OutgoingMessage {
+            msg_key,
+            msg_hash: msg.1,
+        }
     }
 }
 
@@ -68,6 +84,7 @@ pub trait ToNat {
 }
 
 impl ToNat for Principal {
+    #[inline(always)]
     fn to_nat(&self) -> Nat {
         Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
     }
@@ -91,21 +108,21 @@ impl TerabetiaState {
             *index += 1;
 
             let mut map = s.messages_out.borrow_mut();
-            let kp = OutgoingMessage::new(msg_hash, *index);
-            map.insert(kp.clone());
+            let message_out_key = OutgoingMessage::new(msg_hash, *index);
+            map.insert(message_out_key.clone());
 
-            Ok(kp)
+            Ok(message_out_key)
         })
     }
 
     /// Remove outgoing messages to L1
-    pub fn remove_messages(&self, messages: Vec<(String, u64)>) -> Result<bool, String> {
+    pub fn remove_messages(&self, messages: Vec<(String, String)>) -> Result<bool, String> {
         STATE.with(|s| {
             let mut map = s.messages_out.borrow_mut();
 
             messages.into_iter().for_each(|message| {
-                let kp = OutgoingMessage::new(message.0, message.1);
-                map.remove(&kp);
+                let key = OutgoingMessage::from((message.0, message.1));
+                map.remove(&key);
             });
 
             Ok(true)
@@ -241,12 +258,28 @@ mod tests {
     use ic_kit::{MockContext, Principal};
 
     #[test]
-    fn test_get_messages() {
-        let msg_id: u64 = 1;
-        let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
+    fn test_outgoing_message_from() {
+        let index: u64 = 1;
 
-        let message_out = OutgoingMessage::new(msg_hash.to_string(), msg_id);
-        println!("{:#?}", message_out);
+        let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
+        let message_out = OutgoingMessage::new(msg_hash.to_string(), index);
+
+        let expected_msg_key = "13c1e4094887e7ede4cff2cc3b32f010363b8b2b6a71897e12f8aaa6959fbe27";
+        let expected_message_out =
+            OutgoingMessage::from((expected_msg_key.to_string(), msg_hash.to_string()));
+
+        assert_eq!(
+            hex::encode(expected_message_out.msg_key),
+            hex::encode(message_out.msg_key)
+        );
+    }
+
+    #[test]
+    fn test_get_messages() {
+        let controller_pid = Principal::from_slice(&[1, 0x00]);
+        MockContext::new().with_caller(controller_pid).inject();
+
+        //ToDo
     }
 
     #[test]
