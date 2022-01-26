@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[update(name = "send_message")]
-// #[candid_method(update, rename = "send_message")]
+#[candid_method(update, rename = "send_message")]
 fn send(to: Principal, payload: Vec<Nat>) -> Result<OutgoingMessage, String> {
     let caller = api::caller();
 

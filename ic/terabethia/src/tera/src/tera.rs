@@ -1,9 +1,8 @@
-use crate::common::types::Nonce;
-use crate::common::types::OutgoingMessage;
-use candid::{CandidType, Nat, Principal};
+use crate::common::types::{Nonce, OutgoingMessage};
+use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::caller;
-use serde::Deserialize;
 use sha2::{Digest, Sha256};
+
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},

@@ -1,14 +1,15 @@
 type CallResult = record { return : vec nat8 };
-type OutgoingMessage = record { id : nat; hash : text; produced : bool };
+type OutgoingMessage = record { msg_hash : text; msg_key : vec nat8 };
 type Result = variant { Ok : bool; Err : text };
-type Result_1 = variant { Ok : CallResult; Err : text };
+type Result_1 = variant { Ok : OutgoingMessage; Err : text };
+type Result_2 = variant { Ok : CallResult; Err : text };
 service : {
   authorize : (principal) -> ();
   consume_message : (principal, nat, vec nat) -> (Result);
-  get_messages : () -> (vec OutgoingMessage);
-  get_nonces : () -> (vec nat);
-  remove_messages : (vec nat) -> (Result);
-  send_message : (principal, vec nat) -> (Result);
-  store_message : (principal, principal, nat, vec nat) -> (Result_1);
-  trigger_call : (principal, principal, nat, vec nat) -> (Result_1);
+  get_messages : () -> (vec OutgoingMessage) query;
+  get_nonces : () -> (vec nat) query;
+  remove_messages : (vec record { text; text }) -> (Result);
+  send_message : (principal, vec nat) -> (Result_1);
+  store_message : (principal, principal, nat, vec nat) -> (Result_2);
+  trigger_call : (principal, principal, nat, vec nat) -> (Result_2);
 }

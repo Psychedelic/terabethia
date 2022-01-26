@@ -1,31 +1,41 @@
 export default ({ IDL }: { IDL: any }) => {
-  const Result = IDL.Variant({ Ok: IDL.Bool, Err: IDL.Text });
+  const Result = IDL.Variant({ 'Ok': IDL.Bool, 'Err': IDL.Text });
   const OutgoingMessage = IDL.Record({
-    id: IDL.Nat,
-    hash: IDL.Text,
-    produced: IDL.Bool,
+    'msg_hash': IDL.Text,
+    'msg_key': IDL.Vec(IDL.Nat8),
   });
-  const CallResult = IDL.Record({ return: IDL.Vec(IDL.Nat8) });
-  const Result_1 = IDL.Variant({ Ok: CallResult, Err: IDL.Text });
+  const Result_1 = IDL.Variant({ 'Ok': OutgoingMessage, 'Err': IDL.Text });
+  const CallResult = IDL.Record({ 'return': IDL.Vec(IDL.Nat8) });
+  const Result_2 = IDL.Variant({ 'Ok': CallResult, 'Err': IDL.Text });
   return IDL.Service({
-    authorize: IDL.Func([IDL.Principal], [], []),
-    consume_message: IDL.Func(
+    'authorize': IDL.Func([IDL.Principal], [], []),
+    'consume_message': IDL.Func(
       [IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
       [Result],
-      []
+      [],
     ),
-    get_messages: IDL.Func([], [IDL.Vec(OutgoingMessage)], []),
-    remove_messages: IDL.Func([IDL.Vec(IDL.Nat)], [Result], []),
-    send_message: IDL.Func([IDL.Principal, IDL.Vec(IDL.Nat)], [Result], []),
-    store_message: IDL.Func(
-      [IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
-      [Result_1],
-      []
+    'get_messages': IDL.Func([], [IDL.Vec(OutgoingMessage)], []),
+    'get_nonces': IDL.Func([], [IDL.Vec(IDL.Nat)], []),
+    'remove_messages': IDL.Func(
+      [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+      [Result],
+      [],
     ),
-    trigger_call: IDL.Func(
-      [IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
+    'send_message': IDL.Func(
+      [IDL.Principal, IDL.Vec(IDL.Nat)],
       [Result_1],
-      []
+      [],
+    ),
+    'store_message': IDL.Func(
+      [IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
+      [Result_2],
+      [],
+    ),
+    'trigger_call': IDL.Func(
+      [IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
+      [Result_2],
+      [],
     ),
   });
 };
+export const init = ({ IDL }) => { return []; };

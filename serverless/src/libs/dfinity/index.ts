@@ -12,8 +12,7 @@ import { Ed25519KeyIdentity } from '@dfinity/identity';
 import TERA_FACTORY from './idls/tera/tera.did';
 import TerabethiaService, {
   OutgoingMessage,
-  Result,
-  Result1,
+  Result_2,
 } from './idls/tera/tera.d';
 
 type IdlFactory = ({ IDL }: { IDL: any }) => any;
@@ -80,7 +79,7 @@ export const Tera = {
     to: Principal,
     nonce: bigint,
     payload: bigint[],
-  ): Promise<Result1> => teraCanister.store_message(from, to, nonce, payload),
+  ): Promise<Result_2> => teraCanister.store_message(from, to, nonce, payload),
   getMessages: async (): Promise<OutgoingMessage[]> => teraCanister.get_messages(),
-  removeMessages: async (messages: Array<bigint>): Promise<Result> => teraCanister.remove_messages(messages),
+  // removeMessages: async (messages: Array<bigint>): Promise<Result> => teraCanister.remove_messages(messages),
 };
