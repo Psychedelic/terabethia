@@ -359,13 +359,12 @@ mod tests {
         let msg_hash_expected = "d0379be15bb6f33737b756e512dad1e71226b31fa648da57811f930badf6c163";
         let msg_hash = message.calculate_hash(OutgoingMessageHashParams { from, to, payload });
 
-        println!("{}", msg_hash);
         assert_eq!(msg_hash, msg_hash_expected);
 
-        STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
+        let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.clone()));
 
-        let msg_exists = STATE.with(|s| s.message_exists(msg_hash));
-        assert_eq!(msg_exists.unwrap(), true);
+        let outoging_messages = STATE.with(|s| s.get_messages());
+        assert_eq!(outoging_messages.len(), 1);
     }
 
     #[test]
@@ -374,19 +373,26 @@ mod tests {
         MockContext::new().with_caller(controller_pid).inject();
 
         let msg_hash =
-            String::from("bc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45");
+            String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
 
-        STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
+        let message_out = STATE
+            .with(|s| s.store_outgoing_message(msg_hash.clone()))
+            .unwrap();
 
-        let msg_exists = STATE.with(|s| s.message_exists(msg_hash.clone()));
-        assert_eq!(msg_exists.unwrap(), true);
+        let mut outoging_messages = STATE.with(|s| s.get_messages());
 
-        let id_hex = hex::decode(&msg_hash).unwrap();
-        let id_to_remove = Nat::from(num_bigint::BigUint::from_bytes_be(&id_hex[..]));
+        assert_eq!(outoging_messages.len(), 1);
 
-        // let remove_message = STATE.with(|s| s.remove_messages(vec![id_to_remove]));
+        let msg_key = hex::encode(message_out.msg_key);
+        let msg_hash = message_out.msg_hash;
 
-        // assert_eq!(remove_message.unwrap(), true);
+        let remove_message = STATE.with(|s| s.remove_messages(vec![(msg_key, msg_hash)]));
+
+        assert_eq!(remove_message.unwrap(), true);
+
+        outoging_messages = STATE.with(|s| s.get_messages());
+
+        assert_eq!(outoging_messages.len(), 0);
     }
 
     #[test]
