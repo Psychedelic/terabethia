@@ -1,7 +1,7 @@
 use candid::{candid_method, Principal};
 use ic_cdk_macros::update;
 
-use crate::STATE;
+use crate::tera::STATE;
 
 pub fn is_authorized() -> Result<(), String> {
     STATE.with(|s| s.is_authorized())

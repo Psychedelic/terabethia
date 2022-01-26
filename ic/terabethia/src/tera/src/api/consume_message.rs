@@ -7,18 +7,8 @@ use crate::{
         types::{IncomingMessageHashParams, Message, Nonce},
         utils::Keccak256HashFn,
     },
-    MESSAGE_PRODUCED, STATE,
+    tera::{ToNat, STATE},
 };
-
-pub trait ToNat {
-    fn to_nat(&self) -> Nat;
-}
-
-impl ToNat for Principal {
-    fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-    }
-}
 
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
@@ -62,7 +52,7 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, Str
     });
 
     if res.is_ok() {
-        let store = STATE.with(|s| s.store_outgoing_message(msg_hash, !MESSAGE_PRODUCED));
+        let store = STATE.with(|s| s.store_outgoing_message(msg_hash));
         match store {
             Ok(_) => STATE.with(|s| s.update_nonce(nonce)),
             Err(error) => panic!("{:?}", error),

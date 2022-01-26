@@ -1,24 +1,17 @@
-use crate::common::types::{CallResult, Nonce, OutgoingMessage};
-use candid::{export_service, Nat, Principal};
-use tera::TerabetiaState;
-
-pub mod api;
+mod api;
 mod common;
 mod tera;
 mod upgrade;
-
-thread_local! {
-    static STATE: TerabetiaState = TerabetiaState::default();
-}
-
-const MESSAGE_PRODUCED: bool = true;
 
 #[cfg(any(target_arch = "wasm32", test))]
 fn main() {}
 
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
-    export_service!();
+    use crate::common::types::{CallResult, Nonce, OutgoingMessage};
+    use candid::{Nat, Principal};
+
+    ic_kit::candid::export_service!();
     std::print!("{}", __export_service());
 }
 
@@ -27,20 +20,13 @@ mod tests {
     use candid::{Nat, Principal};
     use std::str::FromStr;
 
-    use crate::common::{
-        types::{IncomingMessageHashParams, Message},
-        utils::Keccak256HashFn,
+    use crate::{
+        common::{
+            types::{IncomingMessageHashParams, Message},
+            utils::Keccak256HashFn,
+        },
+        tera::ToNat,
     };
-
-    pub trait ToNat {
-        fn to_nat(&self) -> Nat;
-    }
-
-    impl ToNat for Principal {
-        fn to_nat(&self) -> Nat {
-            Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-        }
-    }
 
     #[test]
     fn message_hash() {

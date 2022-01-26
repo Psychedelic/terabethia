@@ -1,7 +1,5 @@
 use candid::{CandidType, Deserialize, Nat};
 
-pub struct Message;
-
 pub type Nonce = Nat;
 
 #[derive(CandidType, Deserialize)]
@@ -25,9 +23,8 @@ pub struct CallResult {
     pub(crate) r#return: Vec<u8>,
 }
 
-#[derive(Clone, Debug, CandidType, Deserialize)]
-pub struct OutgoingMessage {
-    pub(crate) id: Nat,
-    pub(crate) hash: String,
-    pub(crate) produced: bool,
-}
+#[derive(Debug)]
+pub struct Message;
+
+#[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq, Hash)]
+pub struct OutgoingMessage(pub(crate) [u8; 32]);

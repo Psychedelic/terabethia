@@ -4,25 +4,15 @@ use ic_cdk_macros::update;
 
 use crate::{
     common::{
-        types::{Message, Nonce, OutgoingMessageHashParams},
+        types::{Message, OutgoingMessage, OutgoingMessageHashParams},
         utils::Keccak256HashFn,
     },
-    MESSAGE_PRODUCED, STATE,
+    tera::{ToNat, STATE},
 };
 
-pub trait ToNat {
-    fn to_nat(&self) -> Nat;
-}
-
-impl ToNat for Principal {
-    fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-    }
-}
-
 #[update(name = "send_message")]
-#[candid_method(update, rename = "send_message")]
-fn send(to: Principal, payload: Vec<Nat>) -> Result<bool, String> {
+// #[candid_method(update, rename = "send_message")]
+fn send(to: Principal, payload: Vec<Nat>) -> Result<OutgoingMessage, String> {
     let caller = api::caller();
 
     let message = Message;
@@ -32,5 +22,5 @@ fn send(to: Principal, payload: Vec<Nat>) -> Result<bool, String> {
         payload: payload.clone(),
     });
 
-    STATE.with(|s| s.store_outgoing_message(msg_hash, MESSAGE_PRODUCED))
+    STATE.with(|s| s.store_outgoing_message(msg_hash))
 }

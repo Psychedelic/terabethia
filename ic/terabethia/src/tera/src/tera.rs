@@ -1,12 +1,17 @@
 use crate::common::types::Nonce;
-use crate::{common::types::OutgoingMessage, STATE};
+use crate::common::types::OutgoingMessage;
 use candid::{CandidType, Nat, Principal};
 use ic_cdk::caller;
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
 };
+
+thread_local! {
+    pub static STATE: TerabetiaState = TerabetiaState::default();
+}
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct TerabetiaState {
@@ -17,10 +22,10 @@ pub struct TerabetiaState {
     pub nonce: RefCell<HashSet<Nonce>>,
 
     /// Outgoing messages
-    pub messages_out: RefCell<HashMap<u64, (String, bool)>>,
+    pub messages_out: RefCell<HashSet<OutgoingMessage>>,
 
     /// Outgoing message index
-    pub message_index: RefCell<u64>,
+    pub message_out_index: RefCell<u64>,
 
     /// List of authorized pids
     pub authorized: RefCell<Vec<Principal>>,
@@ -35,66 +40,87 @@ pub struct StableTerabetiaState {
     pub nonce: HashSet<Nonce>,
 
     /// Outgoing messages
-    pub messages_out: HashMap<u64, (String, bool)>,
+    pub messages_out: HashSet<OutgoingMessage>,
 
     /// Outgoing message index
-    pub message_index: u64,
+    pub message_out_index: u64,
 
     /// List of authorized pids
     pub authorized: Vec<Principal>,
 }
 
+impl OutgoingMessage {
+    pub fn new(msg_hash: String, index: u64) -> Self {
+        let mut hasher = Sha256::new();
+        let mut output = [0u8; 32];
+        let index_slice = index.to_be_bytes();
+        let msg_hash_slice = msg_hash.as_bytes();
+
+        hasher.update(index_slice);
+        hasher.update(msg_hash_slice);
+        output.copy_from_slice(&hasher.finalize());
+        OutgoingMessage(output)
+    }
+}
+
+pub trait ToNat {
+    fn to_nat(&self) -> Nat;
+}
+
+impl ToNat for Principal {
+    fn to_nat(&self) -> Nat {
+        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+    }
+}
+
 impl TerabetiaState {
+    ///
+    /// Outgoing
+    ///
+
     /// Get outgoing messages to L1
     pub fn get_messages(&self) -> Vec<OutgoingMessage> {
-        STATE.with(|s| {
-            let map = s.messages_out.borrow();
+        STATE.with(|s| s.messages_out.borrow().iter().cloned().collect())
+    }
 
-            map.clone()
-                .into_iter()
-                .map(|f| OutgoingMessage {
-                    produced: f.1 .1,
-                    id: Nat::from(f.0),
-                    hash: f.1 .0,
-                })
-                .collect()
+    /// Store outgoing messages to L1
+    pub fn store_outgoing_message(&self, msg_hash: String) -> Result<OutgoingMessage, String> {
+        STATE.with(|s| {
+            // we increment outgoing message counter
+            let mut index = s.message_out_index.borrow_mut();
+            *index += 1;
+
+            let mut map = s.messages_out.borrow_mut();
+            let kp = OutgoingMessage::new(msg_hash, *index);
+            map.insert(kp.clone());
+
+            Ok(kp)
         })
     }
+
+    /// Remove outgoing messages to L1
+    pub fn remove_messages(&self, messages: Vec<(String, u64)>) -> Result<bool, String> {
+        STATE.with(|s| {
+            let mut map = s.messages_out.borrow_mut();
+
+            messages.into_iter().for_each(|message| {
+                let kp = OutgoingMessage::new(message.0, message.1);
+                map.remove(&kp);
+            });
+
+            Ok(true)
+        })
+    }
+
+    ///
+    /// Incoming
+    ///
 
     /// Store incoming messages from L1
     pub fn store_incoming_message(&self, msg_hash: String) {
         STATE.with(|s| {
             let mut map = s.messages.borrow_mut();
             *map.entry(msg_hash).or_insert(0) += 1;
-        })
-    }
-
-    /// Store outgoing messages to L1
-    pub fn store_outgoing_message(&self, hash: String, msg_type: bool) -> Result<bool, String> {
-        STATE.with(|s| {
-            // we increment outgoing message counter
-            let mut index = s.message_index.borrow_mut();
-            *index += 1;
-
-            let mut map = s.messages_out.borrow_mut();
-            let msg = (hash, msg_type);
-            map.insert(*index, msg);
-
-            Ok(true)
-        })
-    }
-
-    /// Remove outgoing messages to L1
-    pub fn remove_messages(&self, ids: Vec<Nat>) -> Result<bool, String> {
-        STATE.with(|s| {
-            let mut map = s.messages_out.borrow_mut();
-
-            ids.into_iter().for_each(|n| {
-                let i = &u64::from_str_radix(&n.0.to_str_radix(16), 16).unwrap();
-                map.remove(&i).expect("Message does not exist");
-            });
-
-            Ok(true)
         })
     }
 
@@ -134,6 +160,10 @@ impl TerabetiaState {
         STATE.with(|s| s.nonce.borrow().iter().cloned().collect())
     }
 
+    ///
+    /// Authorization
+    ///
+
     /// Check if caller is authorized
     pub fn is_authorized(&self) -> Result<(), String> {
         STATE.with(|s| {
@@ -156,6 +186,10 @@ impl TerabetiaState {
         })
     }
 
+    ///
+    /// Pre/Post Upgrade
+    ///
+
     /// Return entire state
     /// Before upgrade
     pub fn take_all(&self) -> StableTerabetiaState {
@@ -163,7 +197,7 @@ impl TerabetiaState {
             messages: tera.messages.take(),
             nonce: tera.nonce.take(),
             messages_out: tera.messages_out.take(),
-            message_index: tera.message_index.take(),
+            message_out_index: tera.message_out_index.take(),
             authorized: tera.authorized.take(),
         })
     }
@@ -175,7 +209,7 @@ impl TerabetiaState {
             tera.messages.borrow_mut().clear();
             tera.nonce.borrow_mut().clear();
             tera.messages_out.borrow_mut().clear();
-            tera.message_index.replace(0);
+            tera.message_out_index.replace(0);
             tera.authorized.borrow_mut().clear();
         })
     }
@@ -187,7 +221,8 @@ impl TerabetiaState {
             tera.messages.replace(stable_tera_state.messages);
             tera.nonce.replace(stable_tera_state.nonce);
             tera.messages_out.replace(stable_tera_state.messages_out);
-            tera.message_index.replace(stable_tera_state.message_index);
+            tera.message_out_index
+                .replace(stable_tera_state.message_out_index);
             tera.authorized.replace(stable_tera_state.authorized);
         })
     }
@@ -205,22 +240,13 @@ mod tests {
     use super::*;
     use ic_kit::{MockContext, Principal};
 
-    pub trait ToNat {
-        fn to_nat(&self) -> Nat;
-    }
-
-    impl ToNat for Principal {
-        fn to_nat(&self) -> Nat {
-            Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-        }
-    }
-
     #[test]
     fn test_get_messages() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
+        let msg_id: u64 = 1;
+        let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
 
-        //ToDo
+        let message_out = OutgoingMessage::new(msg_hash.to_string(), msg_id);
+        println!("{:#?}", message_out);
     }
 
     #[test]
@@ -325,9 +351,9 @@ mod tests {
         let id_hex = hex::decode(&msg_hash).unwrap();
         let id_to_remove = Nat::from(num_bigint::BigUint::from_bytes_be(&id_hex[..]));
 
-        let remove_message = STATE.with(|s| s.remove_messages(vec![id_to_remove]));
+        // let remove_message = STATE.with(|s| s.remove_messages(vec![id_to_remove]));
 
-        assert_eq!(remove_message.unwrap(), true);
+        // assert_eq!(remove_message.unwrap(), true);
     }
 
     #[test]

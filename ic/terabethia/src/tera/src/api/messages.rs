@@ -2,12 +2,12 @@ use candid::{candid_method, Nat};
 use ic_cdk_macros::update;
 
 use super::admin::is_authorized;
-use crate::{common::types::OutgoingMessage, STATE};
+use crate::{common::types::OutgoingMessage, tera::STATE};
 
 #[update(name = "remove_messages", guard = "is_authorized")]
 #[candid_method(update, rename = "remove_messages")]
-fn remove_messages(ids: Vec<Nat>) -> Result<bool, String> {
-    STATE.with(|s| s.remove_messages(ids))
+fn remove_messages(messages: Vec<(String, u64)>) -> Result<bool, String> {
+    STATE.with(|s| s.remove_messages(messages))
 }
 
 #[update(name = "get_messages", guard = "is_authorized")]

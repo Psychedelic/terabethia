@@ -8,18 +8,8 @@ use crate::{
         types::{CallResult, IncomingMessageHashParams, Message, Nonce},
         utils::Keccak256HashFn,
     },
-    STATE,
+    tera::{ToNat, STATE},
 };
-
-pub trait ToNat {
-    fn to_nat(&self) -> Nat;
-}
-
-impl ToNat for Principal {
-    fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-    }
-}
 
 #[update(name = "trigger_call", guard = "is_authorized")]
 #[candid_method(update, rename = "trigger_call")]
