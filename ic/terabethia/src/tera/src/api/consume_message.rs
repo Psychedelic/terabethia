@@ -51,13 +51,11 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, Str
         Ok(true)
     });
 
-    if res.is_ok() {
-        let store = STATE.with(|s| s.store_outgoing_message(msg_hash));
-        match store {
-            Ok(_) => STATE.with(|s| s.update_nonce(nonce)),
-            Err(error) => panic!("{:?}", error),
+    match res {
+        Ok(_) => {
+            STATE.with(|s| s.update_nonce(nonce));
+            res
         }
+        Err(error) => panic!("{:?}", error),
     }
-
-    res
 }
