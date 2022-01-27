@@ -59,8 +59,6 @@ fn init() {
     ic::store(ic::caller());
 }
 
-/// ToDo: Access control
-// #[update(name = "handle_message", guard = "only_controller")]
 #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
@@ -98,7 +96,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
         let mint: Result<(TxReceipt,), (RejectionCode, String)> =
             ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
 
-        match mint {
+        return match mint {
             Ok(result) => match result {
                 (Ok(value),) => Ok(value),
                 (Err(error),) => Err(error),

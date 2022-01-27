@@ -1,6 +1,6 @@
 use candid::{candid_method, Nat, Principal};
-use ic_cdk::api;
 use ic_cdk_macros::update;
+use ic_kit::ic::caller;
 
 use crate::{
     common::{
@@ -21,7 +21,7 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, Str
         ));
     }
 
-    let caller = api::caller();
+    let caller = caller();
 
     let message = Message;
     let msg_hash = message.calculate_hash(IncomingMessageHashParams {
@@ -57,5 +57,57 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, Str
             res
         }
         Err(error) => panic!("{:?}", error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ic_kit::{mock_principals, MockContext};
+
+    use super::*;
+
+    fn before_each() -> &'static mut MockContext {
+        MockContext::new()
+            .with_caller(mock_principals::alice())
+            .inject()
+    }
+
+    #[test]
+    fn test_consume_message() {
+        let mock_ctx = before_each();
+
+        // originating eth address as pid
+        let from = mock_principals::john();
+
+        // eth_proxy
+        let to = mock_principals::xtc();
+
+        // token owner
+        let receiver = mock_principals::bob();
+
+        let nonce = Nat::from(4);
+        let amount = Nat::from(44444);
+        let payload = [receiver.to_nat(), amount].to_vec();
+
+        let message = Message;
+        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+            from: from.to_nat(),
+            to: to.to_nat(),
+            nonce: nonce.clone(),
+            payload: payload.clone(),
+        });
+
+        STATE.with(|s| s.store_incoming_message(msg_hash));
+
+        // switch context to eth_proxy mock caller
+        mock_ctx.update_caller(to);
+
+        let consume_message = consume(from, nonce, payload);
+
+        assert_eq!(consume_message.unwrap(), true);
+
+        let get_nonces = STATE.with(|s| s.get_nonces());
+
+        assert_eq!(get_nonces.len(), 1);
     }
 }

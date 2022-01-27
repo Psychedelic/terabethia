@@ -1269,6 +1269,7 @@ dependencies = [
 name = "tera"
 version = "0.1.0"
 dependencies = [
+ "async-std",
  "candid",
  "hex",
  "ic-cdk",

@@ -19,3 +19,6 @@ hex = "0.4.3"
 serde = "1.0.130"
 serde_bytes = "0.11"
 num-bigint = "0.4.3"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+async-std = { version="1.10.0", features = ["attributes"] }

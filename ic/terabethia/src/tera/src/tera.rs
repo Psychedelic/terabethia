@@ -1,6 +1,6 @@
 use crate::common::types::{Nonce, OutgoingMessage};
 use candid::{CandidType, Deserialize, Nat, Principal};
-use ic_cdk::caller;
+use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
 
 use std::{
@@ -278,7 +278,12 @@ mod tests {
         let controller_pid = Principal::from_slice(&[1, 0x00]);
         MockContext::new().with_caller(controller_pid).inject();
 
-        //ToDo
+        let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
+        let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.to_string()));
+
+        let messages = STATE.with(|s| s.get_messages());
+
+        println!("{:#?}", messages.into_iter().next());
     }
 
     #[test]
