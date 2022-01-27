@@ -1,4 +1,4 @@
-use crate::common::types::{Nonce, OutgoingMessage};
+use crate::common::types::{Nonce, OutgoingMessage, OutgoingMessageParam};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
@@ -63,17 +63,17 @@ impl OutgoingMessage {
     }
 }
 
-impl From<(String, String)> for OutgoingMessage {
+impl From<OutgoingMessageParam> for OutgoingMessage {
     #[inline]
-    fn from(msg: (String, String)) -> Self {
+    fn from(msg: OutgoingMessageParam) -> Self {
         let mut msg_key = [0u8; 32];
-        let msg_key_slice = &hex::decode(msg.0).unwrap()[..];
+        let msg_key_slice = &hex::decode(msg.msg_key).unwrap()[..];
 
         msg_key.copy_from_slice(&msg_key_slice);
 
         OutgoingMessage {
             msg_key,
-            msg_hash: msg.1,
+            msg_hash: msg.msg_hash,
         }
     }
 }
@@ -115,12 +115,12 @@ impl TerabetiaState {
     }
 
     /// Remove outgoing messages to L1
-    pub fn remove_messages(&self, messages: Vec<(String, String)>) -> Result<bool, String> {
+    pub fn remove_messages(&self, messages: Vec<OutgoingMessageParam>) -> Result<bool, String> {
         STATE.with(|s| {
             let mut map = s.messages_out.borrow_mut();
 
             messages.into_iter().for_each(|message| {
-                let key = OutgoingMessage::from((message.0, message.1));
+                let key = OutgoingMessage::from(message);
                 map.remove(&key);
             });
 
@@ -264,8 +264,10 @@ mod tests {
         let message_out = OutgoingMessage::new(msg_hash.to_string(), index);
 
         let expected_msg_key = "13c1e4094887e7ede4cff2cc3b32f010363b8b2b6a71897e12f8aaa6959fbe27";
-        let expected_message_out =
-            OutgoingMessage::from((expected_msg_key.to_string(), msg_hash.to_string()));
+        let expected_message_out = OutgoingMessage::from(OutgoingMessageParam {
+            msg_key: expected_msg_key.to_string(),
+            msg_hash: msg_hash.to_string(),
+        });
 
         assert_eq!(
             hex::encode(expected_message_out.msg_key),
@@ -275,9 +277,6 @@ mod tests {
 
     #[test]
     fn test_get_messages() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
         let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.to_string()));
 
@@ -288,17 +287,12 @@ mod tests {
 
     #[test]
     fn test_get_messages_empty() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         //ToDo
     }
 
     #[test]
     fn test_store_incoming_message() {
         let nonce = Nat::from(4);
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
 
         // receiver address ic
         // pid -> hex (0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802) -> nat
@@ -314,7 +308,7 @@ mod tests {
         let from_slice = hex::decode("1b864e1CA9189CFbD8A14a53A02E26B00AB5e91a").unwrap();
         let from = Nat::from(num_bigint::BigUint::from_bytes_be(&from_slice[..]));
 
-        // amount to withdraw
+        // amount to deposit
         let amount = Nat::from_str("69000000").unwrap();
 
         let payload = [receiver, amount].to_vec();
@@ -339,9 +333,6 @@ mod tests {
 
     #[test]
     fn test_store_outgoing_message() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         // receiver address eth
         let receiver_slice = hex::decode("fd82d7abAbC1461798deB5a5d9812603fdd650cc").unwrap();
         let receiver = Nat::from(num_bigint::BigUint::from_bytes_be(&receiver_slice[..]));
@@ -351,7 +342,7 @@ mod tests {
         let from = from_principal.to_nat();
 
         // eth proxy address
-        let to_slice = hex::decode("Fa7FC33D0D5984d33e33AF5d3f504E33a251d52a").unwrap();
+        let to_slice = hex::decode("fa7fc33d0d5984d33e33af5d3f504e33a251d52a").unwrap();
         let to = Nat::from(num_bigint::BigUint::from_bytes_be(&to_slice[..]));
 
         // amount to withdraw
@@ -373,9 +364,6 @@ mod tests {
 
     #[test]
     fn test_remove_messages() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         let msg_hash =
             String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
 
@@ -390,7 +378,8 @@ mod tests {
         let msg_key = hex::encode(message_out.msg_key);
         let msg_hash = message_out.msg_hash;
 
-        let remove_message = STATE.with(|s| s.remove_messages(vec![(msg_key, msg_hash)]));
+        let remove_message =
+            STATE.with(|s| s.remove_messages(vec![OutgoingMessageParam { msg_key, msg_hash }]));
 
         assert_eq!(remove_message.unwrap(), true);
 
@@ -401,9 +390,6 @@ mod tests {
 
     #[test]
     fn test_update_nonce() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         let nonce = Nat::from(1);
         let expected_nonce = Nat::from(1);
 
@@ -416,9 +402,6 @@ mod tests {
 
     #[test]
     fn test_nonce_exists() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         let nonce = Nat::from(1);
 
         STATE.with(|s| s.update_nonce(nonce.clone()));
@@ -430,9 +413,6 @@ mod tests {
 
     #[test]
     fn test_get_nonces() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         let nonce1 = Nat::from(1);
         let nonce2 = Nat::from(2);
 
@@ -446,9 +426,6 @@ mod tests {
 
     #[test]
     fn test_is_authorized() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         let is_authorized = STATE.with(|s| s.is_authorized());
 
         assert!(is_authorized.is_ok());
@@ -480,25 +457,16 @@ mod tests {
 
     #[test]
     fn test_take_all() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         // ToDo
     }
 
     #[test]
     fn test_clear_all() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         // ToDo
     }
 
     #[test]
     fn test_replace_all() {
-        let controller_pid = Principal::from_slice(&[1, 0x00]);
-        MockContext::new().with_caller(controller_pid).inject();
-
         // ToDo
     }
 }

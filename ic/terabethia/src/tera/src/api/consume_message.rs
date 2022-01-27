@@ -72,10 +72,10 @@ mod tests {
             .inject()
     }
 
-    #[test]
-    fn test_consume_message() {
-        let mock_ctx = before_each();
-
+    fn concume_message_with_nonce(
+        mock_ctx: &mut MockContext,
+        nonce: Nonce,
+    ) -> Result<bool, String> {
         // originating eth address as pid
         let from = mock_principals::john();
 
@@ -85,7 +85,6 @@ mod tests {
         // token owner
         let receiver = mock_principals::bob();
 
-        let nonce = Nat::from(4);
         let amount = Nat::from(44444);
         let payload = [receiver.to_nat(), amount].to_vec();
 
@@ -102,12 +101,34 @@ mod tests {
         // switch context to eth_proxy mock caller
         mock_ctx.update_caller(to);
 
-        let consume_message = consume(from, nonce, payload);
+        consume(from, nonce, payload)
+    }
 
-        assert_eq!(consume_message.unwrap(), true);
+    #[test]
+    fn test_consume_message() {
+        let mock_ctx = before_each();
+        let nonce = Nat::from(4);
+
+        let consume_message = concume_message_with_nonce(mock_ctx, nonce);
+
+        assert!(consume_message.unwrap());
 
         let get_nonces = STATE.with(|s| s.get_nonces());
 
         assert_eq!(get_nonces.len(), 1);
+    }
+
+    #[test]
+    fn test_panic_consume_message_twice() {
+        let mock_ctx = before_each();
+        let nonce = Nat::from(4);
+
+        let consume_message_1 = concume_message_with_nonce(mock_ctx, nonce.clone());
+
+        assert!(consume_message_1.unwrap());
+
+        let consume_message_2 = concume_message_with_nonce(mock_ctx, nonce.clone());
+
+        assert!(consume_message_2.is_err());
     }
 }

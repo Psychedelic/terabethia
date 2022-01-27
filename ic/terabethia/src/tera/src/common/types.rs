@@ -31,3 +31,9 @@ pub struct OutgoingMessage {
     pub(crate) msg_key: [u8; 32],
     pub(crate) msg_hash: String,
 }
+
+#[derive(Debug, CandidType, Deserialize)]
+pub struct OutgoingMessageParam {
+    pub(crate) msg_key: String,
+    pub(crate) msg_hash: String,
+}
