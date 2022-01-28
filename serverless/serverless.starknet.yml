@@ -14,9 +14,9 @@ functions:
       # we poll messages every minute
       - schedule: rate(1 minute)
     iamRoleStatements:
-      - Effect: "Allow"        
+      - Effect: 'Allow'        
         Action:
-            - "sqs:SendMessageBatch"
+            - 'sqs:SendMessageBatch'
         Resource:
           - !GetAtt
             - StarknetMessagesQueue
@@ -48,20 +48,28 @@ functions:
               - StarknetMessagesQueue
               - Arn
     iamRoleStatements:
-      - Effect: "Allow"
+      - Effect: 'Allow'
         Action:
-            - "sqs:SendMessage"
+            - 'sqs:SendMessage'
         Resource:
           - !GetAtt
             - StarknetTransactionsQueue
             - Arn
       # allow removing processed messages from queue
-      - Effect: "Allow"
+      - Effect: 'Allow'
         Action:
-            - "sqs:DeleteMessageBatch"
+            - 'sqs:DeleteMessageBatch'
         Resource:
           - !GetAtt
             - StarknetMessagesQueue
+            - Arn
+      - Effect: 'Allow'
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: 
+          - !GetAtt 
+            - StarknetTable  
             - Arn
 
 resources:

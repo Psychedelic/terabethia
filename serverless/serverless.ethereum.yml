@@ -1,5 +1,5 @@
 functions:
-  BlockNativeEventHook:
+  ReceiveMessage:
     timeout: 10
     memorySize: 128
     handler: src/functions/ethereum/blockNative.main
@@ -11,23 +11,25 @@ functions:
           path: /hook
     # allow sending messages to EthereumTxQueue
     iamRoleStatements:
-      - Effect: "Allow"
+      - Effect: 'Allow'
         Action:
-            - "sqs:SendMessage"
+            - 'sqs:SendMessage'
         Resource:
           - !GetAtt
             - EthereumTxQueue
             - Arn
 
-  ReceiveMessageFromL1:
+  StoreMessage:
     timeout: 120
     memorySize: 128
     handler: src/functions/ethereum/store.main
     reservedConcurrency: 1
     environment:
       ETHEREUM_TABLE_NAME: !Ref EthereumTable
+      ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl~true}
+      ETHEREUM_CONTRACT: ${ssm:${self:custom.resourcePrefix}EthereumContract}
       IC_PRIVATE_KEY: ${ssm:${self:custom.resourcePrefix}ICPrivateKey~true}
-      IC_CANISTER_ID: ${ssm:${self:custom.resourcePrefix}ICCanisterId~true}
+      IC_CANISTER_ID: ${ssm:${self:custom.resourcePrefix}ICCanisterId}
       QUEUE_URL: !Ref EthereumTxQueue
     events:
       - sqs:
@@ -38,13 +40,22 @@ functions:
               - Arn
     iamRoleStatements:
       # allow removing processed messages from queue
-      - Effect: "Allow"
+      - Effect: 'Allow'
         Action:
-            - "sqs:DeleteMessageBatch"
+            - 'sqs:DeleteMessageBatch'
         Resource:
           - !GetAtt
             - EthereumTxQueue
             - Arn
+      - Effect: 'Allow'
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: 
+          - !GetAtt 
+            - EthereumTable  
+            - Arn
+
 resources:
   Resources:
     EthereumTxQueue:

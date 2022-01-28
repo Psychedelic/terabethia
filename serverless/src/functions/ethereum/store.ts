@@ -95,10 +95,21 @@ const handleL1Message = async (message: BlockNativePayload) => {
     }
 
     // fromAddress is hex string prefixed with 0x
-    const fromAddresPid = Principal.fromHex(fromAddress.substring(2));
+    const fromAddresPid = Principal.fromHex(fromAddress.substr(2));
 
-    // toAddress is big number
-    const toAddressPid = Principal.fromHex(new BN(toAddress).toString('hex'));
+    // toAddress is ethers BigNumber, we convert it to uint8array (BigEndian)
+    const arr = new BN(toAddress.toBigInt()).toArray();
+
+    // we also need to handle 10 bytes padding for canister ids
+    const paddedArr = new Uint8Array(Array(10 - arr.length).fill(0).concat(arr));
+    const toAddressPid = Principal.fromUint8Array(paddedArr);
+
+    console.log({
+      fromPrincipal: fromAddresPid.toText(),
+      toPrincipal: toAddressPid.toText(),
+      nonce,
+      payload,
+    });
 
     await terabethia.storeMessage(fromAddresPid, toAddressPid, nonce, payload);
     await db.storeMessageHash(messageHash);
