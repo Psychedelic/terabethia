@@ -26,8 +26,9 @@ functions:
     handler: src/functions/teraQueue/handler.main
     reservedConcurrency: 1
     environment:
-      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
       ETHEREUM_TABLE_NAME: !Ref EthereumTable
+      IC_PRIVATE_KEY: ${ssm:${self:custom.resourcePrefix}ICPrivateKey~true}
+      IC_CANISTER_ID: ${ssm:${self:custom.resourcePrefix}ICCanisterId~true}
     events:
       - sqs:
           batchSize: 10

@@ -2,7 +2,7 @@ import 'source-map-support/register';
 
 import { ethers } from 'ethers';
 import middy from '@middy/core';
-import { Tera } from '@libs/dfinity';
+import { Terabethia } from '@libs/dfinity';
 import { Principal } from '@dfinity/principal';
 import { SQSRecord } from 'aws-lambda/trigger/sqs';
 import { ValidatedEventSQSEvent } from '@libs/sqs';
@@ -11,10 +11,13 @@ import sqsJsonBodyParser from '@middy/sqs-json-body-parser';
 import sqsBatchFailureMiddleware from '@middy/sqs-partial-batch-failure';
 import { BlockNativePayload, BlockNativeSchema } from '@libs/blocknative';
 import EthereumDatabase from '@libs/dynamo/ethereum';
+import BN from 'bn.js';
 
 const {
   ETHEREUM_TABLE_NAME,
   ETHEREUM_PROVIDER_URL,
+  IC_PRIVATE_KEY,
+  IC_CANISTER_ID,
 } = process.env;
 
 if (!ETHEREUM_TABLE_NAME) {
@@ -25,16 +28,24 @@ if (!ETHEREUM_PROVIDER_URL) {
   throw new Error('ETHEREUM_PROVIDER_URL must be set');
 }
 
+if (!IC_PRIVATE_KEY) {
+  throw new Error('IC_PRIVATE_KEY must be set');
+}
+
+if (!IC_CANISTER_ID) {
+  throw new Error('IC_CANISTER_ID must be set');
+}
+
 const db = new EthereumDatabase(ETHEREUM_TABLE_NAME);
 
 const ethProxyInterface = new ethers.utils.Interface(EthProxyAbi);
 const provider = new ethers.providers.StaticJsonRpcProvider(ETHEREUM_PROVIDER_URL);
+const terabethia = new Terabethia(IC_CANISTER_ID, IC_PRIVATE_KEY);
 
 const handleL1Message = async (record: SQSRecord) => {
   const { body } = record;
   const { hash } = body as unknown as BlockNativePayload;
   console.log(`hash: ${hash}`);
-  console.log(`record: ${record}`);
 
   const hasTx = await db.hasTransaction(hash);
 
@@ -53,16 +64,17 @@ const handleL1Message = async (record: SQSRecord) => {
       return Promise.reject(record);
     }
 
-    const { from_address: fromAddress, nonce, payload } = logs[0].args;
-    const fromAddresPid = Principal.fromHex(fromAddress.substring(2));
-    const toAddressPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
-    const receiverAddressPidAsHex = payload[0];
-    const amount = payload[1];
+    const {
+      from_address: fromAddress, to_address: toAddress, nonce, payload,
+    } = logs[0].args;
 
-    await Tera.storeMessage(fromAddresPid, toAddressPid, nonce, [
-      receiverAddressPidAsHex,
-      amount,
-    ]);
+    // fromAddress is hex string prefixed with 0x
+    const fromAddresPid = Principal.fromHex(fromAddress.substring(2));
+
+    // toAddress is big number
+    const toAddressPid = Principal.fromHex(new BN(toAddress).toString('hex'));
+
+    await terabethia.storeMessage(fromAddresPid, toAddressPid, nonce, payload);
 
     await db.storeTransaction(hash);
 
