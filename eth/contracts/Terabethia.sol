@@ -91,4 +91,8 @@ contract Terabethia is Initializable, ITerabethiaCore {
 
         return msgHash;
     }
+
+    function messages(bytes32 msgHash) external view returns (uint256) {
+        return simpleStorage().messages[msgHash];
+    }
 }

@@ -15,8 +15,8 @@ describe("Message hash", function () {
 
         // 0xdc64a140aa3e981100a9beca4e685f962f0cf6c9000000000000000000000000
         const depositMessageHash = ethers.utils.solidityKeccak256(
-            ["uint256", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [ethProxyAddr, canisterId, nonce, depositPayload.length, ...depositPayload]
+            ["uint256", "uint256", "uint256", "uint256", "uint256[]"],
+            [ethProxyAddr, canisterId, nonce, depositPayload.length, depositPayload]
         );
 
         expect(depositMessageHash).equals(
@@ -55,7 +55,7 @@ describe("Message hash", function () {
 
         // this is the final hash that appears on Starknet L1 Contract
         expect(starknetMessageHash).equals(
-            "0xbebedf4dff2fec23e14c1f9d715bd8bae1b2ca404bd0507097c7bee45223e371"
+            "0x07113f421042293f67676697d49ed97deaf2c28cb92828351fd3d41c293b01f1"
         );
 
     });

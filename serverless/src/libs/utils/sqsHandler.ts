@@ -13,8 +13,10 @@ interface EntryItem {
 const sqs = new AWS.SQS();
 
 const defaultOnError = (err: Error, msg: any): void => {
-  console.log('error on processing message', { msg });
+  console.log('error on processing SQS message');
   console.log(err);
+  console.log(JSON.stringify(msg));
+  console.log('-----------------');
 };
 
 export const sqsHandler = <T>(

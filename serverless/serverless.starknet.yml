@@ -55,6 +55,14 @@ functions:
           - !GetAtt
             - StarknetTransactionsQueue
             - Arn
+      # allow removing processed messages from queue
+      - Effect: "Allow"
+        Action:
+            - "sqs:DeleteMessageBatch"
+        Resource:
+          - !GetAtt
+            - StarknetMessagesQueue
+            - Arn
 
 resources:
   Resources:

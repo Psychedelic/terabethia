@@ -41,4 +41,4 @@ export default interface TerabethiaService {
     arg_2: bigint,
     arg_3: Array<bigint>,
   ) => Promise<Result2>,
-};
+}
