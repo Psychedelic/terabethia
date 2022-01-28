@@ -8,7 +8,7 @@ fn main() {}
 
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
-    use crate::common::types::{CallResult, Nonce, OutgoingMessage};
+    use crate::common::types::{CallResult, Nonce, OutgoingMessage, OutgoingMessagePair};
     use candid::{Nat, Principal};
 
     ic_kit::candid::export_service!();

@@ -33,7 +33,7 @@ pub struct OutgoingMessage {
 }
 
 #[derive(Debug, CandidType, Deserialize)]
-pub struct OutgoingMessageParam {
+pub struct OutgoingMessagePair {
     pub(crate) msg_key: String,
     pub(crate) msg_hash: String,
 }

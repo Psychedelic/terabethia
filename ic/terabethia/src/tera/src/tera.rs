@@ -1,4 +1,4 @@
-use crate::common::types::{Nonce, OutgoingMessage, OutgoingMessageParam};
+use crate::common::types::{Nonce, OutgoingMessage, OutgoingMessagePair};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
@@ -63,18 +63,27 @@ impl OutgoingMessage {
     }
 }
 
-impl From<OutgoingMessageParam> for OutgoingMessage {
+impl From<OutgoingMessagePair> for OutgoingMessage {
     #[inline]
-    fn from(msg: OutgoingMessageParam) -> Self {
+    fn from(message: OutgoingMessagePair) -> Self {
         let mut msg_key = [0u8; 32];
-        let msg_key_slice = &hex::decode(msg.msg_key).unwrap()[..];
+        let msg_key_slice = &hex::decode(message.msg_key).unwrap()[..];
 
         msg_key.copy_from_slice(&msg_key_slice);
 
         OutgoingMessage {
             msg_key,
-            msg_hash: msg.msg_hash,
+            msg_hash: message.msg_hash,
         }
+    }
+}
+
+fn msg_key_bytes_to_string(message: &OutgoingMessage) -> OutgoingMessagePair {
+    let msg_key = hex::encode(message.msg_key);
+
+    OutgoingMessagePair {
+        msg_key,
+        msg_hash: message.msg_hash.clone(),
     }
 }
 
@@ -95,8 +104,14 @@ impl TerabetiaState {
     ///
 
     /// Get outgoing messages to L1
-    pub fn get_messages(&self) -> Vec<OutgoingMessage> {
-        STATE.with(|s| s.messages_out.borrow().iter().cloned().collect())
+    pub fn get_messages(&self) -> Vec<OutgoingMessagePair> {
+        STATE.with(|s| {
+            s.messages_out
+                .borrow()
+                .iter()
+                .map(msg_key_bytes_to_string)
+                .collect()
+        })
     }
 
     /// Store outgoing messages to L1
@@ -115,7 +130,7 @@ impl TerabetiaState {
     }
 
     /// Remove outgoing messages to L1
-    pub fn remove_messages(&self, messages: Vec<OutgoingMessageParam>) -> Result<bool, String> {
+    pub fn remove_messages(&self, messages: Vec<OutgoingMessagePair>) -> Result<bool, String> {
         STATE.with(|s| {
             let mut map = s.messages_out.borrow_mut();
 
@@ -264,7 +279,7 @@ mod tests {
         let message_out = OutgoingMessage::new(msg_hash.to_string(), index);
 
         let expected_msg_key = "13c1e4094887e7ede4cff2cc3b32f010363b8b2b6a71897e12f8aaa6959fbe27";
-        let expected_message_out = OutgoingMessage::from(OutgoingMessageParam {
+        let expected_message_out = OutgoingMessage::from(OutgoingMessagePair {
             msg_key: expected_msg_key.to_string(),
             msg_hash: msg_hash.to_string(),
         });
@@ -277,12 +292,18 @@ mod tests {
 
     #[test]
     fn test_get_messages() {
+        let msg_key = "13c1e4094887e7ede4cff2cc3b32f010363b8b2b6a71897e12f8aaa6959fbe27";
         let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
+
         let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.to_string()));
 
         let messages = STATE.with(|s| s.get_messages());
 
-        println!("{:#?}", messages.into_iter().next());
+        assert_eq!(messages.len(), 1);
+
+        assert_eq!(messages.first().unwrap().msg_key, msg_key);
+
+        assert_eq!(messages.first().unwrap().msg_hash, msg_hash);
     }
 
     #[test]
@@ -379,7 +400,7 @@ mod tests {
         let msg_hash = message_out.msg_hash;
 
         let remove_message =
-            STATE.with(|s| s.remove_messages(vec![OutgoingMessageParam { msg_key, msg_hash }]));
+            STATE.with(|s| s.remove_messages(vec![OutgoingMessagePair { msg_key, msg_hash }]));
 
         assert_eq!(remove_message.unwrap(), true);
 
