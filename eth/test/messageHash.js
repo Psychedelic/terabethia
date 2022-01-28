@@ -49,7 +49,7 @@ describe("Message hash", function () {
 
         const starknetMessageHash = ethers.utils.solidityKeccak256(
             ["uint256", "uint256", "uint256", "uint256", "uint256"],
-            [cairoTerabethia, terabethiaProxy, 2, "24127044263607486132772889641222586723", "276768161078691357748506014484008718823"]
+            [cairoTerabethia, terabethiaProxy, 2, "276768161078691357748506014484008718823", "24127044263607486132772889641222586723"]
         );
 
         // this is the final hash that appears on Starknet L1 Contract

@@ -10,13 +10,12 @@ import { Principal } from '@dfinity/principal';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
 
 import TERA_FACTORY from './idls/tera/tera.did';
-import TerabethiaService, {
+import _TERA_SERVICE, {
   OutgoingMessage,
   Result,
-  Result1,
-} from './idls/tera/tera.d';
+  Result_1,
+} from './idls/tera/tera';
 
-type IdlFactory = ({ IDL }: { IDL: any }) => any;
 export interface ActorParams {
   host: string;
   canisterId: string;
@@ -27,6 +26,8 @@ export const Hosts = {
   mainnet: 'https://ic0.app',
   local: 'http://localhost:8000',
 };
+
+type IdlFactory = ({ IDL }: { IDL: any }) => any;
 
 const createActor = <T>({
   host,
@@ -68,7 +69,7 @@ const createActor = <T>({
   });
 };
 
-const teraCanister = createActor<TerabethiaService>({
+const teraCanister = createActor<_TERA_SERVICE>({
   host: Hosts.mainnet,
   canisterId: config.TERA_CANISTER_ID,
   idlFactory: TERA_FACTORY,
@@ -79,7 +80,7 @@ export const Tera = {
     from: Principal,
     to: Principal,
     payload: bigint[],
-  ): Promise<Result1> => teraCanister.store_message(from, to, payload),
-  getMessages: async (): Promise<OutgoingMessage[]> => teraCanister.get_messages(),
-  removeMessages: async (messages: Array<bigint>): Promise<Result> => teraCanister.remove_messages(messages),
+  ): Promise<Result_1> => await teraCanister.store_message(from, to, payload),
+  getMessages: async (): Promise<OutgoingMessage[]> => await teraCanister.get_messages(),
+  removeMessages: async (messages: Array<bigint>): Promise<Result> => await teraCanister.remove_messages(messages),
 };

@@ -3,6 +3,7 @@ service:
 
 provider:
   name: aws
+  profile: terabethia
   runtime: nodejs14.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-west-2'}
@@ -49,9 +50,15 @@ provider:
               - Arn
 
 custom:
+  import:
+    - ./serverless.starknet.yml
   region: ${opt:region, self:provider.region}
   EthL1MessageTopic: eth-l1-message-${self:service.name}-${self:provider.stage}-topic.fifo
   resourceSuffix: ${self:service.name}-${self:provider.stage}
+  stagePrefix:
+    dev: TerabethiaTestnet
+    prd: TerabethiaMainnet
+  resourcePrefix: ${self:custom.stagePrefix.${self:provider.stage}}
   deletionPolicy:
     default: Delete
     staging: Retain
@@ -107,6 +114,7 @@ plugins:
   - serverless-dynamodb-local
   - serverless-offline-sns
   - serverless-offline
+  - serverless-import-config-plugin
 
 package:
   individually: true
@@ -138,144 +146,166 @@ functions:
               - Arn
   
   # grab messages from the IC and put them into FIFO StarknetQueue
-  SyncL2ToL1Messages:
-    timeout: 30
-    memorySize: 128
-    handler: src/functions/sync/handler.main
-    environment:
-      OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
-      CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
-      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
-      QUEUE_URL: !Ref StarknetQueue
-    events:
-      - schedule: rate(1 minute)
-    iamRoleStatements:
-      - Effect: "Allow"        
-        Action:
-            - "sqs:SendMessage"
-        Resource:
-          - !GetAtt
-            - StarknetQueue
-            - Arn
+  # SyncL2ToL1Messages:
+  #   timeout: 30
+  #   memorySize: 128
+  #   handler: src/functions/sync/handler.main
+  #   environment:
+  #     OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
+  #     CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
+  #     TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
+  #     QUEUE_URL: !Ref StarknetMessagesQueue
+  #   events:
+  #     - schedule: rate(1 minute)
+  #   iamRoleStatements:
+  #     - Effect: "Allow"        
+  #       Action:
+  #           - "sqs:SendMessage"
+  #       Resource:
+  #         - !GetAtt
+  #           - StarknetMessagesQueue
+  #           - Arn
 
-  # StarknetQueue handler
-  ProcessL2ToL1Messages:
-    timeout: 30
-    memorySize: 128
-    reservedConcurrency: 1
-    handler: src/functions/sync/queue.main
-    environment:
-      OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
-      CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
-      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
-      QUEUE_URL: !Ref StarknetQueue
-    events:
-      - sqs:
-          batchSize: 1 # todo: support batches, blocked by Cairo send_message_batch
-          maximumRetryAttempts: 10
-          arn:
-            Fn::GetAtt:
-              - StarknetQueue
-              - Arn
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-            - "sqs:SendMessage"
-        Resource:
-          - !GetAtt
-            - StarknetQueue
-            - Arn
+  # # StarknetQueue handler
+  # ProcessL2ToL1Messages:
+  #   timeout: 30
+  #   memorySize: 128
+  #   reservedConcurrency: 1
+  #   handler: src/functions/sync/queue.main
+  #   environment:
+  #     STARKNET_ACCOUNT_ADDRESS: ${ssm:terabethia-starknet-account-${self:provider.stage}~true}
+  #     STARKNET_CONTRACT_ADDRESS: ${ssm:terabethia-starknet-contract-${self:provider.stage}~true}
+  #     STARKNET_PRIVATE_KEY: ${ssm:terabethia-starknet-pk-${self:provider.stage}~true}
+  #     CHECK_QUEUE_URL: !Ref StarknetCheckQueue
+  #     QUEUE_URL: !Ref StarknetMessagesQueue
+  #   events:
+  #     - sqs:
+  #         batchSize: 1 # todo: support batches, blocked by Cairo send_message_batch
+  #         maximumRetryAttempts: 10
+  #         arn:
+  #           Fn::GetAtt:
+  #             - StarknetMessagesQueue
+  #             - Arn
+  #   iamRoleStatements:
+  #     - Effect: "Allow"
+  #       Action:
+  #           - "sqs:SendMessage"
+  #       Resource:
+  #         - !GetAtt
+  #           - StarknetCheckQueue
+  #           - Arn
 
 resources:
-  - Resources:
-      TeraQueue:
-        Type: 'AWS::SQS::Queue'
-        Properties:
-          QueueName: tera-queue-${self:custom.resourceSuffix}.fifo
-          ContentBasedDeduplication: true
-          FifoQueue: true
-          VisibilityTimeout: 300 # 5 minutes
-          RedrivePolicy:
-            maxReceiveCount: 5
-            deadLetterTargetArn: !GetAtt
-              - TeraDeadLetterQueue
-              - Arn
-      TeraDeadLetterQueue:
-        Type: AWS::SQS::Queue
-        Properties:
-          FifoQueue: true
-          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}.fifo
-
-      TeraL1StateTable:
-        Type: AWS::DynamoDB::Table
-        DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
-        UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
-        Properties:
-          TableName: tera_l1_state_${self:provider.stage}
-          BillingMode: PAY_PER_REQUEST
-          AttributeDefinitions:
-            - AttributeName: pk
-              AttributeType: S
-            - AttributeName: sk
-              AttributeType: S
-          KeySchema:
-            - AttributeName: pk
-              KeyType: HASH
-            - AttributeName: sk
-              KeyType: RANGE
-
-      EthL1MessageTopic:
-        Type: AWS::SNS::Topic
-        Properties:
-          DisplayName: ETH L1 Message
-          TopicName: ${self:custom.EthL1MessageTopic}
-          ContentBasedDeduplication: true
-          FifoTopic: true
-
-      SnsToTeraQueuePolicy:
-        Type: AWS::SQS::QueuePolicy
-        Properties:
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: "allow-sns-messages"
-                Effect: Allow
-                Principal: "*"
-                Resource: !GetAtt
-                  - TeraQueue
-                  - Arn
-                Action: "SQS:SendMessage"
-                Condition:
-                  ArnEquals:
-                    "aws:SourceArn": !Ref EthL1MessageTopic
-          Queues:
-            - !Ref TeraQueue
-
-      TeraQueueSubscription:
-        Type: 'AWS::SNS::Subscription'
-        Properties:
-          TopicArn: !Ref EthL1MessageTopic
-          Endpoint: !GetAtt
-            - TeraQueue
+  Resources:
+    TeraQueue:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: tera-queue-${self:custom.resourceSuffix}.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        VisibilityTimeout: 300 # 5 minutes
+        RedrivePolicy:
+          maxReceiveCount: 5
+          deadLetterTargetArn: !GetAtt
+            - TeraDeadLetterQueue
             - Arn
-          Protocol: sqs
-          RawMessageDelivery: 'true'
+    TeraDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}.fifo
+
+    TeraL1StateTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
+      UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
+      Properties:
+        TableName: tera_l1_state_${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+
+    EthL1MessageTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: ETH L1 Message
+        TopicName: ${self:custom.EthL1MessageTopic}
+        ContentBasedDeduplication: true
+        FifoTopic: true
+
+    SnsToTeraQueuePolicy:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: "allow-sns-messages"
+              Effect: Allow
+              Principal: "*"
+              Resource: !GetAtt
+                - TeraQueue
+                - Arn
+              Action: "SQS:SendMessage"
+              Condition:
+                ArnEquals:
+                  "aws:SourceArn": !Ref EthL1MessageTopic
+        Queues:
+          - !Ref TeraQueue
+
+    TeraQueueSubscription:
+      Type: 'AWS::SNS::Subscription'
+      Properties:
+        TopicArn: !Ref EthL1MessageTopic
+        Endpoint: !GetAtt
+          - TeraQueue
+          - Arn
+        Protocol: sqs
+        RawMessageDelivery: 'true'
 
 
-      StarknetQueue:
-        Type: 'AWS::SQS::Queue'
-        Properties:
-          QueueName: terabethia-starknet-${self:custom.resourceSuffix}.fifo
-          ContentBasedDeduplication: true
-          FifoQueue: true
-          VisibilityTimeout: 120 # 5 minutes
-          RedrivePolicy:
-            maxReceiveCount: 5
-            deadLetterTargetArn: !GetAtt
-              - StarknetDeadLetterQueue
-              - Arn
-      StarknetDeadLetterQueue:
-        Type: AWS::SQS::Queue
-        Properties:
-          FifoQueue: true
-          QueueName: terabethia-starknet-dlq-${self:custom.resourceSuffix}.fifo
+    # Messages from the Terabethia canister are polled into this queue
+    # StarknetMessagesQueue:
+    #   Type: 'AWS::SQS::Queue'
+    #   Properties:
+    #     QueueName: ${self:custom.resourcePrefix.${self:provider.stage}}StarknetMessages.fifo
+    #     ContentBasedDeduplication: true
+    #     FifoQueue: true
+    #     VisibilityTimeout: 120 # 2 minutes
+    #     RedrivePolicy:
+    #       maxReceiveCount: 3
+    #       deadLetterTargetArn: !GetAtt
+    #         - StarknetMessagesDeadLetterQueue
+    #         - Arn
+    # StarknetMessagesDeadLetterQueue:
+    #   Type: AWS::SQS::Queue
+    #   Properties:
+    #     FifoQueue: true
+    #     QueueName: ${self:custom.resourcePrefix.${self:provider.stage}}StarknetMessagesDLQ.fifo
+    #     MessageRetentionPeriod: 1209600 # 14 days
+
+    # # Starknet transactions are queued here, so we can check if the message was accepted on L2/L1
+    # StarknetTransactionsQueue:
+    #   Type: 'AWS::SQS::Queue'
+    #   Properties:
+    #     QueueName: ${self:custom.resourcePrefix.${self:provider.stage}}StarknetTransactionsQueue.fifo
+    #     FifoQueue: true
+    #     VisibilityTimeout: 300 # 5 minutes
+    #     RedrivePolicy:
+    #       maxReceiveCount: 3
+    #       deadLetterTargetArn: !GetAtt
+    #         - StarknetTransactionsDeadLetterQueue
+    #         - Arn
+    # StarknetTransactionsDeadLetterQueue:
+    #   Type: AWS::SQS::Queue
+    #   Properties:
+    #     FifoQueue: true
+    #     QueueName: ${self:custom.resourcePrefix.${self:provider.stage}}StarknetTransactionsDLQ.fifo
+    #     MessageRetentionPeriod: 1209600 # 14 days
