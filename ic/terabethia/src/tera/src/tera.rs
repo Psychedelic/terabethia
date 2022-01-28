@@ -2,7 +2,7 @@ use crate::common::types::{Nonce, OutgoingMessage, OutgoingMessagePair};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
-
+use std::iter;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -95,6 +95,32 @@ impl ToNat for Principal {
     #[inline(always)]
     fn to_nat(&self) -> Nat {
         Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+    }
+}
+
+pub trait FromNat {
+    fn from_nat(input: Nat) -> Principal;
+}
+
+impl FromNat for Principal {
+    #[inline(always)]
+    fn from_nat(input: Nat) -> Principal {
+        let be_bytes = input.0.to_bytes_be();
+        let mut need_padding = 0;
+        let be_bytes_len = be_bytes.len();
+
+        if be_bytes_len > 10 && be_bytes_len < 29 {
+            need_padding = 29 - be_bytes_len;
+        } else if be_bytes_len < 10 {
+            need_padding = 10 - be_bytes_len;
+        };
+
+        if need_padding == 0 {
+            return Principal::from_slice(&be_bytes.as_slice());
+        } else {
+            let zero_vec: Vec<u8> = iter::repeat(0).take(need_padding).collect();
+            return Principal::from_slice(&[zero_vec, be_bytes].concat().as_slice());
+        }
     }
 }
 

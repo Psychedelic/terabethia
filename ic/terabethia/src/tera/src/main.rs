@@ -25,6 +25,7 @@ mod tests {
             types::{IncomingMessageHashParams, Message},
             utils::Keccak256HashFn,
         },
+        tera::FromNat,
         tera::ToNat,
     };
 
@@ -86,5 +87,36 @@ mod tests {
         let msg_hash_expected = "bc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45";
 
         assert_eq!(msg_hash, msg_hash_expected);
+    }
+
+    #[test]
+    fn user_principal_padding() {
+        let slice =
+            hex::decode("B2BF35A84FAC4062A1C0BC4F8891A4AF09C5E05E4155CAE6355B2402").unwrap();
+
+        let n = Nat::from(num_bigint::BigUint::from_bytes_be(&slice[..]));
+
+        assert_eq!(slice.len(), 28);
+
+        let p = Principal::from_nat(n);
+
+        let p_expected = "kyxzn-5aawk-7tlkc-pvrag-fioax-rhyre-nev4e-4lyc6-ifk4v-zrvlm-sae";
+
+        assert_eq!(p.to_text(), p_expected);
+    }
+
+    #[test]
+    fn canister_principal_padding() {
+        let slice = hex::decode("3000F10101").unwrap();
+
+        let n = Nat::from(num_bigint::BigUint::from_bytes_be(&slice[..]));
+
+        assert_eq!(slice.len(), 5);
+
+        let p = Principal::from_nat(n);
+
+        let p_expected = "tcy4r-qaaaa-aaaab-qadyq-cai";
+
+        assert_eq!(p.to_text(), p_expected);
     }
 }
