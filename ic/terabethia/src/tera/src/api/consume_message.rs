@@ -1,25 +1,35 @@
 use candid::{candid_method, Nat, Principal};
-use ic_cdk::api;
 use ic_cdk_macros::update;
+use ic_kit::ic::caller;
 
-use crate::{common::utils::calculate_hash, MESSAGE_PRODUCED, STATE};
-
-pub trait ToNat {
-    fn to_nat(&self) -> Nat;
-}
-
-impl ToNat for Principal {
-    fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-    }
-}
+use crate::{
+    common::{
+        types::{IncomingMessageHashParams, Message, Nonce},
+        utils::Keccak256HashFn,
+    },
+    tera::{ToNat, STATE},
+};
 
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
-    let caller = api::caller();
+fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, String> {
+    let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
+    if nonce_exists {
+        return Err(format!(
+            "Message with nonce {} has already been consumed!",
+            nonce
+        ));
+    }
 
-    let msg_hash = calculate_hash(from.to_nat(), caller.to_nat(), payload.clone());
+    let caller = caller();
+
+    let message = Message;
+    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        from: from.to_nat(),
+        to: caller.to_nat(),
+        nonce: nonce.clone(),
+        payload: payload.clone(),
+    });
 
     let res = STATE.with(|s| {
         let mut map = s.messages.borrow_mut();
@@ -41,13 +51,84 @@ fn consume(from: Principal, payload: Vec<Nat>) -> Result<bool, String> {
         Ok(true)
     });
 
-    if res.is_ok() {
-        let store = STATE.with(|s| s.store_outgoing_message(msg_hash, !MESSAGE_PRODUCED));
-        match store {
-            Err(e) => panic!("{:?}", e),
-            _ => (),
+    match res {
+        Ok(_) => {
+            STATE.with(|s| s.update_nonce(nonce));
+            res
         }
+        Err(error) => panic!("{:?}", error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ic_kit::{mock_principals, MockContext};
+
+    use super::*;
+
+    fn before_each() -> &'static mut MockContext {
+        MockContext::new()
+            .with_caller(mock_principals::alice())
+            .inject()
     }
 
-    res
+    fn concume_message_with_nonce(
+        mock_ctx: &mut MockContext,
+        nonce: Nonce,
+    ) -> Result<bool, String> {
+        // originating eth address as pid
+        let from = mock_principals::john();
+
+        // eth_proxy
+        let to = mock_principals::xtc();
+
+        // token owner
+        let receiver = mock_principals::bob();
+
+        let amount = Nat::from(44444);
+        let payload = [receiver.to_nat(), amount].to_vec();
+
+        let message = Message;
+        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+            from: from.to_nat(),
+            to: to.to_nat(),
+            nonce: nonce.clone(),
+            payload: payload.clone(),
+        });
+
+        STATE.with(|s| s.store_incoming_message(msg_hash));
+
+        // switch context to eth_proxy mock caller
+        mock_ctx.update_caller(to);
+
+        consume(from, nonce, payload)
+    }
+
+    #[test]
+    fn test_consume_message() {
+        let mock_ctx = before_each();
+        let nonce = Nat::from(4);
+
+        let consume_message = concume_message_with_nonce(mock_ctx, nonce);
+
+        assert!(consume_message.unwrap());
+
+        let get_nonces = STATE.with(|s| s.get_nonces());
+
+        assert_eq!(get_nonces.len(), 1);
+    }
+
+    #[test]
+    fn test_panic_consume_message_twice() {
+        let mock_ctx = before_each();
+        let nonce = Nat::from(4);
+
+        let consume_message_1 = concume_message_with_nonce(mock_ctx, nonce.clone());
+
+        assert!(consume_message_1.unwrap());
+
+        let consume_message_2 = concume_message_with_nonce(mock_ctx, nonce.clone());
+
+        assert!(consume_message_2.is_err());
+    }
 }

@@ -10,3 +10,7 @@ A router canister and proxy for DIP20 token contracts, to their equivalent ERC20
 
 ## Factory
 Token factory contract to instantiate different type fungible and non-fungible contracts on-demand to allow the automatic mirroring of Ethereum assets on the Internet Computer through the Magic Proxy.
+
+# Generate
+didc bind tera.did --target ts > tera.d.ts
+didc bind tera.did --target js > tera.did.ts

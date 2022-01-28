@@ -1,6 +1,5 @@
 import 'source-map-support/register';
 
-import Web3 from 'web3';
 import { ethers } from 'ethers';
 import middy from '@middy/core';
 import { Tera } from '@libs/dfinity';
@@ -8,87 +7,81 @@ import { config } from '@libs/config';
 import { Principal } from '@dfinity/principal';
 import { SQSRecord } from 'aws-lambda/trigger/sqs';
 import { ValidatedEventSQSEvent } from '@libs/sqs';
+import EthProxyAbi from "@libs/eth/abi/EthProxy.json";
 import { BridgeMessage } from '@libs/dynamo/bridgeMessage';
 import sqsJsonBodyParser from '@middy/sqs-json-body-parser';
 import sqsBatchFailureMiddleware from '@middy/sqs-partial-batch-failure';
 import { BlockNativePayload, BlockNativeSchema } from '@libs/blocknative';
 
-const web3 = new Web3();
+const { PROVIDERS } = config;
 const bridgeMessage = new BridgeMessage();
-const { INFURA_KEY, ALCHEMY_KEY } = config;
-const getProvider = (url: string) => new ethers.providers.StaticJsonRpcProvider(url);
-
-const typesArray = [
-  { type: 'uint256', name: 'value1' },
-  { type: 'uint256', name: 'value2' },
-  { type: 'uint256', name: 'principal' },
-  { type: 'uint256', name: 'amount' },
-];
-
-const providers = {
-  Mainnet: [
-    `https://mainnet.infura.io/v3/${INFURA_KEY}`,
-    `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-  ],
-  Goerli: ['https://goerli.infura.io/v3/8328044ef20647ca8cf95216e364e9cb'],
-};
+const ethProxyInterface = new ethers.utils.Interface(EthProxyAbi);
+const getProvider = (url: string) =>
+  new ethers.providers.StaticJsonRpcProvider(url);
 
 const handleL1Message = async (record: SQSRecord) => {
   const { body } = record;
   const { hash } = body as unknown as BlockNativePayload;
   console.log(`hash: ${hash}`);
-
-  const provider = getProvider(providers.Goerli[0] as string);
-  const eventRecipt = await provider.getTransactionReceipt(hash);
-  const { to: from, logs } = eventRecipt;
-
-  if (!Array.isArray(logs) || !logs.length) {
-    Promise.reject(record);
-  }
-
-  const eventProps = web3.eth.abi.decodeParameters(
-    typesArray,
-    logs[0]?.data as string,
-  );
+  console.log(`record: ${record}`);
 
   try {
-    const pk = `contract#${from}`;
+    const provider = getProvider(PROVIDERS.Goerli[0] as string);
+
+    await provider.ready;
+
+    const receipt = await provider.getTransactionReceipt(hash);
+    const logs = receipt.logs.map((log) => ethProxyInterface.parseLog(log));
+
+    if (!Array.isArray(logs) || !logs.length || !logs[0]) {
+      return Promise.reject(record);
+    }
+
+    const { from_address, nonce, payload } = logs[0].args;
+    const fromAddresPid = Principal.fromHex(from_address.substring(2));
+    const toAddressPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
+    const receiverAddressPidAsHex = payload[0];
+    const amount = payload[1];
+
+    const pk = `contract#${from_address}`;
     const sk = `hash#${hash}`;
     const storedMessage = await bridgeMessage.get(pk, sk);
     if (
-      storedMessage
-      && storedMessage.Item
-      && Object.keys(storedMessage.Item).length
+      storedMessage &&
+      storedMessage.Item &&
+      Object.keys(storedMessage.Item).length
     ) {
       return Promise.resolve(record);
     }
 
-    const fromPid = Principal.fromHex(from.substring(2));
-    const toPid = Principal.fromText(config.ETH_PROXY_CANISTER_ID);
-
-    const storeTeraBridge = await Tera.storeMessage(fromPid, toPid, [
-      // pid
-      BigInt(eventProps.principal),
-      // amount
-      BigInt(eventProps.amount),
+    console.log(fromAddresPid.toString(), toAddressPid.toString(), nonce, [
+      receiverAddressPidAsHex,
+      amount,
     ]);
 
-    const storeDynamoDb = await bridgeMessage.put({
-      pk: `contract#${from}`,
+    await Tera.storeMessage(fromAddresPid, toAddressPid, nonce, [
+      receiverAddressPidAsHex,
+      amount,
+    ]);
+
+    await bridgeMessage.put({
+      pk: `contract#${from_address}`,
       sk: `hash#${hash}`,
+      nonce: `nonce#${nonce}`,
     });
 
-    return Promise.resolve({ storeTeraBridge, storeDynamoDb });
+    return Promise.resolve(record);
   } catch (error) {
     console.error(error);
     return Promise.reject(error);
   }
 };
 
-const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> = async (event): Promise<any> => {
-  const messageProcessingPromises = event.Records.map(handleL1Message);
-  return Promise.allSettled(messageProcessingPromises);
-};
+const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> =
+  async (event): Promise<any> => {
+    const messageProcessingPromises = event.Records.map(handleL1Message);
+    return Promise.allSettled(messageProcessingPromises);
+  };
 
 export const main = middy(receiveMessageFromL1)
   .use(sqsJsonBodyParser())
