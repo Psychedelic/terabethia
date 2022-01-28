@@ -4,11 +4,11 @@ export interface CallResult { 'return': Array<number> }
 export interface OutgoingMessage {
   'msg_hash': string,
   'msg_key': Array<number>,
-};
+}
 export interface OutgoingMessagePair {
   'msg_hash': string,
   'msg_key': string,
-};
+}
 export type Result = { 'Ok': boolean } |
 { 'Err': string };
 export type Result_1 = { 'Ok': OutgoingMessage } |
@@ -41,4 +41,4 @@ export default interface TerabethiaService {
     arg_2: bigint,
     arg_3: Array<bigint>,
   ) => Promise<Result_2>,
-}
+};

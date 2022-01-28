@@ -7,7 +7,7 @@ import { config } from '@libs/config';
 import { Principal } from '@dfinity/principal';
 import { SQSRecord } from 'aws-lambda/trigger/sqs';
 import { ValidatedEventSQSEvent } from '@libs/sqs';
-import EthProxyAbi from "@libs/eth/abi/EthProxy.json";
+import EthProxyAbi from '@libs/eth/abi/EthProxy.json';
 import { BridgeMessage } from '@libs/dynamo/bridgeMessage';
 import sqsJsonBodyParser from '@middy/sqs-json-body-parser';
 import sqsBatchFailureMiddleware from '@middy/sqs-partial-batch-failure';
@@ -16,8 +16,7 @@ import { BlockNativePayload, BlockNativeSchema } from '@libs/blocknative';
 const { PROVIDERS } = config;
 const bridgeMessage = new BridgeMessage();
 const ethProxyInterface = new ethers.utils.Interface(EthProxyAbi);
-const getProvider = (url: string) =>
-  new ethers.providers.StaticJsonRpcProvider(url);
+const getProvider = (url: string) => new ethers.providers.StaticJsonRpcProvider(url);
 
 const handleL1Message = async (record: SQSRecord) => {
   const { body } = record;
@@ -47,9 +46,9 @@ const handleL1Message = async (record: SQSRecord) => {
     const sk = `hash#${hash}`;
     const storedMessage = await bridgeMessage.get(pk, sk);
     if (
-      storedMessage &&
-      storedMessage.Item &&
-      Object.keys(storedMessage.Item).length
+      storedMessage
+      && storedMessage.Item
+      && Object.keys(storedMessage.Item).length
     ) {
       return Promise.resolve(record);
     }
@@ -77,11 +76,10 @@ const handleL1Message = async (record: SQSRecord) => {
   }
 };
 
-const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> =
-  async (event): Promise<any> => {
-    const messageProcessingPromises = event.Records.map(handleL1Message);
-    return Promise.allSettled(messageProcessingPromises);
-  };
+const receiveMessageFromL1: ValidatedEventSQSEvent<typeof BlockNativeSchema> = async (event): Promise<any> => {
+  const messageProcessingPromises = event.Records.map(handleL1Message);
+  return Promise.allSettled(messageProcessingPromises);
+};
 
 export const main = middy(receiveMessageFromL1)
   .use(sqsJsonBodyParser())

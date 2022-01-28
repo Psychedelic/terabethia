@@ -11,9 +11,9 @@ import { Ed25519KeyIdentity } from '@dfinity/identity';
 
 import TERA_FACTORY from './idls/tera/tera.did';
 import _TERA_SERVICE, {
-  OutgoingMessage,
+  OutgoingMessagePair,
   Result,
-  Result_1,
+  Result_2,
 } from './idls/tera/tera';
 
 export interface ActorParams {
@@ -82,6 +82,6 @@ export const Tera = {
     nonce: bigint,
     payload: bigint[],
   ): Promise<Result_2> => teraCanister.store_message(from, to, nonce, payload),
-  getMessages: async (): Promise<OutgoingMessage[]> => teraCanister.get_messages(),
-  // removeMessages: async (messages: Array<bigint>): Promise<Result> => teraCanister.remove_messages(messages),
+  getMessages: async (): Promise<OutgoingMessagePair[]> => teraCanister.get_messages(),
+  removeMessages: async (messages: OutgoingMessagePair[]): Promise<Result> => teraCanister.remove_messages(messages),
 };
