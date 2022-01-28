@@ -439,6 +439,74 @@
           }
         }
       }
+    },
+    "07f38ee50f05efda647f69c53e4fbe315fb1140505cd10aced9576836a858f26": {
+      "address": "0x04Fca435D7F0Ed1aa1416bA0cec48d38B6dE00bb",
+      "txHash": "0xaf64003f625cfc3bb8d48a586d2b71f0a6a9bd4b773624140d8b12cb9c9308ec",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "Terabethia",
+            "label": "starknetCore",
+            "type": "t_contract(IStarknetCore)345",
+            "src": "contracts/Terabethia.sol:9"
+          }
+        ],
+        "types": {
+          "t_contract(IStarknetCore)345": {
+            "label": "contract IStarknetCore"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        }
+      }
+    },
+    "c9c7846bbcd1c5189daadb560fda4545e9d6e66bee175d3c6b2756b5235cd4ee": {
+      "address": "0x011e0fBA33cF5d747014556275c4c1a524422bAd",
+      "txHash": "0x469e91bb1e98fcbd2fc23139395c3943a350b3981fda1bcce01e4ce0473281ed",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:39"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:44"
+          },
+          {
+            "contract": "Terabethia",
+            "label": "starknetCore",
+            "type": "t_contract(IStarknetCore)345",
+            "src": "contracts/Terabethia.sol:9"
+          }
+        ],
+        "types": {
+          "t_contract(IStarknetCore)345": {
+            "label": "contract IStarknetCore"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        }
+      }
     }
   }
 }

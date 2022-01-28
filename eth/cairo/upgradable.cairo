@@ -11,13 +11,10 @@ namespace ITerabethiaContract:
     func set_l1_contract(contract_addr : felt):
     end
 
-    func send_message(tx_nonce : felt, msg_1 : felt, msg_2 : felt):
+    func send_message(msg_1 : felt, msg_2 : felt):
     end
 
-    func send_message_batch(tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
-    end
-
-    func get_nonce() -> (res : felt):
+    func send_message_batch(msg_hashes_len : felt, msg_hashes : felt*):
     end
 end
 
@@ -32,13 +29,12 @@ end
 # Initialise operator address
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        contract_addr : felt):
-    let (caller_address) = get_caller_address()
+        contract_addr : felt, operator_address : felt):
     # set operator
-    operator.write(value=caller_address)
+    operator.write(value=operator_address)
 
     # set implementation
-    set_impl_contract(contract_addr)
+    impl_contract.write(value=contract_addr)
     return ()
 end
 
@@ -78,12 +74,12 @@ end
 
 @external
 func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        tx_nonce : felt, msg_1 : felt, msg_2 : felt):
+        msg_1 : felt, msg_2 : felt):
     require_operator()
     let (impl_contract_address) = impl_contract.read()
 
     ITerabethiaContract.delegate_send_message(
-        contract_address=impl_contract_address, tx_nonce=tx_nonce, msg_1=msg_1, msg_2=msg_2)
+        contract_address=impl_contract_address, msg_1=msg_1, msg_2=msg_2)
 
     return ()
 end
@@ -91,7 +87,7 @@ end
 # this is causing the issues, skipping
 @external
 func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        tx_nonce : felt, msg_hashes_len : felt, msg_hashes : felt*):
+        msg_hashes_len : felt, msg_hashes : felt*):
     alloc_locals
     require_operator()
 
@@ -99,19 +95,10 @@ func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
 
     ITerabethiaContract.delegate_send_message_batch(
         contract_address=impl_contract_address,
-        tx_nonce=tx_nonce,
         msg_hashes_len=msg_hashes_len,
         msg_hashes=msg_hashes)
 
     return ()
-end
-
-@view
-func get_nonce{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res : felt):
-    let (impl_contract_address) = impl_contract.read()
-    let (res) = ITerabethiaContract.delegate_get_nonce(contract_address=impl_contract_address)
-
-    return (res)
 end
 
 @view

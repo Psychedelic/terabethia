@@ -1,5 +1,5 @@
 import {
-  Provider, stark, AddTransactionResponse, GetTransactionStatusResponse,
+  Provider, Signer, ec, stark, AddTransactionResponse, GetTransactionStatusResponse,
 } from 'starknet';
 
 const { getSelectorFromName } = stark;
@@ -11,24 +11,22 @@ class TerabethiaStarknet {
 
   private address: string;
 
-  constructor(address: string, network: NetworkName = 'georli-alpha') {
-    this.provider = new Provider({ network });
+  constructor(account: string, privateKey: string, address: string, network: NetworkName = 'georli-alpha') {
+    const provider = new Provider({ network });
+    const keyPair = ec.getKeyPair(privateKey);
+    const signer = new Signer(provider, account, keyPair);
+
+    this.provider = signer;
     this.address = address;
   }
 
-  getNonce(): Promise<number> {
-    return this.provider.callContract({
-      contract_address: this.address,
-      entry_point_selector: getSelectorFromName('get_nonce'),
-    }).then((r) => (r.result[0] ? parseInt(r.result[0], 10) : 0));
-  }
-
-  async sendMessage(nonce: string, p1: BigInt, p2: BigInt): Promise<AddTransactionResponse> {
+  async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
     return this.provider.addTransaction({
       type: 'INVOKE_FUNCTION',
       contract_address: this.address,
       entry_point_selector: getSelectorFromName('send_message'),
-      calldata: [nonce.toString(), p1.toString(), p2.toString()],
+      calldata: [p1.toString(), p2.toString()],
+      nonce,
     });
   }
 

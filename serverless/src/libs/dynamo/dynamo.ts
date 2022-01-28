@@ -10,6 +10,7 @@ import {
   GetCommandOutput,
 } from '@aws-sdk/lib-dynamodb';
 import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
+import BN from 'bn.js';
 import { IMessages } from './IMessages';
 
 const STAGE = config.AWS_STAGE || 'local';
@@ -109,7 +110,7 @@ export class DynamoDb implements IMessages {
   }
 
   public async storeTransaction(txHash: string, messages: string[]) {
-    return this.db.send(
+    await this.db.send(
       new PutCommand({
         TableName: this.teraTableName,
         Item: {
@@ -119,6 +120,20 @@ export class DynamoDb implements IMessages {
         },
       }),
     );
+
+    // we store message -> transaction relation
+    for (const message of messages) {
+      await this.db.send(
+        new PutCommand({
+          TableName: this.teraTableName,
+          Item: {
+            pk: message,
+            sk: 'transaction',
+            hash: txHash,
+          },
+        }),
+      );
+    }
   }
 
   public async getMessagesFromTransaction(txHash: string) {
@@ -137,5 +152,54 @@ export class DynamoDb implements IMessages {
     }
 
     return [];
+  }
+
+  public async getTransactionFromMessage(message: string): Promise<string|null> {
+    const res = await this.db.send(
+      new GetCommand({
+        TableName: this.teraTableName,
+        Key: {
+          pk: message,
+          sk: 'transaction',
+        },
+      }),
+    );
+
+    if (res.Item && res.Item.hash) {
+      return res.Item.hash;
+    }
+
+    return null;
+  }
+
+  public async storeLastNonce(nonce: BN) {
+    return this.db.send(
+      new PutCommand({
+        TableName: this.teraTableName,
+        Item: {
+          pk: 'nonce',
+          sk: 'last',
+          nonce: nonce.toString(),
+        },
+      }),
+    );
+  }
+
+  public async getLastNonce(): Promise<BN|undefined> {
+    const res = await this.db.send(
+      new GetCommand({
+        TableName: this.teraTableName,
+        Key: {
+          pk: 'nonce',
+          sk: 'last',
+        },
+      }),
+    );
+
+    if (res.Item && res.Item.messages) {
+      return new BN(res.Item.nonce);
+    }
+
+    return undefined;
   }
 }
