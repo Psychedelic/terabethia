@@ -1,0 +1,57 @@
+functions:
+  BlockNativeEventHook:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/blocknative/handler.main
+    environment:
+      AWS_ACCOUNT_ID: ${aws:accountId}
+      QUEUE_URL: !Ref EthereumTxQueue
+    events:
+      - http:
+          method: POST
+          path: /hook
+    # allow sending messages to EthereumTxQueue
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+            - "sqs:SendMessage"
+        Resource:
+          - !GetAtt
+            - EthereumTxQueue
+            - Arn
+
+  ReceiveMessageFromL1:
+    timeout: 120
+    memorySize: 128
+    handler: src/functions/teraQueue/handler.main
+    reservedConcurrency: 1
+    environment:
+      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
+      ETHEREUM_TABLE_NAME: !Ref EthereumTable
+    events:
+      - sqs:
+          batchSize: 10
+          arn:
+            Fn::GetAtt:
+              - EthereumTxQueue
+              - Arn
+resources:
+  Resources:
+    EthereumTxQueue:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}EthereumTxQueue.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        VisibilityTimeout: 300 # 5 minutes
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt
+            - EthereumTxDLQ
+            - Arn
+    EthereumTxDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}EthereumTxDLQ.fifo
+        MessageRetentionPeriod: 1209600 # 14 days

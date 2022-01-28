@@ -1,3 +1,5 @@
+import { SQSClient } from '@aws-sdk/client-sqs';
+
 const sliceToBigInt = (buff: Buffer, ...args: number[]): BigInt => BigInt(`0x${buff.slice(...args).toString('hex')}`);
 
 /**

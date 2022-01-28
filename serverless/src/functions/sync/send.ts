@@ -1,7 +1,7 @@
 import 'source-map-support/register';
 
 import { splitUint256, sqsHandler } from '@libs/utils';
-import { DynamoDb } from '@libs/dynamo';
+import StarknetDatabase from '@libs/dynamo/starknet';
 import TerabethiaStarknet from '@libs/starknet';
 import {
   SQSClient,
@@ -13,6 +13,7 @@ const {
   STARKNET_ACCOUNT_ADDRESS,
   STARKNET_CONTRACT_ADDRESS,
   STARKNET_PRIVATE_KEY, QUEUE_URL, CHECK_QUEUE_URL,
+  STARKNET_TABLE_NAME,
 } = process.env;
 
 if (!STARKNET_ACCOUNT_ADDRESS) {
@@ -35,9 +36,13 @@ if (!CHECK_QUEUE_URL) {
   throw new Error('CHECK_QUEUE_URL must be set');
 }
 
+if (!STARKNET_TABLE_NAME) {
+  throw new Error('STARKNET_TABLE_NAME must be set');
+}
+
 const terabethia = new TerabethiaStarknet(STARKNET_ACCOUNT_ADDRESS, STARKNET_PRIVATE_KEY, STARKNET_CONTRACT_ADDRESS);
 
-const db = new DynamoDb();
+const db = new StarknetDatabase(STARKNET_TABLE_NAME);
 
 const sqsClient = new SQSClient({});
 

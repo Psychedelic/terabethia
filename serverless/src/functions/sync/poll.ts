@@ -1,13 +1,16 @@
 import { ScheduledHandler } from 'aws-lambda';
 import { Terabethia } from '@libs/dfinity';
-import { DynamoDb } from '@libs/dynamo';
+import StarknetDatabase from '@libs/dynamo/starknet';
 import {
   SQSClient,
   SendMessageBatchCommand,
   SendMessageBatchRequestEntry,
 } from '@aws-sdk/client-sqs';
+import bluebird from 'bluebird';
 
-const { IC_PRIVATE_KEY, IC_CANISTER_ID, QUEUE_URL } = process.env;
+const {
+  IC_PRIVATE_KEY, IC_CANISTER_ID, QUEUE_URL, STARKNET_TABLE_NAME,
+} = process.env;
 
 if (!IC_PRIVATE_KEY) {
   throw new Error('IC_PRIVATE_KEY must be set');
@@ -21,8 +24,12 @@ if (!QUEUE_URL) {
   throw new Error('QUEUE_URL must be set');
 }
 
+if (!STARKNET_TABLE_NAME) {
+  throw new Error('STARKNET_TABLE_NAME must be set');
+}
+
 const sqsClient = new SQSClient({});
-const db = new DynamoDb();
+const db = new StarknetDatabase(STARKNET_TABLE_NAME);
 
 const tera = new Terabethia(IC_CANISTER_ID, IC_PRIVATE_KEY);
 
@@ -71,11 +78,8 @@ export const main: ScheduledHandler = async () => {
   await sqsClient.send(command);
 
   // store into DynamoDB (in case IC message removal fails)
-  for (const message of messages) {
-    await db.setProcessingMessage(message.msg_key);
-  }
+  await bluebird.each(messages, (message) => db.setProcessingMessage(message.msg_key));
 
   // remove all messages from the IC, since they are processed
-  // const messagesToBeRemoved = messages.map((m) => m.id);
   await tera.removeMessages(rawMessages);
 };

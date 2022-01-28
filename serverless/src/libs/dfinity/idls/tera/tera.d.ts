@@ -3,17 +3,17 @@ import type { Principal } from '@dfinity/principal';
 export interface CallResult { 'return': Array<number> }
 export interface OutgoingMessage {
   'msg_hash': string,
-  'msg_key': Array<number>,
-};
+  'msg_key': string,
+}
 export interface OutgoingMessagePair {
   'msg_hash': string,
   'msg_key': string,
-};
+}
 export type Result = { 'Ok': boolean } |
 { 'Err': string };
-export type Result_1 = { 'Ok': OutgoingMessage } |
+export type Result1 = { 'Ok': OutgoingMessage } |
 { 'Err': string };
-export type Result_2 = { 'Ok': CallResult } |
+export type Result2 = { 'Ok': CallResult } |
 { 'Err': string };
 
 export default interface TerabethiaService {
@@ -27,18 +27,18 @@ export default interface TerabethiaService {
   'get_nonces': () => Promise<Array<bigint>>,
   'remove_messages': (arg_0: Array<OutgoingMessagePair>) => Promise<Result>,
   'send_message': (arg_0: Principal, arg_1: Array<bigint>) => Promise<
-    Result_1
+    Result1
   >,
   'store_message': (
     arg_0: Principal,
     arg_1: Principal,
     arg_2: bigint,
     arg_3: Array<bigint>,
-  ) => Promise<Result_2>,
+  ) => Promise<Result2>,
   'trigger_call': (
     arg_0: Principal,
     arg_1: Principal,
     arg_2: bigint,
     arg_3: Array<bigint>,
-  ) => Promise<Result_2>,
-}
+  ) => Promise<Result2>,
+};

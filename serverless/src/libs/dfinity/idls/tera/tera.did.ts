@@ -1,8 +1,8 @@
 export default ({ IDL }: { IDL: any }) => {
-  const Result = IDL.Variant({ 'Ok': IDL.Bool, 'Err': IDL.Text });
+  const Result = IDL.Variant({ Ok: IDL.Bool, Err: IDL.Text });
   const OutgoingMessagePair = IDL.Record({
-    'msg_hash': IDL.Text,
-    'msg_key': IDL.Text,
+    msg_hash: IDL.Text,
+    msg_key: IDL.Text,
   });
   const OutgoingMessage = IDL.Record({
     msg_hash: IDL.Text,
@@ -19,10 +19,10 @@ export default ({ IDL }: { IDL: any }) => {
       [Result],
       [],
     ),
-    'get_messages': IDL.Func([], [IDL.Vec(OutgoingMessagePair)], ['query']),
-    'get_nonces': IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
-    'remove_messages': IDL.Func([IDL.Vec(OutgoingMessagePair)], [Result], []),
-    'send_message': IDL.Func(
+    get_messages: IDL.Func([], [IDL.Vec(OutgoingMessagePair)], ['query']),
+    get_nonces: IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
+    remove_messages: IDL.Func([IDL.Vec(OutgoingMessagePair)], [Result], []),
+    send_message: IDL.Func(
       [IDL.Principal, IDL.Vec(IDL.Nat)],
       [Result1],
       [],

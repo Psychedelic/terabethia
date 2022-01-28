@@ -5,46 +5,33 @@ import {
   HttpAgent,
   HttpAgentOptions,
 } from '@dfinity/agent';
-import { config } from '@libs/config';
 import { Principal } from '@dfinity/principal';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
 
 import TERA_FACTORY from './idls/tera/tera.did';
-import _TERA_SERVICE, {
+import TerabethiaService, {
   OutgoingMessage,
+  OutgoingMessagePair,
   Result,
-  Result_1,
-} from './idls/tera/tera';
+  Result2,
+} from './idls/tera/tera.d';
 
 export interface ActorParams {
   host: string;
   canisterId: string;
-  idlFactory: IdlFactory;
 }
 
-export const Hosts = {
-  mainnet: 'https://ic0.app',
-  local: 'http://localhost:8000',
-};
-
-type IdlFactory = ({ IDL }: { IDL: any }) => any;
-
-const createActor = <T>({
+const createActor = ({
   host,
   canisterId,
-  idlFactory,
-}: {
-  host: string;
-  canisterId: string;
-  idlFactory: IdlFactory;
-}): ActorSubclass<T> => {
-  let identity = Ed25519KeyIdentity.generate();
+}: ActorParams, privateKeyJson?: string): ActorSubclass<TerabethiaService> => {
+  let identity: Ed25519KeyIdentity;
 
-  if (config.TERA_AGENT_KEY_PAIR) {
-    identity = Ed25519KeyIdentity.fromJSON(config.TERA_AGENT_KEY_PAIR);
+  if (privateKeyJson) {
+    identity = Ed25519KeyIdentity.fromJSON(privateKeyJson);
+  } else {
+    identity = Ed25519KeyIdentity.generate();
   }
-
-  console.log('id pid', identity.getPrincipal().toText());
 
   const agent = new HttpAgent({
     host,
@@ -63,25 +50,35 @@ const createActor = <T>({
     }
   }
 
-  return Actor.createActor(idlFactory, {
+  return Actor.createActor<TerabethiaService>(TERA_FACTORY, {
     agent,
     canisterId,
   });
 };
+export class Terabethia {
+  private actor: ActorSubclass<TerabethiaService>;
 
-const teraCanister = createActor<_TERA_SERVICE>({
-  host: Hosts.mainnet,
-  canisterId: config.TERA_CANISTER_ID,
-  idlFactory: TERA_FACTORY,
-});
+  constructor(canisterId: string, privateKeyJson?: string, host = 'https://ic0.app') {
+    this.actor = createActor({
+      host,
+      canisterId,
+    }, privateKeyJson);
+  }
 
-export const Tera = {
-  storeMessage: async (
+  storeMessage(
     from: Principal,
     to: Principal,
     nonce: bigint,
     payload: bigint[],
-  ): Promise<Result_2> => teraCanister.store_message(from, to, nonce, payload),
-  getMessages: async (): Promise<OutgoingMessage[]> => teraCanister.get_messages(),
-  // removeMessages: async (messages: Array<bigint>): Promise<Result> => teraCanister.remove_messages(messages),
-};
+  ): Promise<Result2> {
+    return this.actor.store_message(from, to, nonce, payload);
+  }
+
+  getMessages(): Promise<OutgoingMessage[]> {
+    return this.actor.get_messages();
+  }
+
+  removeMessages(messages: OutgoingMessagePair[]): Promise<Result> {
+    return this.actor.remove_messages(messages);
+  }
+}

@@ -9,6 +9,7 @@ functions:
       IC_PRIVATE_KEY: ${ssm:${self:custom.resourcePrefix}ICPrivateKey~true}
       IC_CANISTER_ID: ${ssm:${self:custom.resourcePrefix}ICCanisterId~true}
       QUEUE_URL: !Ref StarknetMessagesQueue
+      STARKNET_TABLE_NAME: !Ref StarknetTable
     events:
       # we poll messages every minute
       - schedule: rate(1 minute)
@@ -37,6 +38,7 @@ functions:
       QUEUE_URL: !Ref StarknetMessagesQueue
       # when transaction is submitted, we need to check for acceptance
       CHECK_QUEUE_URL: !Ref StarknetTransactionsQueue
+      STARKNET_TABLE_NAME: !Ref StarknetTable
     events:
       - sqs:
           batchSize: 10

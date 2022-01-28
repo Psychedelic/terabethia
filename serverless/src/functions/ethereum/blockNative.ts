@@ -4,25 +4,22 @@ import {
   formatJSONResponse,
   ValidatedEventAPIGatewayProxyEvent,
 } from '@libs/apiGateway';
-import { config } from '@libs/config';
 import { middyfy } from '@libs/lambda';
 import {
-  SNSClient,
-  PublishCommand,
-  PublishCommandInput,
-} from '@aws-sdk/client-sns';
+  SQSClient,
+  SendMessageCommand,
+} from '@aws-sdk/client-sqs';
 import schema from './schema';
 
 const {
-  SNS_URL,
-  IS_OFFLINE,
-  AWS_REGION,
-  AWS_ACCOUNT_ID,
-  AWS_ACCOUNT_ID_LOCAL,
-  ETH_L1_MESSAGE_TOPIC_NAME,
-} = config;
+  QUEUE_URL,
+} = process.env;
 
-const snsClient = new SNSClient({ region: AWS_REGION });
+if (!QUEUE_URL) {
+  throw new Error('QUEUE_URL must be set');
+}
+
+const sqsClient = new SQSClient({});
 
 export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
   typeof schema
@@ -34,22 +31,16 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
     });
   }
 
-  const messageTopicPayload: PublishCommandInput = {
-    TopicArn: `arn:aws:sns:${AWS_REGION}:${
-      IS_OFFLINE ? AWS_ACCOUNT_ID_LOCAL : AWS_ACCOUNT_ID
-    }:${ETH_L1_MESSAGE_TOPIC_NAME}`,
-    Message: JSON.stringify(event.body),
-    MessageGroupId: event.body.hash,
-  };
-
   try {
-    console.log(messageTopicPayload);
-    const command = new PublishCommand(messageTopicPayload);
-    const response = await snsClient.send(command);
+    await sqsClient.send(new SendMessageCommand({
+      QueueUrl: QUEUE_URL,
+      MessageBody: JSON.stringify(event.body),
+      MessageDeduplicationId: event.body.hash,
+    }));
 
     return formatJSONResponse({
       statusCode: 200,
-      body: { message: 'success', response },
+      body: { message: 'success' },
     });
   } catch (error) {
     console.error('Exception on sns publish', error);
