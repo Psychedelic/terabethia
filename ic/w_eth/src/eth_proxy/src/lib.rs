@@ -47,6 +47,28 @@ impl ToNat for Principal {
     }
 }
 
+pub trait FromNat {
+    fn from_nat(input: Nat) -> Principal;
+}
+
+impl FromNat for Principal {
+    #[inline(always)]
+    fn from_nat(input: Nat) -> Principal {
+        let be_bytes = input.0.to_bytes_be();
+        let be_bytes_len = be_bytes.len();
+        let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
+            29 - be_bytes_len
+        } else if be_bytes_len < 10 {
+            10 - be_bytes_len
+        } else {
+            0
+        };
+        let mut p_slice = vec![0u8; padding_bytes];
+        p_slice.extend_from_slice(&be_bytes);
+        Principal::from_slice(&p_slice)
+    }
+}
+
 fn only_controller() -> bool {
     let controller = ic::get_maybe::<Principal>().expect("controller not set");
 
@@ -91,7 +113,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
         let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
         let amount = Nat::from(payload[1].0.clone());
-        let to = Principal::from_slice(&payload[0].0.to_bytes_be().as_slice());
+        let to = Principal::from_nat(payload[0].clone());
 
         let mint: Result<(TxReceipt,), (RejectionCode, String)> =
             ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
@@ -201,6 +223,20 @@ mod tests {
     use candid::Principal;
     use ic_cdk::export::candid::{decode_args, encode_args, Nat};
     use std::{ops::Mul, str::FromStr};
+
+    use crate::FromNat;
+
+    #[test]
+    fn nat_to_pid() {
+        let receiver =
+            Nat::from_str("18824246983838276872301504726052517757254996994179285355049850184706")
+                .unwrap();
+
+        let pid = Principal::from_nat(receiver);
+        let expected_pid = "kyxzn-5aawk-7tlkc-pvrag-fioax-rhyre-nev4e-4lyc6-ifk4v-zrvlm-sae";
+
+        assert_eq!(expected_pid, pid.to_text());
+    }
 
     #[test]
     fn test_decode_eth_payload() {
