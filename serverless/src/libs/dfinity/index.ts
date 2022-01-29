@@ -10,10 +10,9 @@ import { Ed25519KeyIdentity } from '@dfinity/identity';
 
 import TERA_FACTORY from './idls/tera/tera.did';
 import TerabethiaService, {
-  OutgoingMessage,
   OutgoingMessagePair,
   Result,
-  Result2,
+  Result_2,
 } from './idls/tera/tera.d';
 
 export interface ActorParams {
@@ -70,11 +69,11 @@ export class Terabethia {
     to: Principal,
     nonce: bigint,
     payload: bigint[],
-  ): Promise<Result2> {
+  ): Promise<Result_2> {
     return this.actor.store_message(from, to, nonce, payload);
   }
 
-  getMessages(): Promise<OutgoingMessage[]> {
+  getMessages(): Promise<OutgoingMessagePair[]> {
     return this.actor.get_messages();
   }
 
