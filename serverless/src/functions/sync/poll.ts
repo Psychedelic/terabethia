@@ -81,6 +81,11 @@ export const main: ScheduledHandler = async () => {
     };
   });
 
+  // if there are no messages, we skip
+  if (entries.length === 0) {
+    return;
+  }
+
   const command = new SendMessageBatchCommand({
     QueueUrl: QUEUE_URL,
     Entries: entries,

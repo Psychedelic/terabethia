@@ -5,6 +5,8 @@ import {
   SigningAlgorithmSpec,
 } from '@aws-sdk/client-kms';
 import { Secp256k1PublicKey } from '@dfinity/identity';
+import { sha256 } from 'js-sha256';
+import { derToJose } from 'ecdsa-sig-formatter';
 
 export class KMSIdentity extends SignIdentity {
   constructor(
@@ -20,8 +22,16 @@ export class KMSIdentity extends SignIdentity {
   }
 
   async sign(blob: ArrayBuffer): Promise<Signature> {
+    const hash = sha256.create();
+    hash.update(blob);
+    const message = new Uint8Array(hash.digest());
+
+    console.log('Message len', message.length);
+    console.log('Message', message);
+
     const command = new SignCommand({
-      Message: new Uint8Array(blob),
+      Message: message,
+      MessageType: 'DIGEST',
       KeyId: this.keyId,
       SigningAlgorithm: SigningAlgorithmSpec.ECDSA_SHA_256,
     });
@@ -32,6 +42,8 @@ export class KMSIdentity extends SignIdentity {
       throw new Error('Unable to sign request.');
     }
 
-    return response.Signature.buffer as Signature;
+    const base64 = derToJose(Buffer.from(response.Signature), 'ES256');
+
+    return Buffer.from(base64, 'base64') as unknown as Signature;
   }
 }
