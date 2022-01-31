@@ -10,6 +10,13 @@ pub type Nonce = Nat;
 
 pub type TxReceipt = Result<Nat, TxError>;
 
+#[derive(Serialize, Clone, CandidType, Deserialize, PartialEq, Eq, Hash)]
+pub struct OutgoingMessage {
+    #[serde(with = "serde_bytes")]
+    pub(crate) msg_key: Vec<u8>,
+    pub(crate) msg_hash: String,
+}
+
 #[derive(Deserialize, CandidType, Debug, PartialEq)]
 pub enum TxError {
     InsufficientBalance,
@@ -104,7 +111,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
-    // Check if WETH canister is alive
+    // 1) Check if WETH canister is alive
     if (ic::call(weth_ic_addr_pid, "name", ()).await as Result<(), (RejectionCode, String)>)
         .is_err()
     {
@@ -114,6 +121,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
         )));
     }
 
+    // 2) Consume message from Tera canister
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
@@ -126,6 +134,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_nat(payload[0].clone());
 
+        // 3) Mint amount to {to}
         let mint: (TxReceipt,) = match ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await {
             Ok(res) => res,
             Err((code, err)) => {
@@ -158,7 +167,7 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [eth_addr.clone().to_nat(), amount.clone()];
 
-    // Check if WETH canister is alive
+    // 1) Check if WETH canister is alive
     if (ic::call(weth_ic_addr_pid, "name", ()).await as Result<(), (RejectionCode, String)>)
         .is_err()
     {
@@ -168,6 +177,7 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
         )));
     }
 
+    // 2) transferFrom caller to our canister the amount to burn
     let transfer: Result<(TxReceipt,), _> = ic::call(
         weth_ic_addr_pid,
         "transferFrom",
@@ -175,47 +185,51 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     )
     .await;
 
-    match transfer {
-        Ok(result) => match result {
-            (Ok(_),) => {
-                let burn_txn: Result<(TxReceipt,), _> =
-                    ic::call(weth_ic_addr_pid, "burn", (&amount,)).await;
+    if transfer.is_ok() {
+        print(format!("here transfer"));
 
-                match burn_txn {
-                    Ok(result) => match result {
-                        (Ok(txn_id),) => {
-                            let send_message: (Result<bool, String>,) = ic::call(
-                                Principal::from_str(TERA_ADDRESS).unwrap(),
-                                "send_message",
-                                (&eth_addr, &payload),
-                            )
-                            .await
-                            .expect("sending message to L1 failed!");
+        // Log Transfer to our canister for auditing
 
-                            if send_message.0.is_ok() {
-                                return Ok(txn_id);
-                            }
+        // 3) Burn the amount
+        let burn_txn: (TxReceipt,) = match ic::call(weth_ic_addr_pid, "burn", (&amount,)).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(TxError::Canister(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
 
-                            Err(TxError::Canister(format!(
-                                "Send Message: {:?}\n{}",
-                                "Canister: ", "sending message failed!"
-                            )))
-                        }
-                        (Err(error),) => Err(error),
-                    },
-                    Err((code, err)) => Err(TxError::Canister(format!(
-                        "RejectionCode: {:?}\n{}",
-                        code, err
-                    ))),
+        match burn_txn {
+            (Ok(txn_id),) => {
+
+                print(format!("{}", txn_id));
+
+                // 4) Send outgoing message to tera canister
+                let send_message: (OutgoingMessage,) = ic::call(
+                    Principal::from_str(TERA_ADDRESS).unwrap(),
+                    "send_message",
+                    (&eth_addr, &payload),
+                )
+                .await
+                .expect("sending message to L1 failed!");
+
+                if let outgoing_message = send_message.0 {
+                    print(format!("{:#?}", outgoing_message));
+                    let msg_has_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(&outgoing_message.msg_key));
+
+                    return Ok(msg_has_as_nat);
                 }
             }
-            (Err(error),) => Err(error),
-        },
-        Err((code, err)) => Err(TxError::Canister(format!(
-            "RejectionCode: {:?}\n{}",
-            code, err
-        ))),
+            (Err(error),) => return Err(error),
+        };
     }
+
+    Err(TxError::Canister(format!(
+        "Canister ETH_PROXY: failed to transferFrom {:?} to {}!",
+        caller, canister_id
+    )))
 }
 
 candid::export_service!();

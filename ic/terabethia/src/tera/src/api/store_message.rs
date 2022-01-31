@@ -114,8 +114,8 @@ mod tests {
 
     /// TODO
     /// Integration test with other canisters
-    #[async_test]
-    async fn test_store_incoming_message() {
+    #[test]
+    fn test_store_incoming_message() {
         let mock_ctx = before_each();
         // let store_msg = store().await;
 
