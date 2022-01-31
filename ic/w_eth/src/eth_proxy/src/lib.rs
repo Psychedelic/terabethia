@@ -98,7 +98,7 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 }
 
 #[update(name = "mint")]
-// #[candid_method(update, rename = "mint")]
+#[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
@@ -157,6 +157,16 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let canister_id = ic::id();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let payload = [eth_addr.clone().to_nat(), amount.clone()];
+
+    // Check if WETH canister is alive
+    if (ic::call(weth_ic_addr_pid, "name", ()).await as Result<(), (RejectionCode, String)>)
+        .is_err()
+    {
+        return Err(TxError::Canister(format!(
+            "WETH {} canister is not responding!",
+            weth_ic_addr_pid
+        )));
+    }
 
     let transfer: Result<(TxReceipt,), _> = ic::call(
         weth_ic_addr_pid,
