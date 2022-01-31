@@ -4,16 +4,17 @@ import {
   ActorSubclass,
   HttpAgent,
   HttpAgentOptions,
+  SignIdentity,
 } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { Ed25519KeyIdentity } from '@dfinity/identity';
-
 import TERA_FACTORY from './idls/tera/tera.did';
 import TerabethiaService, {
   OutgoingMessagePair,
   Result,
-  Result_2,
+  Result2,
 } from './idls/tera/tera.d';
+
+export { KMSIdentity } from './kms';
 
 export interface ActorParams {
   host: string;
@@ -23,15 +24,7 @@ export interface ActorParams {
 const createActor = ({
   host,
   canisterId,
-}: ActorParams, privateKeyJson?: string): ActorSubclass<TerabethiaService> => {
-  let identity: Ed25519KeyIdentity;
-
-  if (privateKeyJson) {
-    identity = Ed25519KeyIdentity.fromJSON(privateKeyJson);
-  } else {
-    identity = Ed25519KeyIdentity.generate();
-  }
-
+}: ActorParams, identity: SignIdentity): ActorSubclass<TerabethiaService> => {
   const agent = new HttpAgent({
     host,
     fetch,
@@ -57,11 +50,11 @@ const createActor = ({
 export class Terabethia {
   private actor: ActorSubclass<TerabethiaService>;
 
-  constructor(canisterId: string, privateKeyJson?: string, host = 'https://ic0.app') {
+  constructor(canisterId: string, identity: SignIdentity, host = 'https://ic0.app') {
     this.actor = createActor({
       host,
       canisterId,
-    }, privateKeyJson);
+    }, identity);
   }
 
   storeMessage(
@@ -69,7 +62,7 @@ export class Terabethia {
     to: Principal,
     nonce: bigint,
     payload: bigint[],
-  ): Promise<Result_2> {
+  ): Promise<Result2> {
     return this.actor.store_message(from, to, nonce, payload);
   }
 

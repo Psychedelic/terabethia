@@ -1,7 +1,8 @@
 import 'source-map-support/register';
 
 import { ethers } from 'ethers';
-import { Terabethia } from '@libs/dfinity';
+import { Terabethia, KMSIdentity } from '@libs/dfinity';
+import { Secp256k1PublicKey } from '@dfinity/identity';
 import { Principal } from '@dfinity/principal';
 import TerabethiaAbi from '@libs/eth/abi/Terabethia.json';
 import { BlockNativePayload } from '@libs/blocknative';
@@ -9,14 +10,18 @@ import EthereumDatabase from '@libs/dynamo/ethereum';
 import { sqsHandler } from '@libs/utils';
 import bluebird from 'bluebird';
 import BN from 'bn.js';
+import {
+  KMSClient,
+} from '@aws-sdk/client-kms';
 
 const {
   ETHEREUM_TABLE_NAME,
   ETHEREUM_PROVIDER_URL,
-  IC_PRIVATE_KEY,
-  IC_CANISTER_ID,
+  CANISTER_ID,
   QUEUE_URL,
   ETHEREUM_CONTRACT,
+  KMS_KEY_ID,
+  KMS_PUBLIC_KEY,
 } = process.env;
 
 if (!ETHEREUM_TABLE_NAME) {
@@ -31,21 +36,30 @@ if (!ETHEREUM_CONTRACT) {
   throw new Error('ETHEREUM_CONTRACT must be set');
 }
 
-if (!IC_PRIVATE_KEY) {
-  throw new Error('IC_PRIVATE_KEY must be set');
-}
-
-if (!IC_CANISTER_ID) {
-  throw new Error('IC_CANISTER_ID must be set');
+if (!CANISTER_ID) {
+  throw new Error('CANISTER_ID must be set');
 }
 
 if (!QUEUE_URL) {
-  throw new Error('IC_CANISTER_ID must be set');
+  throw new Error('QUEUE_URL must be set');
 }
 
+if (!KMS_KEY_ID) {
+  throw new Error('KMS_KEY_ID must be set');
+}
+
+if (!KMS_PUBLIC_KEY) {
+  throw new Error('KMS_PUBLIC_KEY must be set');
+}
+
+// Terabethia IC with KMS
+const kms = new KMSClient({});
+const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(KMS_PUBLIC_KEY, 'base64'));
+const identity = new KMSIdentity(publicKey, kms, KMS_KEY_ID);
+const terabethia = new Terabethia(CANISTER_ID, identity);
+// Terabethia ETH
 const db = new EthereumDatabase(ETHEREUM_TABLE_NAME);
 const provider = new ethers.providers.StaticJsonRpcProvider(ETHEREUM_PROVIDER_URL);
-const terabethia = new Terabethia(IC_CANISTER_ID, IC_PRIVATE_KEY);
 const ethContract = new ethers.Contract(ETHEREUM_CONTRACT, TerabethiaAbi, provider);
 
 const handleL1Message = async (message: BlockNativePayload) => {

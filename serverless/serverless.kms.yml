@@ -1,0 +1,112 @@
+service: terabethia-kms
+
+provider:
+  name: aws
+  profile: terabethia
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-west-2'}
+
+custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+  prune:
+    automatic: true
+    number: 3
+  serverlessTerminationProtection:
+    stages:
+      - prd
+      - dev
+
+plugins:
+  - serverless-webpack
+  - serverless-stack-termination-protection
+  - serverless-prune-plugin
+  - serverless-iam-roles-per-function
+
+package:
+  individually: true
+
+
+functions:
+  # resolve KMS to principal id
+  KMSPrincipal:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/kms/principal.main
+    environment:
+      # KMS_KEY_ID: !Ref InternetComputerOperator
+    events:
+      - http:
+          method: GET
+          path: /principal
+
+resources:
+  Resources:
+    # requests to Terabethia Canister are signed with KMS
+    # AWS is using HSM underneath, so private key is never exposed
+    InternetComputerOperator:
+      Type: AWS::KMS::Key
+      Properties: 
+        Description: Internet Computer Operator
+        KeyPolicy:
+          Id: default
+          Statement:
+          # key cannot be created without an admin
+          # "The new key policy will not allow you to update the key policy in the future"
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            NotAction:
+              - 'kms:GetPublicKey'
+              - 'kms:Sign'
+              - 'kms:Verify'
+            Resource: '*'
+
+          # allow describe/get public key actions, so this key can be publicly verified / whitelisted
+          - Effect: Allow
+            Principal:
+              AWS: !Ref KMSPrincipalIamRoleLambdaExecution
+            Condition:
+              ArnEquals:
+                'aws:SourceArn':
+                  - !Sub 'arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:terabethia-kms-${self:provider.stage}-KMSPrincipal:*'
+            Action:
+              - 'kms:DescribeKey'
+              - 'kms:GetPublicKey'
+            Resource: '*'
+
+          # we only allow Sign/Verify methods to be used by terabethia lambda functions
+          - Effect: 'Allow'
+            Action:
+              - 'kms:DescribeKey'
+              - 'kms:GetPublicKey'
+              - 'kms:Sign'
+              - 'kms:Verify'
+            Resource: '*'
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
+            Condition:
+              ArnEquals:
+                'aws:SourceArn':
+                  # storing message to Terabethia Canister needs a signature
+                  - !Sub 'arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:terabethia-${self:provider.stage}-StoreMessage:*'
+                  # reading L2->L1 messages from Terabethia Canister needs a signature
+                  - !Sub 'arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:terabethia-${self:provider.stage}-StarknetPollMessages:*'
+        # secp256k elliptic curve
+        KeySpec: ECC_SECG_P256K1
+        # key is used only for sign/verify operations
+        KeyUsage: SIGN_VERIFY
+        # default settings
+        # MultiRegion: false
+        # PendingWindowInDays: 30
+        # Enabled: true
+        # EnableKeyRotation: false
+  Outputs:
+    InternetComputerOperatorKMS:
+      Value:
+        Ref: InternetComputerOperator
