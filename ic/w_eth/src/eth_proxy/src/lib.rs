@@ -1,5 +1,5 @@
 use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{ic::{self, print}, macros::*, Principal, RejectionCode};
+use ic_kit::{ic, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -89,7 +89,7 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
         return Err(TxError::Canister(format!(
             "Eth Contract Address is inccorrect: {}",
             eth_addr_hex
-        )))
+        )));
     }
 
     // ToDo: more validation here
@@ -102,6 +102,17 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
+    let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
+
+    // Check if WETH canister is alive
+    if (ic::call(weth_ic_addr_pid, "name", ()).await as Result<(), (RejectionCode, String)>)
+        .is_err()
+    {
+        return Err(TxError::Canister(format!(
+            "WETH {} canister is not responding!",
+            weth_ic_addr_pid
+        )));
+    }
 
     let consume: (Result<bool, String>,) = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
@@ -112,19 +123,17 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     .expect("consuming message from L1 failed!");
 
     if consume.0.is_ok() {
-        let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
-
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_nat(payload[0].clone());
 
-        let mint: (TxReceipt,) = match ic::call(weth_ic_addr_pid, "mint", (&to, &amount))
-        .await
-        {
+        let mint: (TxReceipt,) = match ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await {
             Ok(res) => res,
-            Err((code, err)) => return Err(TxError::Canister(format!(
-                "RejectionCode: {:?}\n{}",
-                code, err
-            ))),
+            Err((code, err)) => {
+                return Err(TxError::Canister(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
         };
 
         match mint {
