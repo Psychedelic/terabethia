@@ -113,7 +113,7 @@ functions:
       # Ethereum Provider API URL (only for querying L1 state)
       ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl~true}
       # AWS KMS Key ID, IC Operator
-      KMS_KEY_ID: ${cf:terabethia-kms-${self:provider.stage}.InternetComputerOperatorKMS}
+      KMS_KEY_ID: !Ref InternetComputerOperator
       # AWS KMS Public Key (base64 encoded), IC Operator
       KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC~true}
       # Terabethia L1 Contract ID
@@ -163,7 +163,7 @@ functions:
     handler: src/functions/sync/poll.main
     environment:
       # AWS KMS Key ID, IC Operator
-      KMS_KEY_ID: ${cf:terabethia-kms-${self:provider.stage}.InternetComputerOperatorKMS}
+      KMS_KEY_ID: !Ref InternetComputerOperator
       # AWS KMS Public Key (base64 encoded), IC Operator
       KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC~true}
       CANISTER_ID: ${ssm:${self:custom.resourcePrefix}CanisterId~true}
