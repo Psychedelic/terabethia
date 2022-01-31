@@ -3,6 +3,7 @@ import bluebird from 'bluebird';
 import {
   PutCommand,
   GetCommand,
+  PutCommandOutput,
 } from '@aws-sdk/lib-dynamodb';
 import Database from './database';
 
@@ -20,8 +21,8 @@ class StarknetDatabase extends Database {
     return !!item.Item;
   }
 
-  async setProcessingMessage(msgKey: string): Promise<void> {
-    await this.db.send(
+  setProcessingMessage(msgKey: string): Promise<PutCommandOutput> {
+    return this.db.send(
       new PutCommand({
         TableName: this.tableName,
         Item: {

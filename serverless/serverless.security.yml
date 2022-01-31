@@ -1,0 +1,37 @@
+resources:
+  Resources:
+    # requests to Terabethia Canister are signed with KMS
+    # AWS is using HSM underneath, so private key is never exposed
+    InternetComputerOperator:
+      Type: AWS::KMS::Key
+      Properties: 
+        Description: Internet Computer Operator
+        # we only allow Sign/Verify methods to be used by our lambda functions
+        KeyPolicy:
+          Id: default
+          Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'kms:DescribeKey'
+              - 'kms:Sign'
+              - 'kms:Verify'
+            Resource: '*'
+            Principal:
+              AWS:
+                # storing message to Terabethia Canister needs a signature
+                - !GetAtt 
+                  - StoreMessageLambdaFunction  
+                  - Arn
+                # reading L2->L1 messages from Terabethia Canister needs a signature
+                - !GetAtt 
+                  - StarknetMessagesQueueLambdaFunction  
+                  - Arn
+        # secp256k elliptic curve
+        KeySpec: ECC_SECG_P256K1
+        # key is used only for sign/verify operations
+        KeyUsage: SIGN_VERIFY
+        # default settings
+        # MultiRegion: false
+        # PendingWindowInDays: 30
+        # Enabled: true
+        # EnableKeyRotation: false
