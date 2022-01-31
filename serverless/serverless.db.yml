@@ -10,10 +10,10 @@ resources:
         TableName: ${self:custom.resourcePrefix}Ethereum
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
-          - AttributeName: Id
+          - AttributeName: PrimaryKey
             AttributeType: S
         KeySchema:
-          - AttributeName: Id
+          - AttributeName: PrimaryKey
             KeyType: HASH
 
     # Prevent replays L2 -> L1, allows tx lookup by message key
@@ -25,8 +25,8 @@ resources:
         TableName: ${self:custom.resourcePrefix}Starknet
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
-          - AttributeName: Id
+          - AttributeName: PrimaryKey
             AttributeType: S
         KeySchema:
-          - AttributeName: Id
+          - AttributeName: PrimaryKey
             KeyType: HASH
