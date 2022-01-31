@@ -1,11 +1,10 @@
-use bigdecimal::BigDecimal;
 use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{ic, macros::*, Principal, RejectionCode};
+use ic_kit::{ic::{self, print}, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
 const WETH_ADDRESS_IC: &str = "sbuvx-eyaaa-aaaab-qad6a-cai";
-const WETH_ADDRESS_ETH: &str = "0x1b864e1ca9189cfbd8a14a53a02e26b00ab5e91a";
+const WETH_ADDRESS_ETH: &str = "0xfa7fc33d0d5984d33e33af5d3f504e33a251d52a";
 
 pub type Nonce = Nat;
 
@@ -87,7 +86,10 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
     let eth_addr_hex = hex::encode(eth_addr);
 
     if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
-        panic!("Eth Contract Address is inccorrect!");
+        return Err(TxError::Canister(format!(
+            "Eth Contract Address is inccorrect: {}",
+            eth_addr_hex
+        )))
     }
 
     // ToDo: more validation here
@@ -96,7 +98,7 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 }
 
 #[update(name = "mint")]
-#[candid_method(update, rename = "mint")]
+// #[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
@@ -115,18 +117,19 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_nat(payload[0].clone());
 
-        let mint: Result<(TxReceipt,), (RejectionCode, String)> =
-            ic::call(weth_ic_addr_pid, "mint", (&to, &amount)).await;
-
-        return match mint {
-            Ok(result) => match result {
-                (Ok(value),) => Ok(value),
-                (Err(error),) => Err(error),
-            },
-            Err((code, err)) => Err(TxError::Canister(format!(
+        let mint: (TxReceipt,) = match ic::call(weth_ic_addr_pid, "mint", (&to, &amount))
+        .await
+        {
+            Ok(res) => res,
+            Err((code, err)) => return Err(TxError::Canister(format!(
                 "RejectionCode: {:?}\n{}",
                 code, err
             ))),
+        };
+
+        match mint {
+            (Ok(tx_id),) => return Ok(tx_id),
+            (Err(error),) => return Err(error),
         };
     }
 
