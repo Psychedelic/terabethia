@@ -5,7 +5,7 @@ We have created an example of mirroring assets using the Terabethia bridge with 
 Learn more at: [ETH WETH Documentation](https://docs.terabethia.ooo/terabethia-testnet/eth-weth/)
 
 ## w_eth 
-canisterId: **sbuvx-eyaaa-aaaab-qad6a-cai**
+canisterId: **tgodh-faaaa-aaaab-qaefa-cai**
 - wrapped ether on IC using DIP20
 
 ## eth_proxy

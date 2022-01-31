@@ -2,8 +2,8 @@ use candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::{ic::{self, print}, macros::*, Principal, RejectionCode};
 use std::str::FromStr;
 
-const TERA_ADDRESS: &str = "s5qpg-tyaaa-aaaab-qad4a-cai";
-const WETH_ADDRESS_IC: &str = "sbuvx-eyaaa-aaaab-qad6a-cai";
+const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
+const WETH_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
 const WETH_ADDRESS_ETH: &str = "0xfa7fc33d0d5984d33e33af5d3f504e33a251d52a";
 
 pub type Nonce = Nat;
