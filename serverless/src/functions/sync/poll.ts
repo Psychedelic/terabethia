@@ -1,5 +1,4 @@
 import { ScheduledHandler } from 'aws-lambda';
-import { Terabethia } from '@libs/dfinity';
 import StarknetDatabase from '@libs/dynamo/starknet';
 import {
   SQSClient,
@@ -7,17 +6,18 @@ import {
   SendMessageBatchRequestEntry,
 } from '@aws-sdk/client-sqs';
 import bluebird from 'bluebird';
+import { Terabethia, KMSIdentity } from '@libs/dfinity';
+import { Secp256k1PublicKey } from '@dfinity/identity';
+import {
+  KMSClient,
+} from '@aws-sdk/client-kms';
 
 const {
-  IC_PRIVATE_KEY, IC_CANISTER_ID, QUEUE_URL, STARKNET_TABLE_NAME,
+  CANISTER_ID, QUEUE_URL, STARKNET_TABLE_NAME, KMS_KEY_ID, KMS_PUBLIC_KEY,
 } = process.env;
 
-if (!IC_PRIVATE_KEY) {
-  throw new Error('IC_PRIVATE_KEY must be set');
-}
-
-if (!IC_CANISTER_ID) {
-  throw new Error('IC_CANISTER_ID must be set');
+if (!CANISTER_ID) {
+  throw new Error('CANISTER_ID must be set');
 }
 
 if (!QUEUE_URL) {
@@ -28,10 +28,22 @@ if (!STARKNET_TABLE_NAME) {
   throw new Error('STARKNET_TABLE_NAME must be set');
 }
 
+if (!KMS_KEY_ID) {
+  throw new Error('KMS_KEY_ID must be set');
+}
+
+if (!KMS_PUBLIC_KEY) {
+  throw new Error('KMS_PUBLIC_KEY must be set');
+}
+
+// Terabethia IC with KMS
+const kms = new KMSClient({});
+const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(KMS_PUBLIC_KEY, 'base64'));
+const identity = new KMSIdentity(publicKey, kms, KMS_KEY_ID);
+const terabethia = new Terabethia(CANISTER_ID, identity);
+
 const sqsClient = new SQSClient({});
 const db = new StarknetDatabase(STARKNET_TABLE_NAME);
-
-const tera = new Terabethia(IC_CANISTER_ID, IC_PRIVATE_KEY);
 
 export interface MessagePayload {
   key: string;
@@ -46,7 +58,7 @@ export interface MessagePayload {
  */
 export const main: ScheduledHandler = async () => {
   // fetch messages from Tera canister
-  const rawMessages = await tera.getMessages();
+  const rawMessages = await terabethia.getMessages();
 
   const messages = await Promise.all(
     rawMessages.map(async (m) => {
@@ -69,6 +81,11 @@ export const main: ScheduledHandler = async () => {
     };
   });
 
+  // if there are no messages, we skip
+  if (entries.length === 0) {
+    return;
+  }
+
   const command = new SendMessageBatchCommand({
     QueueUrl: QUEUE_URL,
     Entries: entries,
@@ -81,5 +98,5 @@ export const main: ScheduledHandler = async () => {
   await bluebird.each(messages, (message) => db.setProcessingMessage(message.msg_key));
 
   // remove all messages from the IC, since they are processed
-  await tera.removeMessages(rawMessages);
+  await terabethia.removeMessages(rawMessages);
 };

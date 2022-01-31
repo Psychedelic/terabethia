@@ -1,39 +1,39 @@
 export default ({ IDL }: { IDL: any }) => {
-  const Result = IDL.Variant({ 'Ok': IDL.Bool, 'Err': IDL.Text });
+  const Result = IDL.Variant({ Ok: IDL.Bool, Err: IDL.Text });
   const OutgoingMessagePair = IDL.Record({
-    'msg_hash': IDL.Text,
-    'msg_key': IDL.Text,
+    msg_hash: IDL.Text,
+    msg_key: IDL.Text,
   });
   const OutgoingMessage = IDL.Record({
-    'msg_hash': IDL.Text,
-    'msg_key': IDL.Vec(IDL.Nat8),
+    msg_hash: IDL.Text,
+    msg_key: IDL.Vec(IDL.Nat8),
   });
-  const Result_1 = IDL.Variant({ 'Ok': OutgoingMessage, 'Err': IDL.Text });
-  const CallResult = IDL.Record({ 'return': IDL.Vec(IDL.Nat8) });
-  const Result_2 = IDL.Variant({ 'Ok': CallResult, 'Err': IDL.Text });
+  const Result1 = IDL.Variant({ Ok: OutgoingMessage, Err: IDL.Text });
+  const CallResult = IDL.Record({ return: IDL.Vec(IDL.Nat8) });
+  const Result2 = IDL.Variant({ Ok: CallResult, Err: IDL.Text });
   return IDL.Service({
-    'authorize': IDL.Func([IDL.Principal], [], []),
-    'consume_message': IDL.Func(
+    authorize: IDL.Func([IDL.Principal], [], []),
+    consume_message: IDL.Func(
       [IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
       [Result],
       [],
     ),
-    'get_messages': IDL.Func([], [IDL.Vec(OutgoingMessagePair)], ['query']),
-    'get_nonces': IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
-    'remove_messages': IDL.Func([IDL.Vec(OutgoingMessagePair)], [Result], []),
-    'send_message': IDL.Func(
+    get_messages: IDL.Func([], [IDL.Vec(OutgoingMessagePair)], ['query']),
+    get_nonces: IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
+    remove_messages: IDL.Func([IDL.Vec(OutgoingMessagePair)], [Result], []),
+    send_message: IDL.Func(
       [IDL.Principal, IDL.Vec(IDL.Nat)],
-      [Result_1],
+      [Result1],
       [],
     ),
-    'store_message': IDL.Func(
+    store_message: IDL.Func(
       [IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
-      [Result_2],
+      [Result2],
       [],
     ),
-    'trigger_call': IDL.Func(
+    trigger_call: IDL.Func(
       [IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat)],
-      [Result_2],
+      [Result2],
       [],
     ),
   });
