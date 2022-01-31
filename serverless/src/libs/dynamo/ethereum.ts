@@ -1,12 +1,13 @@
 import {
   PutCommand,
+  PutCommandOutput,
   GetCommand,
 } from '@aws-sdk/lib-dynamodb';
 import Database from './database';
 
 class EthereumDatabase extends Database {
-  async storeTransaction(txHash: string): Promise<void> {
-    await this.db.send(
+  storeTransaction(txHash: string): Promise<PutCommandOutput> {
+    return this.db.send(
       new PutCommand({
         TableName: this.tableName,
         Item: {
@@ -30,8 +31,8 @@ class EthereumDatabase extends Database {
     return !!res.Item;
   }
 
-  async storeMessageHash(hash: string): Promise<void> {
-    await this.db.send(
+  storeMessageHash(hash: string): Promise<PutCommandOutput> {
+    return this.db.send(
       new PutCommand({
         TableName: this.tableName,
         Item: {
