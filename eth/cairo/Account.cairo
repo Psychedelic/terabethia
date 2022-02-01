@@ -1,13 +1,17 @@
 %lang starknet
 
+%builtins pedersen range_check
+
 from starkware.cairo.common.registers import get_fp_and_pc
 from starkware.starknet.common.syscalls import get_contract_address
-from starkware.cairo.common.signature import verify_ecdsa_signature
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin
 from starkware.starknet.common.syscalls import call_contract, get_caller_address, get_tx_signature
 from starkware.cairo.common.hash_state import (
     hash_init, hash_finalize, hash_update, hash_update_single)
 
+from cairo.secp.secp_ec import EcPoint
+from cairo.secp.secp import verify_ecdsa
+from cairo.secp.bigint import BigInt3, from_felt
 #
 # Structs
 #
@@ -30,7 +34,7 @@ func current_nonce() -> (res : felt):
 end
 
 @storage_var
-func public_key() -> (res : felt):
+func public_key() -> (res : EcPoint):
 end
 
 #
@@ -51,7 +55,7 @@ end
 
 @view
 func get_public_key{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-        res : felt):
+        res : EcPoint):
     let (res) = public_key.read()
     return (res=res)
 end
@@ -74,7 +78,7 @@ end
 
 @external
 func set_public_key{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        new_public_key : felt):
+        new_public_key : EcPoint):
     assert_only_self()
     public_key.write(new_public_key)
     return ()
@@ -86,7 +90,7 @@ end
 
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _public_key : felt):
+        _public_key : EcPoint):
     public_key.write(_public_key)
     return ()
 end
@@ -96,29 +100,24 @@ end
 #
 
 @view
-func is_valid_signature{
-        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,
-        ecdsa_ptr : SignatureBuiltin*}(hash : felt, signature_len : felt, signature : felt*) -> ():
+func is_valid_signature{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        hash : BigInt3, sig_r : BigInt3, sig_s : BigInt3) -> ():
+    alloc_locals
+
     let (_public_key) = public_key.read()
 
     # This interface expects a signature pointer and length to make
     # no assumption about signature validation schemes.
     # But this implementation does, and it expects a (sig_r, sig_s) pair.
-    let sig_r = signature[0]
-    let sig_s = signature[1]
-
-    verify_ecdsa_signature(
-        message=hash, public_key=_public_key, signature_r=sig_r, signature_s=sig_s)
+    verify_ecdsa(public_key_pt=_public_key, msg_hash=hash, r=sig_r, s=sig_s)
 
     return ()
 end
 
 @external
-func execute{
-        syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,
-        ecdsa_ptr : SignatureBuiltin*}(
-        to : felt, selector : felt, calldata_len : felt, calldata : felt*, nonce : felt) -> (
-        response_len : felt, response : felt*):
+func execute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        to : felt, selector : felt, calldata_len : felt, calldata : felt*, nonce : felt,
+        sig_r : BigInt3, sig_s : BigInt3) -> (response_len : felt, response : felt*):
     alloc_locals
 
     let (__fp__, _) = get_fp_and_pc()
@@ -139,8 +138,9 @@ func execute{
 
     # validate transaction
     let (hash) = hash_message(&message)
-    let (signature_len, signature) = get_tx_signature()
-    is_valid_signature(hash, signature_len, signature)
+    let (msg_hash : BigInt3) = from_felt(hash)
+
+    is_valid_signature(msg_hash, sig_r, sig_s)
 
     # bump nonce
     current_nonce.write(_current_nonce + 1)
