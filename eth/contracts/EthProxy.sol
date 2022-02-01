@@ -7,7 +7,7 @@ contract EthProxy {
     ITerabethiaCore terabethiaCore;
 
     // The selector of the "deposit" l1_handler.
-    uint256 constant CANISTER_ADDRESS = 0x00000000003000F10101;
+    uint256 constant CANISTER_ADDRESS = 0x00000000003001090101;
 
     /**
       Initializes the contract state.
