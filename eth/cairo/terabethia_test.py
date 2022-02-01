@@ -5,7 +5,7 @@ from starkware.starknet.testing.starknet import Starknet
 
 # The path to the contract source code.
 CONTRACT_FILE = os.path.join(
-    os.path.dirname(__file__), "terabethia.cairo")
+    os.path.dirname(__file__), "Terabethia.cairo")
 
 
 # The testing library uses python's asyncio. So the following
