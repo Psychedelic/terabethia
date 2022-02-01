@@ -88,6 +88,7 @@ const handleMessage = async (body: MessagePayload) => {
         MessageBody: JSON.stringify(tx),
         DelaySeconds: 900,
         MessageGroupId: 'starknet',
+        MessageDeduplicationId: tx.transaction_hash,
       }));
     } catch (e) {
       console.log('error after starknet tx submitted');
