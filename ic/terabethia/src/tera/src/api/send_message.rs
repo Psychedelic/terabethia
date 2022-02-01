@@ -50,15 +50,15 @@ mod tests {
         let receiver = Nat::from(num_bigint::BigUint::from_bytes_be(&receiver_slice[..]));
 
         // eth proxy address
-        let to_slice = hex::decode("Fa7FC33D0D5984d33e33AF5d3f504E33a251d52a").unwrap();
+        let to_slice = hex::decode("2e130e57021bb4dfb95eb4dd0dd8cfceb936148a").unwrap();
         let to = Principal::from_slice(&to_slice);
 
         // amount to withdraw
-        let amount = Nat::from(1000000);
+        let amount = Nat::from(300000);
         let payload = [receiver, amount].to_vec();
 
         // change caller to tcy4r-qaaaa-aaaab-qadyq-cai
-        let mock_caller = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
+        let mock_caller = Principal::from_text("tpni3-tiaaa-aaaab-qaeeq-cai").unwrap();
         mock_ctx.update_caller(mock_caller);
         let send_message = send(to, payload);
 
