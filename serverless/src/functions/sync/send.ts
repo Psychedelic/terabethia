@@ -63,31 +63,41 @@ const handleMessage = async (body: MessagePayload) => {
   try {
     tx = await terabethia.sendMessage(a, b, nextNonce);
   } catch (e) {
-    console.log('error during starknet call');
-    console.log(e);
+    // dump error response
     console.log(JSON.stringify(e.response));
-    return;
+    throw e;
   }
 
+  // we can NOT throw error once Starknet tx is submitted
+  // so errors in this block are silent
   if (tx && tx.transaction_hash) {
     console.log('Transaction was sent, tx hash: %s', tx.transaction_hash);
+    console.log('Next nonce', nextNonceBn);
 
-    if (nextNonceBn) {
-      await db.storeLastNonce(nextNonceBn);
+    try {
+      if (nextNonceBn) {
+        await db.storeLastNonce(nextNonceBn);
+      }
+
+      await db.storeTransaction(tx.transaction_hash, [key]);
+
+      // we need to make sure the tx was accepted
+      // so we delay another event
+      await sqsClient.send(new SendMessageCommand({
+        QueueUrl: envs.CHECK_QUEUE_URL,
+        MessageBody: JSON.stringify(tx),
+        DelaySeconds: 900,
+        MessageGroupId: 'starknet',
+      }));
+    } catch (e) {
+      console.log('error after starknet tx submitted');
+      console.log(e.message);
+      console.log(e);
     }
-
-    await db.storeTransaction(tx.transaction_hash, [key]);
-
-    // we need to make sure the tx was accepted
-    // so we delay another event
-    await sqsClient.send(new SendMessageCommand({
-      QueueUrl: envs.CHECK_QUEUE_URL,
-      MessageBody: JSON.stringify(tx),
-      DelaySeconds: 900,
-      MessageGroupId: 'starknet',
-    }));
   } else {
-    throw new Error('Starknet transaction was not successful.');
+    console.log('starknet transaction response');
+    console.log(tx);
+    throw new Error('Starknet transaction with no transaction_hash.');
   }
 };
 
