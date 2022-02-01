@@ -41,7 +41,7 @@ end
 # Initialise settings
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        implementation_addr : felt, approved_admin : felt, approved_operator : felt,
+        approved_admin : felt, approved_operator : felt, implementation_addr : felt,
         l1_contract_address : felt):
     # set admin account
     admin.write(value=approved_admin)
@@ -75,6 +75,16 @@ func set_implementation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
 
     # save new implementation contract
     implementation.write(value=implementation_address)
+    return ()
+end
+
+@external
+func set_admin{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        approved_admin : felt):
+    require_admin()
+
+    # save new implementation contract
+    admin.write(value=approved_admin)
     return ()
 end
 
