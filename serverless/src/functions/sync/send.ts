@@ -72,19 +72,20 @@ const handleMessage = async (body: MessagePayload) => {
   if (tx && tx.transaction_hash) {
     console.log('Transaction was sent, tx hash: %s', tx.transaction_hash);
 
+    if (nextNonceBn) {
+      await db.storeLastNonce(nextNonceBn);
+    }
+
+    await db.storeTransaction(tx.transaction_hash, [key]);
+
     // we need to make sure the tx was accepted
     // so we delay another event
     await sqsClient.send(new SendMessageCommand({
       QueueUrl: envs.CHECK_QUEUE_URL,
       MessageBody: JSON.stringify(tx),
       DelaySeconds: 900,
+      MessageGroupId: 'starknet',
     }));
-
-    if (nextNonceBn) {
-      await db.storeLastNonce(nextNonceBn);
-    }
-
-    await db.storeTransaction(tx.transaction_hash, [key]);
   } else {
     throw new Error('Starknet transaction was not successful.');
   }

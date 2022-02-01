@@ -63,6 +63,7 @@ export const main: ScheduledHandler = async () => {
       Id: m.msg_key,
       MessageBody: JSON.stringify(payload),
       MessageDeduplicationId: m.msg_key,
+      MessageGroupId: 'starknet',
     };
   });
 

@@ -30,6 +30,7 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
       QueueUrl: envs.QUEUE_URL,
       MessageBody: JSON.stringify(event.body),
       MessageDeduplicationId: event.body.hash,
+      MessageGroupId: 'ethereum',
     }));
 
     return formatJSONResponse({
@@ -37,7 +38,7 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
       body: { message: 'success' },
     });
   } catch (error) {
-    console.error('Exception on sns publish', error);
+    console.error('Exception on SQS publish', error);
 
     return formatJSONResponse({
       statusCode: 500,

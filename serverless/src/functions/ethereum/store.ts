@@ -1,6 +1,6 @@
 import 'source-map-support/register';
 
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { Terabethia, KMSIdentity } from '@libs/dfinity';
 import { Secp256k1PublicKey } from '@dfinity/identity';
 import { Principal } from '@dfinity/principal';
@@ -75,7 +75,7 @@ const handleL1Message = async (message: BlockNativePayload) => {
     // check if the hash actually exists on L1
     const number = await ethContract.messages(messageHash);
 
-    if (new BN(number).isZero()) {
+    if (number.isZero()) {
       throw new Error(`Message hash ${messageHash} is not valid.`);
     }
 
@@ -96,7 +96,9 @@ const handleL1Message = async (message: BlockNativePayload) => {
       payload,
     });
 
-    await terabethia.storeMessage(fromAddresPid, toAddressPid, nonce, payload);
+    const payloadBigInt = payload.map((p: BigNumber) => p.toBigInt());
+
+    await terabethia.storeMessage(fromAddresPid, toAddressPid, nonce.toBigInt(), payloadBigInt);
     await db.storeMessageHash(messageHash);
   });
 
