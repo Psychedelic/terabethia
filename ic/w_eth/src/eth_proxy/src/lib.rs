@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 const WETH_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
-const WETH_ADDRESS_ETH: &str = "0x2E130E57021Bb4dfb95Eb4Dd0dD8CFCeB936148a";
+const WETH_ADDRESS_ETH: &str = "0x2e130e57021bb4dfb95eb4dd0dd8cfceb936148a";
 
 pub type Nonce = Nat;
 
