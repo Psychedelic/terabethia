@@ -140,10 +140,13 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
                 match burn_txn {
                     Ok(result) => match result {
                         (Ok(txn_id),) => {
+                            let weth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
+                            let weth_eth_addr_pid = Principal::from_slice(&hex::decode(weth_addr_hex).unwrap());
+                        
                             let send_message: (Result<bool, String>,) = ic::call(
                                 Principal::from_str(TERA_ADDRESS).unwrap(),
                                 "send_message",
-                                (&eth_addr, &payload),
+                                (&weth_eth_addr_pid, &payload),
                             )
                             .await
                             .expect("sending message to L1 failed!");
