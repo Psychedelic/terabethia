@@ -397,7 +397,18 @@ resources:
           - Effect: Allow
             Principal:
               AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
-            Action: 'kms:*'
+            NotAction:
+              - 'kms:Sign'
+            Resource: '*'
+
+          # signatures can be only made by StarknetPollMessages or StoreMessage lambda
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StarknetPollMessages-${self:provider.region}-lambdaRole' 
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StoreMessage-${self:provider.region}-lambdaRole' 
+            Action:
+              - 'kms:Sign'
             Resource: '*'
 
         # secp256k elliptic curve

@@ -26,9 +26,6 @@ export class KMSIdentity extends SignIdentity {
     hash.update(blob);
     const message = new Uint8Array(hash.digest());
 
-    console.log('Message len', message.length);
-    console.log('Message', message);
-
     const command = new SignCommand({
       Message: message,
       MessageType: 'DIGEST',
