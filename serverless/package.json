@@ -21,6 +21,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.42.0",
     "@aws-sdk/client-kms": "^3.49.0",
+    "@aws-sdk/client-secrets-manager": "^3.49.0",
     "@aws-sdk/client-sns": "^3.42.0",
     "@aws-sdk/client-sqs": "^3.42.0",
     "@aws-sdk/lib-dynamodb": "^3.42.0",
@@ -33,6 +34,7 @@
     "@middy/http-json-body-parser": "^1.5.2",
     "@middy/sqs-json-body-parser": "^2.5.3",
     "@middy/sqs-partial-batch-failure": "^2.5.3",
+    "@types/lodash": "^4.14.178",
     "asn1js": "^2.2.0",
     "aws-lambda": "^1.0.7",
     "aws-sdk": "^2.1065.0",
@@ -43,6 +45,7 @@
     "ethers": "^5.5.2",
     "js-sha256": "^0.9.0",
     "json-schema-to-ts": "^1.6.5",
+    "lodash": "^4.17.21",
     "minimalistic-assert": "^1.0.1",
     "remove": "^0.1.5",
     "source-map-support": "^0.5.21",

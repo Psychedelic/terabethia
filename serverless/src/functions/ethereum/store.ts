@@ -7,60 +7,31 @@ import { Principal } from '@dfinity/principal';
 import TerabethiaAbi from '@libs/eth/abi/Terabethia.json';
 import { BlockNativePayload } from '@libs/blocknative';
 import EthereumDatabase from '@libs/dynamo/ethereum';
-import { sqsHandler } from '@libs/utils';
+import { sqsHandler, requireEnv } from '@libs/utils';
 import bluebird from 'bluebird';
 import BN from 'bn.js';
 import {
   KMSClient,
 } from '@aws-sdk/client-kms';
 
-const {
-  ETHEREUM_TABLE_NAME,
-  ETHEREUM_PROVIDER_URL,
-  CANISTER_ID,
-  QUEUE_URL,
-  ETHEREUM_CONTRACT,
-  KMS_KEY_ID,
-  KMS_PUBLIC_KEY,
-} = process.env;
-
-if (!ETHEREUM_TABLE_NAME) {
-  throw new Error('ETHEREUM_TABLE_NAME must be set');
-}
-
-if (!ETHEREUM_PROVIDER_URL) {
-  throw new Error('ETHEREUM_PROVIDER_URL must be set');
-}
-
-if (!ETHEREUM_CONTRACT) {
-  throw new Error('ETHEREUM_CONTRACT must be set');
-}
-
-if (!CANISTER_ID) {
-  throw new Error('CANISTER_ID must be set');
-}
-
-if (!QUEUE_URL) {
-  throw new Error('QUEUE_URL must be set');
-}
-
-if (!KMS_KEY_ID) {
-  throw new Error('KMS_KEY_ID must be set');
-}
-
-if (!KMS_PUBLIC_KEY) {
-  throw new Error('KMS_PUBLIC_KEY must be set');
-}
+const envs = requireEnv(['ETHEREUM_TABLE_NAME',
+  'ETHEREUM_PROVIDER_URL',
+  'CANISTER_ID',
+  'QUEUE_URL',
+  'ETHEREUM_CONTRACT',
+  'KMS_KEY_ID',
+  'KMS_PUBLIC_KEY',
+]);
 
 // Terabethia IC with KMS
 const kms = new KMSClient({});
-const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(KMS_PUBLIC_KEY, 'base64'));
-const identity = new KMSIdentity(publicKey, kms, KMS_KEY_ID);
-const terabethia = new Terabethia(CANISTER_ID, identity);
+const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(envs.KMS_PUBLIC_KEY, 'base64'));
+const identity = new KMSIdentity(publicKey, kms, envs.KMS_KEY_ID);
+const terabethia = new Terabethia(envs.CANISTER_ID, identity);
 // Terabethia ETH
-const db = new EthereumDatabase(ETHEREUM_TABLE_NAME);
-const provider = new ethers.providers.StaticJsonRpcProvider(ETHEREUM_PROVIDER_URL);
-const ethContract = new ethers.Contract(ETHEREUM_CONTRACT, TerabethiaAbi, provider);
+const db = new EthereumDatabase(envs.ETHEREUM_TABLE_NAME);
+const provider = new ethers.providers.StaticJsonRpcProvider(envs.ETHEREUM_PROVIDER_URL);
+const ethContract = new ethers.Contract(envs.ETHEREUM_CONTRACT, TerabethiaAbi, provider);
 
 const handleL1Message = async (message: BlockNativePayload) => {
   const { hash } = message;
@@ -132,4 +103,4 @@ const handleL1Message = async (message: BlockNativePayload) => {
   await db.storeTransaction(hash);
 };
 
-export const main = sqsHandler<BlockNativePayload>(handleL1Message, QUEUE_URL, undefined, 1);
+export const main = sqsHandler<BlockNativePayload>(handleL1Message, envs.QUEUE_URL, undefined, 1);

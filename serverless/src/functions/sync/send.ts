@@ -1,52 +1,55 @@
 import 'source-map-support/register';
 
-import { splitUint256, sqsHandler } from '@libs/utils';
+import { splitUint256, requireEnv, sqsHandler } from '@libs/utils';
 import StarknetDatabase from '@libs/dynamo/starknet';
 import TerabethiaStarknet from '@libs/starknet';
 import {
   SQSClient,
   SendMessageCommand,
 } from '@aws-sdk/client-sqs';
+import {
+  KMSClient,
+  DecryptCommand,
+  EncryptionAlgorithmSpec,
+} from '@aws-sdk/client-kms';
+import BN from 'bn.js';
 import { MessagePayload } from './poll';
 
-const {
-  STARKNET_ACCOUNT_ADDRESS,
-  STARKNET_CONTRACT_ADDRESS,
-  STARKNET_PRIVATE_KEY, QUEUE_URL, CHECK_QUEUE_URL,
-  STARKNET_TABLE_NAME,
-} = process.env;
+const envs = requireEnv([
+  'STARKNET_ACCOUNT_ADDRESS',
+  'STARKNET_CONTRACT_ADDRESS',
+  'STARKNET_PRIVATE_KEY',
+  'QUEUE_URL',
+  'CHECK_QUEUE_URL',
+  'STARKNET_TABLE_NAME',
+  'KMS_KEY_ID',
+]);
 
-if (!STARKNET_ACCOUNT_ADDRESS) {
-  throw new Error('STARKNET_ACCOUNT_ADDRESS must be set');
-}
-
-if (!STARKNET_CONTRACT_ADDRESS) {
-  throw new Error('STARKNET_CONTRACT_ADDRESS must be set');
-}
-
-if (!STARKNET_PRIVATE_KEY) {
-  throw new Error('STARKNET_PRIVATE_KEY must be set');
-}
-
-if (!QUEUE_URL) {
-  throw new Error('QUEUE_URL must be set');
-}
-
-if (!CHECK_QUEUE_URL) {
-  throw new Error('CHECK_QUEUE_URL must be set');
-}
-
-if (!STARKNET_TABLE_NAME) {
-  throw new Error('STARKNET_TABLE_NAME must be set');
-}
-
-const terabethia = new TerabethiaStarknet(STARKNET_ACCOUNT_ADDRESS, STARKNET_PRIVATE_KEY, STARKNET_CONTRACT_ADDRESS);
-
-const db = new StarknetDatabase(STARKNET_TABLE_NAME);
+const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 
 const sqsClient = new SQSClient({});
+const kmsClient = new KMSClient({});
+
+let terabethia: TerabethiaStarknet;
 
 const handleMessage = async (body: MessagePayload) => {
+  if (!terabethia) {
+    const command = new DecryptCommand({
+      CiphertextBlob: new Uint8Array(Buffer.from(envs.STARKNET_PRIVATE_KEY, 'base64')),
+      KeyId: envs.KMS_KEY_ID,
+      EncryptionAlgorithm: EncryptionAlgorithmSpec.RSAES_OAEP_SHA_256,
+    });
+
+    const res = await kmsClient.send(command);
+
+    if (!res.Plaintext) {
+      console.log('Unable to decrypt STARKNET_PRIVATE_KEY');
+      return;
+    }
+
+    terabethia = new TerabethiaStarknet(envs.STARKNET_ACCOUNT_ADDRESS, new BN(res.Plaintext), envs.STARKNET_CONTRACT_ADDRESS);
+  }
+
   const { hash, key } = body;
 
   const [a, b] = splitUint256(hash);
@@ -72,7 +75,7 @@ const handleMessage = async (body: MessagePayload) => {
     // we need to make sure the tx was accepted
     // so we delay another event
     await sqsClient.send(new SendMessageCommand({
-      QueueUrl: CHECK_QUEUE_URL,
+      QueueUrl: envs.CHECK_QUEUE_URL,
       MessageBody: JSON.stringify(tx),
       DelaySeconds: 900,
     }));
@@ -87,4 +90,4 @@ const handleMessage = async (body: MessagePayload) => {
   }
 };
 
-export const main = sqsHandler<MessagePayload>(handleMessage, QUEUE_URL, undefined, 1);
+export const main = sqsHandler<MessagePayload>(handleMessage, envs.QUEUE_URL, undefined, 1);

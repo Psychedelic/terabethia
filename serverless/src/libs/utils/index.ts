@@ -1,2 +1,2 @@
-export { splitUint256 } from './utils';
+export { splitUint256, requireEnv } from './utils';
 export { sqsHandler } from './sqsHandler';

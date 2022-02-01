@@ -195,16 +195,17 @@ functions:
     reservedConcurrency: 1
     handler: src/functions/sync/send.main
     environment:
-      # Terabethia Account
+      # Terabethia Signer Account contract
       STARKNET_ACCOUNT_ADDRESS: ${ssm:${self:custom.resourcePrefix}StarknetAccount}
+      # Terabethia Signer PK encrypted by Bootstrap KMS
+      STARKNET_PRIVATE_KEY: ${ssm:${self:custom.resourcePrefix}StarknetPrivateKey~true}
       # Terabethia Starknet Contract
       STARKNET_CONTRACT_ADDRESS: ${ssm:${self:custom.resourcePrefix}StarknetContract}
-      # Terabethia Signer Private Key (with access to Account)
-      STARKNET_PRIVATE_KEY: ${ssm:${self:custom.resourcePrefix}StarknetPrivateKey~true}
       QUEUE_URL: !Ref StarknetMessagesQueue
       # when transaction is submitted, we need to check for acceptance
       CHECK_QUEUE_URL: !Ref StarknetTransactionsQueue
       STARKNET_TABLE_NAME: !Ref StarknetTable
+      KMS_KEY_ID: !Ref BootstrapKey # decrypt with BootstrapKey
     events:
       - sqs:
           arn: !GetAtt
@@ -235,12 +236,18 @@ functions:
           - !GetAtt 
             - StarknetTable  
             - Arn
-
-  # dump principal id
+      - Effect: 'Allow'
+        Action:
+            - 'kms:Decrypt'
+        Resource:
+          - !GetAtt
+            - BootstrapKey
+            - Arn
+  # Expose principal id of KMS key pair
   KMSPrincipal:
     timeout: 10
     memorySize: 128
-    handler: src/functions/kms/principal.main
+    handler: src/functions/security/principal.main
     environment:
       KMS_KEY_ID: !Ref InternetComputerOperator
     events:
@@ -254,6 +261,23 @@ functions:
         Resource:
           - !GetAtt
             - InternetComputerOperator
+            - Arn
+
+  # Bootstrap Starknet
+  SecretsBootstrap:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/security/bootstrap.main
+    environment:
+      KMS_KEY_ID: !Ref BootstrapKey # encrypt with BootstrapKey
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+            - 'kms:Encrypt'
+            - 'kms:Decrypt'
+        Resource:
+          - !GetAtt
+            - BootstrapKey
             - Arn
 
 resources:
@@ -386,4 +410,48 @@ resources:
         # Enabled: true
         # EnableKeyRotation: false
 
+    # we do not want to expose any raw private keys
+    # so we bootstrap the key via lambda
+    # and encrypt it with this KMS Key 
+    BootstrapKey:
+      Type: AWS::KMS::Key
+      Properties: 
+        Description: Encrypt/Decrypt Bootstrap Secret
+        KeyPolicy:
+          Id: default
+          Statement:
+          # we will delegate IAM policies instead of admin / users / roles
+          # "The new key policy will not allow you to update the key policy in the future"
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            NotAction:
+              - 'kms:Decrypt'
+              - 'kms:Encrypt'
+            Resource: '*'
 
+          # allow encrypt only to SecretsBootstrap lambda
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-SecretsBootstrap-${self:provider.region}-lambdaRole' 
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+            Resource: '*'
+
+          # allow decrypt Starknet PK by specific lambda
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StarknetSendMessages-${self:provider.region}-lambdaRole' 
+            Action:
+              - 'kms:Decrypt'
+            Resource: '*'
+               
+        KeySpec: RSA_4096
+        # key is used only for sign/verify operations
+        KeyUsage: ENCRYPT_DECRYPT
+        # default settings
+        # MultiRegion: false
+        # PendingWindowInDays: 30
+        # Enabled: true
+        # EnableKeyRotation: false
