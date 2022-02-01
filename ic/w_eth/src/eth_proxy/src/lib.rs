@@ -4,16 +4,14 @@ use std::str::FromStr;
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 const WETH_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
-const WETH_ADDRESS_ETH: &str = "0xfa7fc33d0d5984d33e33af5d3f504e33a251d52a";
-
+const WETH_ADDRESS_ETH: &str = "0x2E130E57021Bb4dfb95Eb4Dd0dD8CFCeB936148a";
 pub type Nonce = Nat;
 
 pub type TxReceipt = Result<Nat, TxError>;
 
-#[derive(Serialize, Clone, CandidType, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq, Hash)]
 pub struct OutgoingMessage {
-    #[serde(with = "serde_bytes")]
-    pub(crate) msg_key: Vec<u8>,
+    pub(crate) msg_key: [u8; 32],
     pub(crate) msg_hash: String,
 }
 
@@ -186,10 +184,6 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     .await;
 
     if transfer.is_ok() {
-        print(format!("here transfer"));
-
-        // Log Transfer to our canister for auditing
-
         // 3) Burn the amount
         let burn_txn: (TxReceipt,) = match ic::call(weth_ic_addr_pid, "burn", (&amount,)).await {
             Ok(res) => res,
@@ -202,12 +196,9 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
         };
 
         match burn_txn {
-            (Ok(txn_id),) => {
-
-                print(format!("{}", txn_id));
-
+            (Ok(_),) => {
                 // 4) Send outgoing message to tera canister
-                let send_message: (OutgoingMessage,) = ic::call(
+                let send_message: (Result<OutgoingMessage, String>,) = ic::call(
                     Principal::from_str(TERA_ADDRESS).unwrap(),
                     "send_message",
                     (&eth_addr, &payload),
@@ -215,11 +206,10 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
                 .await
                 .expect("sending message to L1 failed!");
 
-                if let outgoing_message = send_message.0 {
-                    print(format!("{:#?}", outgoing_message));
-                    let msg_has_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(&outgoing_message.msg_key));
+                if let Ok(outgoing_message) = send_message.0 {
+                    let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(&outgoing_message.msg_key));
 
-                    return Ok(msg_has_as_nat);
+                    return Ok(msg_hash_as_nat);
                 }
             }
             (Err(error),) => return Err(error),
