@@ -9,9 +9,9 @@ import {
 import { Principal } from '@dfinity/principal';
 import TERA_FACTORY from './idls/tera/tera.did';
 import TerabethiaService, {
+  ConsumeMessageResponse,
   OutgoingMessagePair,
-  Result,
-  Result2,
+  StoreMessageResponse,
 } from './idls/tera/tera.d';
 
 export { KMSIdentity } from './kms';
@@ -62,7 +62,7 @@ export class Terabethia {
     to: Principal,
     nonce: bigint,
     payload: bigint[],
-  ): Promise<Result2> {
+  ): Promise<StoreMessageResponse> {
     return this.actor.store_message(from, to, nonce, payload);
   }
 
@@ -70,7 +70,7 @@ export class Terabethia {
     return this.actor.get_messages();
   }
 
-  removeMessages(messages: OutgoingMessagePair[]): Promise<Result> {
+  removeMessages(messages: OutgoingMessagePair[]): Promise<ConsumeMessageResponse> {
     return this.actor.remove_messages(messages);
   }
 }

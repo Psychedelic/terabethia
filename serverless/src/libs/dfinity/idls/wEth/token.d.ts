@@ -1,3 +1,4 @@
+/* eslint-disable semi */
 import type { Principal } from '@dfinity/principal';
 
 export type Operation =

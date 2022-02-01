@@ -311,4 +311,14 @@ mod tests {
 
         assert_eq!(result, expected_eth_value);
     }
+
+    #[test]
+    fn test_msg_key_nat_to_hex() {
+        let msg_key_nat = Nat::from_str("86_855_831_666_600_905_947_423_310_688_086_934_908_714_905_915_540_673_094_718_154_189_320_832_230_868").unwrap(); 
+        let msg_key = hex::encode(msg_key_nat.0.to_bytes_be());
+    
+        let expected_msg_key = String::from("c006a89a6884a2c0c24fbf1ed3df36600e96a4f540f1879fceb27d506a9525d4");
+
+        assert_eq!(expected_msg_key, msg_key);
+    }
 }
