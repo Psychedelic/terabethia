@@ -4,7 +4,7 @@ use ic_kit::ic::caller;
 
 use crate::{
     common::{
-        types::{Message, OutgoingMessage, OutgoingMessageHashParams},
+        types::{Message, OutgoingMessageHashParams, SendMessageResponse},
         utils::Keccak256HashFn,
     },
     tera::{ToNat, STATE},
@@ -12,7 +12,7 @@ use crate::{
 
 #[update(name = "send_message")]
 #[candid_method(update, rename = "send_message")]
-fn send(to: Principal, payload: Vec<Nat>) -> Result<OutgoingMessage, String> {
+fn send(to: Principal, payload: Vec<Nat>) -> SendMessageResponse {
     let caller = caller();
 
     let message = Message;
@@ -22,7 +22,7 @@ fn send(to: Principal, payload: Vec<Nat>) -> Result<OutgoingMessage, String> {
         payload: payload.clone(),
     });
 
-    STATE.with(|s| s.store_outgoing_message(msg_hash))
+    STATE.with(|s| SendMessageResponse(s.store_outgoing_message(msg_hash)))
 }
 
 #[cfg(test)]
@@ -62,7 +62,7 @@ mod tests {
         mock_ctx.update_caller(mock_caller);
         let send_message = send(to, payload);
 
-        assert!(send_message.is_ok());
+        assert!(send_message.0.is_ok());
 
         let get_messages = STATE.with(|s| s.get_messages());
 

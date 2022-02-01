@@ -58,7 +58,10 @@ impl OutgoingMessage {
         hasher.update(index_slice);
         hasher.update(msg_hash_slice);
         msg_key.copy_from_slice(&hasher.finalize());
-        OutgoingMessage { msg_key: msg_key.to_vec(), msg_hash }
+        OutgoingMessage {
+            msg_key: msg_key.to_vec(),
+            msg_hash,
+        }
     }
 }
 

@@ -2,12 +2,15 @@ use candid::candid_method;
 use ic_cdk_macros::{query, update};
 
 use super::admin::is_authorized;
-use crate::{common::types::OutgoingMessagePair, tera::STATE};
+use crate::{
+    common::types::{OutgoingMessagePair, RemoveMessagesResponse},
+    tera::STATE,
+};
 
 #[update(name = "remove_messages", guard = "is_authorized")]
 #[candid_method(update, rename = "remove_messages")]
-fn remove_messages(messages: Vec<OutgoingMessagePair>) -> Result<bool, String> {
-    STATE.with(|s| s.remove_messages(messages))
+fn remove_messages(messages: Vec<OutgoingMessagePair>) -> RemoveMessagesResponse {
+    STATE.with(|s| RemoveMessagesResponse(s.remove_messages(messages)))
 }
 
 #[query(name = "get_messages", guard = "is_authorized")]
@@ -63,7 +66,7 @@ mod tests {
 
         let remove_messages = remove_messages(messages_to_remove);
 
-        assert!(remove_messages.is_ok());
+        assert!(remove_messages.0.is_ok());
 
         let stored_messages = get_messages();
 

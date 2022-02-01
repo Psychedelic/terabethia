@@ -1,7 +1,19 @@
-use serde::Serialize;
 use ic_kit::candid::{CandidType, Deserialize, Nat};
+use serde::Serialize;
 
 pub type Nonce = Nat;
+
+#[derive(Serialize, CandidType, Deserialize)]
+pub struct ConsumeMessageResponse(pub(crate) Result<bool, String>);
+
+#[derive(Serialize, CandidType, Deserialize)]
+pub struct RemoveMessagesResponse(pub(crate) Result<bool, String>);
+
+#[derive(Serialize, CandidType, Deserialize)]
+pub struct SendMessageResponse(pub(crate) Result<OutgoingMessage, String>);
+
+#[derive(Serialize, CandidType, Deserialize)]
+pub struct StoreMessageResponse(pub(crate) Result<CallResult, String>);
 
 #[derive(CandidType, Deserialize)]
 pub struct IncomingMessageHashParams {

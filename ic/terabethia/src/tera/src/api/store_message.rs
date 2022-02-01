@@ -5,7 +5,7 @@ use ic_cdk_macros::update;
 use super::admin::is_authorized;
 use crate::{
     common::{
-        types::{CallResult, IncomingMessageHashParams, Message, Nonce},
+        types::{CallResult, IncomingMessageHashParams, Message, Nonce, StoreMessageResponse},
         utils::Keccak256HashFn,
     },
     tera::{ToNat, STATE},
@@ -18,10 +18,13 @@ async fn trigger_call(
     to: Principal,
     nonce: Nonce,
     payload: Vec<Nat>,
-) -> Result<CallResult, String> {
+) -> StoreMessageResponse {
     let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
     if nonce_exists {
-        return Err(format!("Transaction with nonce {} already exists!", nonce));
+        return StoreMessageResponse(Err(format!(
+            "Transaction with nonce {} already exists!",
+            nonce
+        )));
     }
 
     let message = Message;
@@ -35,17 +38,17 @@ async fn trigger_call(
     let message_exists = STATE.with(|s| s.message_exists(msg_hash));
 
     if message_exists.is_err() {
-        return Err(message_exists.err().unwrap());
+        return StoreMessageResponse(Err(message_exists.err().unwrap()));
     }
 
     let args_raw = encode_args((&from, &nonce, &payload)).unwrap();
 
     match api::call::call_raw(to, "handle_message", args_raw, 0).await {
-        Ok(x) => Ok(CallResult { r#return: x }),
-        Err((code, msg)) => Err(format!(
+        Ok(x) => StoreMessageResponse(Ok(CallResult { r#return: x })),
+        Err((code, msg)) => StoreMessageResponse(Err(format!(
             "An error happened during the call: {}: {}",
             code as u8, msg
-        )),
+        ))),
     }
 }
 
@@ -56,10 +59,13 @@ async fn store_message(
     to: Principal,
     nonce: Nonce,
     payload: Vec<Nat>,
-) -> Result<CallResult, String> {
+) -> StoreMessageResponse {
     let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
     if nonce_exists {
-        return Err(format!("Transaction with nonce {} already exists!", nonce));
+        return StoreMessageResponse(Err(format!(
+            "Transaction with nonce {} already exists!",
+            nonce
+        )));
     }
 
     let message = Message;
@@ -89,7 +95,7 @@ mod tests {
             .inject()
     }
 
-    async fn store() -> Result<CallResult, String> {
+    async fn store() -> StoreMessageResponse {
         let nonce = Nat::from(4);
 
         // receiver address ic
