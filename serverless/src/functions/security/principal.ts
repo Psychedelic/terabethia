@@ -2,6 +2,7 @@ import 'source-map-support/register';
 import {
   formatJSONResponse,
 } from '@libs/apiGateway';
+import { requireEnv } from '@libs/utils';
 import {
   KMSClient,
   GetPublicKeyCommand,
@@ -11,9 +12,7 @@ import { Secp256k1PublicKey } from '@dfinity/identity';
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import * as asn1js from 'asn1js';
 
-// @todo: dfinity/principal relies on this dependency
-// https://github.com/dfinity/agent-js/issues/522
-require('js-sha256');
+const envs = requireEnv(['KMS_KEY_ID']);
 
 function toArrayBuffer(buffer: Buffer): ArrayBuffer {
   const ab = new ArrayBuffer(buffer.length);
@@ -32,12 +31,10 @@ function publicKeyFromAsn1(buf: Buffer): Buffer {
   return Buffer.from(value.valueBlock.valueHex);
 }
 
-const { KMS_KEY_ID } = process.env;
-
 const kms = new KMSClient({});
 
 export const main: APIGatewayProxyHandlerV2 = async () => {
-  const command = new GetPublicKeyCommand({ KeyId: KMS_KEY_ID });
+  const command = new GetPublicKeyCommand({ KeyId: envs.KMS_KEY_ID });
   const res = await kms.send(command);
 
   if (!res.PublicKey) {

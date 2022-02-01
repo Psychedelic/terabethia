@@ -4,6 +4,7 @@ import {
   formatJSONResponse,
   ValidatedEventAPIGatewayProxyEvent,
 } from '@libs/apiGateway';
+import { requireEnv } from '@libs/utils';
 import { middyfy } from '@libs/lambda';
 import {
   SQSClient,
@@ -11,14 +12,7 @@ import {
 } from '@aws-sdk/client-sqs';
 import schema from './schema';
 
-const {
-  QUEUE_URL,
-} = process.env;
-
-if (!QUEUE_URL) {
-  throw new Error('QUEUE_URL must be set');
-}
-
+const envs = requireEnv(['QUEUE_URL']);
 const sqsClient = new SQSClient({});
 
 export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
@@ -33,7 +27,7 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
 
   try {
     await sqsClient.send(new SendMessageCommand({
-      QueueUrl: QUEUE_URL,
+      QueueUrl: envs.QUEUE_URL,
       MessageBody: JSON.stringify(event.body),
       MessageDeduplicationId: event.body.hash,
     }));

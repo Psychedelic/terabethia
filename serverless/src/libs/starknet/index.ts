@@ -1,6 +1,7 @@
 import {
   Provider, Signer, ec, stark, AddTransactionResponse, GetTransactionStatusResponse,
 } from 'starknet';
+import BN from 'bn.js';
 
 const { getSelectorFromName } = stark;
 
@@ -11,7 +12,7 @@ class TerabethiaStarknet {
 
   private address: string;
 
-  constructor(account: string, privateKey: string, address: string, network: NetworkName = 'georli-alpha') {
+  constructor(account: string, privateKey: BN, address: string, network: NetworkName = 'georli-alpha') {
     const provider = new Provider({ network });
     const keyPair = ec.getKeyPair(privateKey);
     const signer = new Signer(provider, account, keyPair);

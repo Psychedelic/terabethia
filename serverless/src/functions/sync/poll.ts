@@ -1,5 +1,6 @@
 import { ScheduledHandler } from 'aws-lambda';
 import StarknetDatabase from '@libs/dynamo/starknet';
+import { requireEnv } from '@libs/utils';
 import {
   SQSClient,
   SendMessageBatchCommand,
@@ -12,38 +13,22 @@ import {
   KMSClient,
 } from '@aws-sdk/client-kms';
 
-const {
-  CANISTER_ID, QUEUE_URL, STARKNET_TABLE_NAME, KMS_KEY_ID, KMS_PUBLIC_KEY,
-} = process.env;
-
-if (!CANISTER_ID) {
-  throw new Error('CANISTER_ID must be set');
-}
-
-if (!QUEUE_URL) {
-  throw new Error('QUEUE_URL must be set');
-}
-
-if (!STARKNET_TABLE_NAME) {
-  throw new Error('STARKNET_TABLE_NAME must be set');
-}
-
-if (!KMS_KEY_ID) {
-  throw new Error('KMS_KEY_ID must be set');
-}
-
-if (!KMS_PUBLIC_KEY) {
-  throw new Error('KMS_PUBLIC_KEY must be set');
-}
+const envs = requireEnv([
+  'CANISTER_ID',
+  'QUEUE_URL',
+  'STARKNET_TABLE_NAME',
+  'KMS_KEY_ID',
+  'KMS_PUBLIC_KEY',
+]);
 
 // Terabethia IC with KMS
 const kms = new KMSClient({});
-const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(KMS_PUBLIC_KEY, 'base64'));
-const identity = new KMSIdentity(publicKey, kms, KMS_KEY_ID);
-const terabethia = new Terabethia(CANISTER_ID, identity);
+const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(envs.KMS_PUBLIC_KEY, 'base64'));
+const identity = new KMSIdentity(publicKey, kms, envs.KMS_KEY_ID);
+const terabethia = new Terabethia(envs.CANISTER_ID, identity);
 
 const sqsClient = new SQSClient({});
-const db = new StarknetDatabase(STARKNET_TABLE_NAME);
+const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 
 export interface MessagePayload {
   key: string;
@@ -87,7 +72,7 @@ export const main: ScheduledHandler = async () => {
   }
 
   const command = new SendMessageBatchCommand({
-    QueueUrl: QUEUE_URL,
+    QueueUrl: envs.QUEUE_URL,
     Entries: entries,
   });
 

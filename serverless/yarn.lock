@@ -151,6 +151,46 @@
     "@aws-sdk/util-utf8-node" "3.49.0"
     tslib "^2.3.0"
 
+"@aws-sdk/client-secrets-manager@^3.49.0":
+  version "3.49.0"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/client-secrets-manager/-/client-secrets-manager-3.49.0.tgz#7644919575d7edf641badde1714ec5c1b28df6c7"
+  integrity sha512-CIAS69cR9QscJLWXJxTSEPCb6znZ+p0PuSxbyeBpOAviqL9NzRaZdWCyB00ve+KnpXCbMebRPdVkhCdJJ4OrAw==
+  dependencies:
+    "@aws-crypto/sha256-browser" "2.0.0"
+    "@aws-crypto/sha256-js" "2.0.0"
+    "@aws-sdk/client-sts" "3.49.0"
+    "@aws-sdk/config-resolver" "3.49.0"
+    "@aws-sdk/credential-provider-node" "3.49.0"
+    "@aws-sdk/fetch-http-handler" "3.49.0"
+    "@aws-sdk/hash-node" "3.49.0"
+    "@aws-sdk/invalid-dependency" "3.49.0"
+    "@aws-sdk/middleware-content-length" "3.49.0"
+    "@aws-sdk/middleware-host-header" "3.49.0"
+    "@aws-sdk/middleware-logger" "3.49.0"
+    "@aws-sdk/middleware-retry" "3.49.0"
+    "@aws-sdk/middleware-serde" "3.49.0"
+    "@aws-sdk/middleware-signing" "3.49.0"
+    "@aws-sdk/middleware-stack" "3.49.0"
+    "@aws-sdk/middleware-user-agent" "3.49.0"
+    "@aws-sdk/node-config-provider" "3.49.0"
+    "@aws-sdk/node-http-handler" "3.49.0"
+    "@aws-sdk/protocol-http" "3.49.0"
+    "@aws-sdk/smithy-client" "3.49.0"
+    "@aws-sdk/types" "3.49.0"
+    "@aws-sdk/url-parser" "3.49.0"
+    "@aws-sdk/util-base64-browser" "3.49.0"
+    "@aws-sdk/util-base64-node" "3.49.0"
+    "@aws-sdk/util-body-length-browser" "3.49.0"
+    "@aws-sdk/util-body-length-node" "3.49.0"
+    "@aws-sdk/util-defaults-mode-browser" "3.49.0"
+    "@aws-sdk/util-defaults-mode-node" "3.49.0"
+    "@aws-sdk/util-user-agent-browser" "3.49.0"
+    "@aws-sdk/util-user-agent-node" "3.49.0"
+    "@aws-sdk/util-utf8-browser" "3.49.0"
+    "@aws-sdk/util-utf8-node" "3.49.0"
+    tslib "^2.3.0"
+    uuid "^8.3.2"
+
 "@aws-sdk/client-sns@^3.42.0":
   version "3.42.0"
   resolved "https://registry.npmjs.org/@aws-sdk/client-sns/-/client-sns-3.42.0.tgz"
@@ -3947,7 +3987,7 @@
   dependencies:
     "@types/lodash" "*"
 
-"@types/lodash@*":
+"@types/lodash@*", "@types/lodash@^4.14.178":
   version "4.14.178"
   resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.178.tgz#341f6d2247db528d4a13ddbb374bcdc80406f4f8"
   integrity sha512-0d5Wd09ItQWH1qFbEyQ7oTQ3GZrMfth5JkbN3EvTKLXcHLRDSXeLnlvlOn0wvxVIwK5o2M8JzP/OWz7T3NRsbw==
@@ -6453,14 +6493,7 @@ ecc-jsbn@~0.1.1:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
 
-ecdsa-sig-formatter@1.0.11:
-  version "1.0.11"
-  resolved "https://registry.npmjs.org/ecdsa-sig-formatter/-/ecdsa-sig-formatter-1.0.11.tgz"
-  integrity sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==
-  dependencies:
-    safe-buffer "^5.0.1"
-
-ecdsa-sig-formatter@^1.0.11:
+ecdsa-sig-formatter@1.0.11, ecdsa-sig-formatter@^1.0.11:
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/ecdsa-sig-formatter/-/ecdsa-sig-formatter-1.0.11.tgz#ae0f0fa2d85045ef14a817daa3ce9acd0489e5bf"
   integrity sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==
@@ -9774,7 +9807,7 @@ lodash.union@^4.6.0:
 
 lodash@4.17.x, lodash@^4.17.0, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.21, lodash@^4.17.4, lodash@^4.7.0:
   version "4.17.21"
-  resolved "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
 
 log-node@^8.0.2:
