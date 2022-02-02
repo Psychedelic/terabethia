@@ -1,13 +1,18 @@
 type CallResult = record { return : vec nat8 };
-type OutgoingMessage = record { id : nat; hash : text; produced : bool };
-type Result = variant { Ok : bool; Err : text };
-type Result_1 = variant { Ok : CallResult; Err : text };
+type ConsumeMessageResponse = variant { Ok : bool; Err : text };
+type OutgoingMessage = record { msg_hash : text; msg_key : vec nat8 };
+type OutgoingMessagePair = record { msg_hash : text; msg_key : text };
+type SendMessageResponse = variant { Ok : OutgoingMessage; Err : text };
+type StoreMessageResponse = variant { Ok : CallResult; Err : text };
 service : {
   authorize : (principal) -> ();
-  consume_message : (principal, vec nat) -> (Result);
-  get_messages : () -> (vec OutgoingMessage);
-  remove_messages : (vec nat) -> (Result);
-  send_message : (principal, vec nat) -> (Result);
-  store_message : (principal, principal, vec nat) -> (Result_1);
-  trigger_call : (principal, principal, vec nat) -> (Result_1);
+  consume_message : (principal, nat, vec nat) -> (ConsumeMessageResponse);
+  get_messages : () -> (vec OutgoingMessagePair) query;
+  get_nonces : () -> (vec nat) query;
+  remove_messages : (vec OutgoingMessagePair) -> (ConsumeMessageResponse);
+  send_message : (principal, vec nat) -> (SendMessageResponse);
+  store_message : (principal, principal, nat, vec nat) -> (
+      StoreMessageResponse,
+    );
+  trigger_call : (principal, principal, nat, vec nat) -> (StoreMessageResponse);
 }

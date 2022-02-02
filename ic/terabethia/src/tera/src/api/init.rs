@@ -1,7 +1,7 @@
-use ic_cdk::caller;
 use ic_cdk_macros::init;
+use ic_kit::ic::caller;
 
-use crate::STATE;
+use crate::tera::STATE;
 
 #[init]
 fn init() {

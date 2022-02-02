@@ -32,3 +32,14 @@ npx solhint 'contracts/**/*.sol'
 npx solhint 'contracts/**/*.sol' --fix
 ```
 
+## Starknet
+
+```sh
+npx hardhat starknet-compile
+
+# run tests
+pytest cairo/terabethia_test.py
+
+# deploy to testnet
+npx hardhat starknet-deploy starknet-artifacts/cairo/terabethia.cairo/terabethia.json --starknet-network alpha-goerli
+```

@@ -1,92 +1,76 @@
-import fetch from "cross-fetch";
+import fetch from 'cross-fetch';
 import {
   Actor,
   ActorSubclass,
   HttpAgent,
   HttpAgentOptions,
-} from "@dfinity/agent";
-import { config } from "@libs/config";
-import { Principal } from "@dfinity/principal";
-import { Ed25519KeyIdentity } from "@dfinity/identity";
+  SignIdentity,
+} from '@dfinity/agent';
+import { Principal } from '@dfinity/principal';
+import TERA_FACTORY from './idls/tera/tera.did';
+import TerabethiaService, {
+  ConsumeMessageResponse,
+  OutgoingMessagePair,
+  StoreMessageResponse,
+} from './idls/tera/tera.d';
 
-import TERA_FACTORY from "./idls/tera/tera.did";
-import _TERA_SERVICE, {
-  OutgoingMessage,
-  Result,
-  Result_1,
-} from "./idls/tera/tera";
+export { KMSIdentity } from './kms';
 
 export interface ActorParams {
   host: string;
   canisterId: string;
-  idlFactory: IdlFactory;
 }
 
-export const Hosts = {
-  mainnet: "https://ic0.app",
-  local: "http://localhost:8000",
-};
-
-type IdlFactory = ({ IDL }: { IDL: any }) => any;
-
-const createActor = <T>({
+const createActor = ({
   host,
   canisterId,
-  idlFactory,
-}: {
-  host: string;
-  canisterId: string;
-  idlFactory: IdlFactory;
-}): ActorSubclass<T> => {
-  let identity = Ed25519KeyIdentity.generate();
-
-  if (config.TERA_AGENT_KEY_PAIR) {
-    identity = Ed25519KeyIdentity.fromJSON(config.TERA_AGENT_KEY_PAIR);
-  }
-
-  console.log("id pid", identity.getPrincipal().toText());
-
+}: ActorParams, identity: SignIdentity): ActorSubclass<TerabethiaService> => {
   const agent = new HttpAgent({
     host,
     fetch,
     identity,
   } as unknown as HttpAgentOptions);
 
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== 'production') {
     try {
       agent.fetchRootKey();
     } catch (err) {
       console.warn(
-        "Oops! Unable to fetch root key, is the local replica running?"
+        'Oops! Unable to fetch root key, is the local replica running?',
       );
       console.error(err);
     }
   }
 
-  return Actor.createActor(idlFactory, {
+  return Actor.createActor<TerabethiaService>(TERA_FACTORY, {
     agent,
     canisterId,
   });
 };
+export class Terabethia {
+  private actor: ActorSubclass<TerabethiaService>;
 
-const teraCanister = createActor<_TERA_SERVICE>({
-  host: Hosts.mainnet,
-  canisterId: config.TERA_CANISTER_ID,
-  idlFactory: TERA_FACTORY,
-});
+  constructor(canisterId: string, identity: SignIdentity, host = 'https://ic0.app') {
+    this.actor = createActor({
+      host,
+      canisterId,
+    }, identity);
+  }
 
-export const Tera = {
-  storeMessage: async (
+  storeMessage(
     from: Principal,
     to: Principal,
+    nonce: bigint,
     payload: bigint[],
-  ): Promise<Result_1> => {
-    return await teraCanister.store_message(from, to, payload);
-  },
-  getMessages: async (): Promise<OutgoingMessage[]> => {
-    return await teraCanister.get_messages();
-  },
-  removeMessages: async (messages: Array<bigint>): Promise<Result> => {
-    return await teraCanister.remove_messages(messages);
-  },
-};
+  ): Promise<StoreMessageResponse> {
+    return this.actor.store_message(from, to, nonce, payload);
+  }
+
+  getMessages(): Promise<OutgoingMessagePair[]> {
+    return this.actor.get_messages();
+  }
+
+  removeMessages(messages: OutgoingMessagePair[]): Promise<ConsumeMessageResponse> {
+    return this.actor.remove_messages(messages);
+  }
+}

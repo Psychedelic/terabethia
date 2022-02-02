@@ -1,20 +1,19 @@
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-import "./IStarknetMessaging.sol";
+import "./ITerabethiaCore.sol";
 
 contract EthProxy {
     // The StarkNet core contract.
-    IStarknetMessaging starknetCore;
+    ITerabethiaCore terabethiaCore;
 
     // The selector of the "deposit" l1_handler.
-    uint256 constant CANISTER_ADDRESS = 0x00000000003000F10101;
+    uint256 constant CANISTER_ADDRESS = 0x00000000003001090101;
 
     /**
       Initializes the contract state.
     */
-    constructor(IStarknetMessaging starknetCore_) public {
-        starknetCore = starknetCore_;
+    constructor(ITerabethiaCore terabethiaCore_) {
+        terabethiaCore = terabethiaCore_;
     }
 
     function withdraw(uint256 amount) external {
@@ -25,7 +24,7 @@ contract EthProxy {
 
         // Consume the message from the IC
         // This will revert the (Ethereum) transaction if the message does not exist.
-        starknetCore.consumeMessage(CANISTER_ADDRESS, payload);
+        terabethiaCore.consumeMessage(CANISTER_ADDRESS, payload);
 
         // withdraw eth
         require(
@@ -60,6 +59,6 @@ contract EthProxy {
         payload[1] = deposit_amount;
 
         // Send the message to the IC
-        starknetCore.sendMessage(CANISTER_ADDRESS, payload);
+        terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
     }
 }

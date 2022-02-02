@@ -1,30 +1,71 @@
 use candid::Nat;
 use sha3::{Digest, Keccak256};
 
-pub fn calculate_hash(from: Nat, to: Nat, payload: Vec<Nat>) -> String {
-    let mut data = vec![from, to, Nat::from(payload.len())];
-    data.extend(payload);
+use super::types::{IncomingMessageHashParams, Message, OutgoingMessageHashParams};
 
-    let data_encoded: Vec<Vec<u8>> = data
-        .clone()
-        .into_iter()
-        .map(|x| {
-            // take a slice of 32
-            let f = [0u8; 32];
-            let slice = &x.0.to_bytes_be()[..];
-            // calculate zero values padding
-            let l = 32 - slice.len();
-            [&f[..l], &slice].concat()
-        })
-        .collect();
+pub trait Keccak256HashFn<T> {
+    fn calculate_hash(&self, params: T) -> String;
+}
 
-    let concated = data_encoded.concat().to_vec();
+impl Keccak256HashFn<IncomingMessageHashParams> for Message {
+    fn calculate_hash(&self, params: IncomingMessageHashParams) -> String {
+        let mut data = vec![
+            params.from,
+            params.to,
+            params.nonce,
+            Nat::from(params.payload.len()),
+        ];
+        data.extend(params.payload);
 
-    let mut hasher = Keccak256::new();
+        let data_encoded: Vec<Vec<u8>> = data
+            .clone()
+            .into_iter()
+            .map(|x| {
+                // take a slice of 32
+                let f = [0u8; 32];
+                let slice = &x.0.to_bytes_be()[..];
+                // calculate zero values padding
+                let l = 32 - slice.len();
+                [&f[..l], &slice].concat()
+            })
+            .collect();
 
-    hasher.update(concated);
+        let concated = data_encoded.concat().to_vec();
+        let mut hasher = Keccak256::new();
 
-    let result = hasher.finalize();
+        hasher.update(concated);
 
-    hex::encode(result.to_vec())
+        let result = hasher.finalize();
+
+        hex::encode(result.to_vec())
+    }
+}
+
+impl Keccak256HashFn<OutgoingMessageHashParams> for Message {
+    fn calculate_hash(&self, params: OutgoingMessageHashParams) -> String {
+        let mut data = vec![params.from, params.to, Nat::from(params.payload.len())];
+        data.extend(params.payload);
+
+        let data_encoded: Vec<Vec<u8>> = data
+            .clone()
+            .into_iter()
+            .map(|x| {
+                // take a slice of 32
+                let f = [0u8; 32];
+                let slice = &x.0.to_bytes_be()[..];
+                // calculate zero values padding
+                let l = 32 - slice.len();
+                [&f[..l], &slice].concat()
+            })
+            .collect();
+
+        let concated = data_encoded.concat().to_vec();
+        let mut hasher = Keccak256::new();
+
+        hasher.update(concated);
+
+        let result = hasher.finalize();
+
+        hex::encode(result.to_vec())
+    }
 }

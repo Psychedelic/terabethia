@@ -1,28 +1,46 @@
-import type { Principal } from "@dfinity/principal";
-export interface CallResult {
-  return: Array<number>;
-}
+/* eslint-disable semi */
+import type { Principal } from '@dfinity/principal';
+
+export interface CallResult { 'return' : Array<number> }
+export type ConsumeMessageResponse = { 'Ok' : boolean } |
+  { 'Err' : string };
 export interface OutgoingMessage {
-  id: bigint;
-  hash: string;
-  produced: boolean;
+  'msg_hash' : string,
+  'msg_key' : Array<number>,
 }
-export type Result = { Ok: boolean } | { Err: string };
-export type Result_1 = { Ok: CallResult } | { Err: string };
+export interface OutgoingMessagePair {
+  'msg_hash' : string,
+  'msg_key' : string,
+}
+export type SendMessageResponse = { 'Ok' : OutgoingMessage } |
+  { 'Err' : string };
+export type StoreMessageResponse = { 'Ok' : CallResult } |
+  { 'Err' : string };
 export default interface _SERVICE {
-  authorize: (arg_0: Principal) => Promise<undefined>;
-  consume_message: (arg_0: Principal, arg_1: Array<bigint>) => Promise<Result>;
-  get_messages: () => Promise<Array<OutgoingMessage>>;
-  remove_messages: (arg_0: Array<bigint>) => Promise<Result>;
-  send_message: (arg_0: Principal, arg_1: Array<bigint>) => Promise<Result>;
-  store_message: (
-    arg_0: Principal,
-    arg_1: Principal,
-    arg_2: Array<bigint>
-  ) => Promise<Result_1>;
-  trigger_call: (
-    arg_0: Principal,
-    arg_1: Principal,
-    arg_2: Array<bigint>
-  ) => Promise<Result_1>;
+  'authorize' : (arg_0: Principal) => Promise<undefined>,
+  'consume_message' : (
+      arg_0: Principal,
+      arg_1: bigint,
+      arg_2: Array<bigint>,
+    ) => Promise<ConsumeMessageResponse>,
+  'get_messages' : () => Promise<Array<OutgoingMessagePair>>,
+  'get_nonces' : () => Promise<Array<bigint>>,
+  'remove_messages' : (arg_0: Array<OutgoingMessagePair>) => Promise<
+      ConsumeMessageResponse
+    >,
+  'send_message' : (arg_0: Principal, arg_1: Array<bigint>) => Promise<
+      SendMessageResponse
+    >,
+  'store_message' : (
+      arg_0: Principal,
+      arg_1: Principal,
+      arg_2: bigint,
+      arg_3: Array<bigint>,
+    ) => Promise<StoreMessageResponse>,
+  'trigger_call' : (
+      arg_0: Principal,
+      arg_1: Principal,
+      arg_2: bigint,
+      arg_3: Array<bigint>,
+    ) => Promise<StoreMessageResponse>,
 }

@@ -1,39 +1,17 @@
-use candid::Nat;
-use ic_cdk::export::candid::{CandidType, Principal};
-use serde::Deserialize;
-use std::{cell::RefCell, collections::HashMap};
-
-use crate::common::types::{CallResult, OutgoingMessage};
-
-pub mod api;
+mod api;
 mod common;
 mod tera;
 mod upgrade;
-
-thread_local! {
-    static STATE: TerabetiaState = TerabetiaState::default();
-}
-
-const MESSAGE_PRODUCED: bool = true;
-
-#[derive(CandidType, Deserialize, Default)]
-pub struct TerabetiaState {
-    // incoming messages from L1
-    pub messages: RefCell<HashMap<String, u32>>,
-
-    // outgoing messages
-    pub messages_out: RefCell<HashMap<u64, (String, bool)>>,
-    pub message_index: RefCell<u64>,
-
-    pub authorized: RefCell<Vec<Principal>>,
-}
 
 #[cfg(any(target_arch = "wasm32", test))]
 fn main() {}
 
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
-    candid::export_service!();
+    use crate::common::types::*;
+    use candid::{Nat, Principal};
+
+    ic_kit::candid::export_service!();
     std::print!("{}", __export_service());
 }
 
@@ -42,20 +20,20 @@ mod tests {
     use candid::{Nat, Principal};
     use std::str::FromStr;
 
-    pub trait ToNat {
-        fn to_nat(&self) -> Nat;
-    }
-
-    impl ToNat for Principal {
-        fn to_nat(&self) -> Nat {
-            Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-        }
-    }
+    use crate::{
+        common::{
+            types::{IncomingMessageHashParams, Message},
+            utils::Keccak256HashFn,
+        },
+        tera::FromNat,
+        tera::ToNat,
+    };
 
     #[test]
     fn message_hash() {
         let from_principal = Principal::from_text("rdbii-uiaaa-aaaab-qadva-cai").unwrap();
 
+        let nonce = Nat::from(4);
         let from = from_principal.to_nat();
 
         // eth address
@@ -69,7 +47,14 @@ mod tests {
         ]
         .to_vec();
 
-        let msg_hash = calculate_hash(from, to, payload);
+        let message = Message;
+        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+            from,
+            to,
+            nonce,
+            payload,
+        });
+
         let msg_hash_expected = "c6161e9e668869b9cf3cea759e3dfcf6318c224b3ca4622c2163ea01ee761fb3";
 
         assert_eq!(msg_hash, msg_hash_expected);
@@ -77,6 +62,7 @@ mod tests {
 
     #[test]
     fn deposit_message_hash() {
+        let nonce = Nat::from(4);
         let to_principal = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
         let to = to_principal.to_nat();
 
@@ -91,9 +77,46 @@ mod tests {
         ]
         .to_vec();
 
-        let msg_hash = calculate_hash(from, to, payload);
+        let message = Message;
+        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+            from,
+            to,
+            nonce,
+            payload,
+        });
         let msg_hash_expected = "bc979e70fa8f9743ae0515d2bc10fed93108a80a1c84450c4e79a3e83825fc45";
 
         assert_eq!(msg_hash, msg_hash_expected);
+    }
+
+    #[test]
+    fn user_principal_padding() {
+        let slice =
+            hex::decode("B2BF35A84FAC4062A1C0BC4F8891A4AF09C5E05E4155CAE6355B2402").unwrap();
+
+        let n = Nat::from(num_bigint::BigUint::from_bytes_be(&slice[..]));
+
+        assert_eq!(slice.len(), 28);
+
+        let p = Principal::from_nat(n);
+
+        let p_expected = "kyxzn-5aawk-7tlkc-pvrag-fioax-rhyre-nev4e-4lyc6-ifk4v-zrvlm-sae";
+
+        assert_eq!(p.to_text(), p_expected);
+    }
+
+    #[test]
+    fn canister_principal_padding() {
+        let slice = hex::decode("3000F10101").unwrap();
+
+        let n = Nat::from(num_bigint::BigUint::from_bytes_be(&slice[..]));
+
+        assert_eq!(slice.len(), 5);
+
+        let p = Principal::from_nat(n);
+
+        let p_expected = "tcy4r-qaaaa-aaaab-qadyq-cai";
+
+        assert_eq!(p.to_text(), p_expected);
     }
 }

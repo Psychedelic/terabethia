@@ -1,5 +1,17 @@
-import type { Principal } from "@dfinity/principal";
+/* eslint-disable semi */
+import type { Principal } from '@dfinity/principal';
 
+export type Operation =
+  | { Approve: null }
+  | { Burn: null }
+  | { Mint: null }
+  | { Transfer: null }
+  | { TransferFrom: null };
+
+export type TransactionStatus =
+  | { Failed: null }
+  | { Succeeded: null }
+  | { Inprogress: null };
 export interface Metadata {
   fee: bigint;
   decimals: number;
@@ -21,12 +33,12 @@ export interface OpRecord {
   index: bigint;
   amount: bigint;
 }
-export type Operation =
-  | { Approve: null }
-  | { Burn: null }
-  | { Mint: null }
-  | { Transfer: null }
-  | { TransferFrom: null };
+
+export type TxError =
+  | { InsufficientAllowance: null }
+  | { InsufficientBalance: null }
+  | { Unauthorized: null };
+
 export type Result = { Ok: bigint } | { Err: TxError };
 export interface TokenInfo {
   deploy_time: bigint;
@@ -36,14 +48,7 @@ export interface TokenInfo {
   metadata: Metadata;
   cycles: bigint;
 }
-export type TransactionStatus =
-  | { Failed: null }
-  | { Succeeded: null }
-  | { Inprogress: null };
-export type TxError =
-  | { InsufficientAllowance: null }
-  | { InsufficientBalance: null }
-  | { Unauthorized: null };
+
 export default interface _SERVICE {
   allowance: (arg_0: Principal, arg_1: Principal) => Promise<bigint>;
   approve: (arg_0: Principal, arg_1: bigint) => Promise<Result>;

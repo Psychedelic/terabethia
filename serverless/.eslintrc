@@ -23,7 +23,19 @@
       "ignoreUrls": true,
       "ignoreStrings": true,
       "ignoreTemplateLiterals": true
-    }]
+    }],
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "never",
+        "jsx": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+    ],
+    "no-shadow": "off",
+    "@typescript-eslint/no-shadow": ["error"]
   },
   "parser": "@typescript-eslint/parser",
   "env": {},
@@ -33,7 +45,8 @@
       "alias": {
         "map": [
           ["@src", "./src"],
-          ["@tests", "./tests"]
+          ["@tests", "./tests"],
+          ["@libs", "./src/libs"]
         ],
         "extensions": [
           ".ts",

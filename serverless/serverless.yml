@@ -1,8 +1,8 @@
-service:
-  name: terabethia
+service: terabethia
 
 provider:
   name: aws
+  profile: terabethia
   runtime: nodejs14.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-west-2'}
@@ -10,63 +10,26 @@ provider:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
     DEBUG: '*'
-    QUEUE_URL: !Ref TeraQueue
     AWS_STAGE: ${self:provider.stage}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
     DYNAMO_LOCAL_PORT: ${self:custom.dynamodb.start.port}
-    ETH_L1_MESSAGE_TOPIC_NAME: ${self:custom.EthL1MessageTopic}
-    SNS_URL: ${self:custom.serverless-offline-sns.sns-endpoint}
-    TERA_AGENT_KEY_PAIR: "${ssm:tera-agent-identity-key-pair-dev~true}"
-    ETH_L1_MESSAGE_TOPIC_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:custom.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.EthL1MessageTopic}" ] ]  }
-  iam:
-    role:
-      statements:
-        - Effect: 'Allow'
-          Action:
-            - "sqs:SendMessage"
-            - "sqs:DeleteMessage"
-          Resource:
-            - !GetAtt
-              - TeraQueue
-              - Arn
-        - Effect: Allow
-          Action:
-            - SNS:Publish
-            - SNS:Subscribe
-          Resource: "*"
-        - Effect: 'Allow'
-          Action:
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:GetItem
-            - dynamodb:PutItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-            - dynamodb:BatchWriteItem
-          Resource: 
-            - !GetAtt 
-              - TeraL1StateTable  
-              - Arn
 
 custom:
-  region: ${opt:region, self:provider.region}
-  EthL1MessageTopic: eth-l1-message-${self:service.name}-${self:provider.stage}-topic.fifo
-  resourceSuffix: ${self:service.name}-${self:provider.stage}
-  deletionPolicy:
-    default: Delete
-    staging: Retain
-    prod: Retain
-  updateReplacePolicy:
-    default: Delete
-    staging: Retain
-    prod: Retain
+  stagePrefix:
+    dev: TerabethiaTestnet
+    prd: TerabethiaMainnet
+
+  resourcePrefix: ${self:custom.stagePrefix.${self:provider.stage}}
+  
+  # stack termination protection
   serverlessTerminationProtection:
-  # sls remove --force
     stages:
-      - prod
+      - prd
+      - dev
   domain:
-    dev: ${self:service.name}-dev.psychedelic.ooo
-    prod: ${self:service.name}.psychedelic.ooo
+    dev: terabethia-dev.psychedelic.ooo
+    prd: terabethia.psychedelic.ooo
+
   # ToDo {botch} confirm domains
   # customDomain:
   #   domainName: ${self:custom.domain.${opt:stage, 'dev'}}
@@ -111,113 +74,446 @@ plugins:
 package:
   individually: true
 
+
 functions:
-  BlockNativeEventHook:
+  #
+  # L1 -> L2 messages, capture transactions from Ethereum
+  #
+  ReceiveMessage:
     timeout: 10
     memorySize: 128
-    handler: src/functions/blocknative/handler.main
+    handler: src/functions/ethereum/blockNative.main
     environment:
-      AWS_ACCOUNT_ID: ${aws:accountId}
+      QUEUE_URL: !Ref EthereumTxQueue
     events:
       - http:
           method: POST
           path: /hook
-  ReceiveMessageFromL1:
-    timeout: 30
+          request:
+            schema:
+              application/json: ${file(src/functions/ethereum/schema_json.json)}
+    # allow sending messages to EthereumTxQueue
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 'sqs:SendMessage'
+        Resource:
+          - !GetAtt
+            - EthereumTxQueue
+            - Arn
+  # send unique & valid messages to Terabethia Canister
+  # ! do not rename ! 
+  StoreMessage:
+    timeout: 120
     memorySize: 128
-    handler: src/functions/teraQueue/handler.main
+    handler: src/functions/ethereum/store.main
+    reservedConcurrency: 1
     environment:
-      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
+      ETHEREUM_TABLE_NAME: !Ref EthereumTable
+      # Ethereum Provider API URL (only for querying L1 state)
+      ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl~true}
+      # AWS KMS Key ID, IC Operator
+      KMS_KEY_ID: !Ref InternetComputerOperator
+      # AWS KMS Public Key (base64 encoded), IC Operator
+      KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC~true}
+      # Terabethia L1 Contract ID
+      ETHEREUM_CONTRACT: ${ssm:${self:custom.resourcePrefix}EthereumContract}
+      # Terabethia Canister ID
+      CANISTER_ID: ${ssm:${self:custom.resourcePrefix}CanisterId}
+      QUEUE_URL: !Ref EthereumTxQueue
     events:
       - sqs:
+          arn: !GetAtt
+            - EthereumTxQueue
+            - Arn
           batchSize: 10
-          maximumRetryAttempts: 10
-          arn:
-            Fn::GetAtt:
-              - TeraQueue
-              - Arn
-  SyncL2ToL1Messages:
-    timeout: 15
+    iamRoleStatements:
+      # allow removing processed messages from queue
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:DeleteMessage'
+        Resource:
+          - !GetAtt
+            - EthereumTxQueue
+            - Arn
+      - Effect: 'Allow'
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: 
+          - !GetAtt 
+            - EthereumTable  
+            - Arn
+      - Effect: 'Allow'
+        Action:
+            - 'kms:Sign'
+        Resource:
+          - !GetAtt
+            - InternetComputerOperator
+            - Arn
+
+  #
+  # L2 -> L1 messages
+  #
+  # grab messages from the IC and put them into FIFO StarknetQueue
+  # ! do not rename ! 
+  StarknetPollMessages:
+    timeout: 45
     memorySize: 128
-    handler: src/functions/sync/handler.main
+    handler: src/functions/sync/poll.main
     environment:
-      OPERATOR_PRIVATE_KEY: ${ssm:terabethia-testnet-pk~true}
-      CONTRACT_ADDRESS: '0x7de702C6503Bc03b5EbE00221F50Af9330ca4c16'
-      TERA_AGENT_KEY_PAIR: ${ssm:tera-agent-identity-key-pair-dev~true}
+      # AWS KMS Key ID, IC Operator
+      KMS_KEY_ID: !Ref InternetComputerOperator
+      # AWS KMS Public Key (base64 encoded), IC Operator
+      KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC~true}
+      CANISTER_ID: ${ssm:${self:custom.resourcePrefix}CanisterId~true}
+      QUEUE_URL: !Ref StarknetMessagesQueue
+      STARKNET_TABLE_NAME: !Ref StarknetTable
     events:
+      # we poll messages every minute
       - schedule: rate(1 minute)
+    iamRoleStatements:
+      - Effect: 'Allow'        
+        Action:
+            - 'sqs:SendMessage'
+        Resource:
+          - !GetAtt
+            - StarknetMessagesQueue
+            - Arn
+      - Effect: 'Allow'
+        Action:
+            - 'kms:Sign'
+        Resource:
+          - !GetAtt
+            - InternetComputerOperator
+            - Arn
+      - Effect: 'Allow'
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: 
+          - !GetAtt 
+            - StarknetTable  
+            - Arn
+
+  # send messages to L1 through Starknet
+  StarknetSendMessages:
+    timeout: 90
+    memorySize: 258
+    reservedConcurrency: 1
+    handler: src/functions/sync/send.main
+    environment:
+      # Terabethia Signer Account contract
+      STARKNET_ACCOUNT_ADDRESS: ${ssm:${self:custom.resourcePrefix}StarknetAccount}
+      # Terabethia Signer PK encrypted by Bootstrap KMS
+      STARKNET_PRIVATE_KEY: ${ssm:${self:custom.resourcePrefix}StarknetPrivateKey~true}
+      # Terabethia Starknet Contract
+      STARKNET_CONTRACT_ADDRESS: ${ssm:${self:custom.resourcePrefix}StarknetContract}
+      QUEUE_URL: !Ref StarknetMessagesQueue
+      # when transaction is submitted, we need to check for acceptance
+      CHECK_QUEUE_URL: !Ref StarknetTransactionsQueue
+      STARKNET_TABLE_NAME: !Ref StarknetTable
+      KMS_KEY_ID: !Ref BootstrapKey # decrypt with BootstrapKey
+    events:
+      - sqs:
+          arn: !GetAtt
+            - StarknetMessagesQueue
+            - Arn
+          batchSize: 10
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:SendMessage'
+        Resource:
+          - !GetAtt
+            - StarknetTransactionsQueue
+            - Arn
+      # allow removing processed messages from queue
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:DeleteMessage'
+        Resource:
+          - !GetAtt
+            - StarknetMessagesQueue
+            - Arn
+      - Effect: 'Allow'
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: 
+          - !GetAtt 
+            - StarknetTable  
+            - Arn
+      - Effect: 'Allow'
+        Action:
+            - 'kms:Decrypt'
+        Resource:
+          - !GetAtt
+            - BootstrapKey
+            - Arn
+
+  StarknetCheckTx:
+    timeout: 120
+    memorySize: 258
+    reservedConcurrency: 1
+    handler: src/functions/sync/check.main
+    environment:
+      QUEUE_URL: !Ref StarknetTransactionsQueue
+      MESSAGES_QUEUE_URL: !Ref StarknetMessagesQueue
+      # STARKNET_TABLE_NAME: !Ref StarknetTable
+    events:
+      - sqs:
+          arn: !GetAtt
+            - StarknetTransactionsQueue
+            - Arn
+          batchSize: 10
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:SendMessage'
+        Resource:
+          - !GetAtt
+            - StarknetMessagesQueue
+            - Arn
+      # allow removing processed messages from queue
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:DeleteMessage'
+        Resource:
+          - !GetAtt
+            - StarknetTransactionsQueue
+            - Arn
+      # - Effect: 'Allow'
+      #   Action:
+      #     - dynamodb:GetItem
+      #     - dynamodb:PutItem
+      #   Resource: 
+      #     - !GetAtt 
+      #       - StarknetTable  
+      #       - Arn
+
+  # Expose principal id of KMS key pair
+  KMSPrincipal:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/security/principal.main
+    environment:
+      KMS_KEY_ID: !Ref InternetComputerOperator
+    events:
+      - http:
+          method: GET
+          path: /principal
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+            - 'kms:GetPublicKey'
+        Resource:
+          - !GetAtt
+            - InternetComputerOperator
+            - Arn
+
+  # Bootstrap Starknet
+  SecretsBootstrap:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/security/bootstrap.main
+    environment:
+      KMS_KEY_ID: !Ref BootstrapKey # encrypt with BootstrapKey
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+            - 'kms:Encrypt'
+            - 'kms:Decrypt'
+        Resource:
+          - !GetAtt
+            - BootstrapKey
+            - Arn
 
 resources:
-  - Resources:
-      TeraQueue:
-        Type: 'AWS::SQS::Queue'
-        Properties:
-          QueueName: tera-queue-${self:custom.resourceSuffix}.fifo
-          ContentBasedDeduplication: true
-          FifoQueue: true
-          VisibilityTimeout: 300 # 5 minutes
-          RedrivePolicy:
-            maxReceiveCount: 5
-            deadLetterTargetArn: !GetAtt
-              - TeraDeadLetterQueue
-              - Arn
-      TeraDeadLetterQueue:
-        Type: AWS::SQS::Queue
-        Properties:
-          FifoQueue: true
-          QueueName: tera-dead-letter-queue-${self:custom.resourceSuffix}.fifo
+  Resources:
+    #
+    # DynamoDB
+    #
+    # We use two different tables, so we can have a better access control
+    # Prevent replays L1 -> L2
+    EthereumTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+      Properties:
+        TableName: ${self:custom.resourcePrefix}Ethereum
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PrimaryKey
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PrimaryKey
+            KeyType: HASH
 
-      TeraL1StateTable:
-        Type: AWS::DynamoDB::Table
-        DeletionPolicy: ${self:custom.deletionPolicy.${self:provider.stage}, '${self:custom.deletionPolicy.default}'}
-        UpdateReplacePolicy: ${self:custom.updateReplacePolicy.${self:provider.stage}, '${self:custom.updateReplacePolicy.default}'}
-        Properties:
-          TableName: tera_l1_state_${self:provider.stage}
-          BillingMode: PAY_PER_REQUEST
-          AttributeDefinitions:
-            - AttributeName: pk
-              AttributeType: S
-            - AttributeName: sk
-              AttributeType: S
-          KeySchema:
-            - AttributeName: pk
-              KeyType: HASH
-            - AttributeName: sk
-              KeyType: RANGE
+    # Prevent replays L2 -> L1, allows tx lookup by message key
+    StarknetTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+      Properties:
+        TableName: ${self:custom.resourcePrefix}Starknet
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PrimaryKey
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PrimaryKey
+            KeyType: HASH
 
-      EthL1MessageTopic:
-        Type: AWS::SNS::Topic
-        Properties:
-          DisplayName: ETH L1 Message
-          TopicName: ${self:custom.EthL1MessageTopic}
-          ContentBasedDeduplication: true
-          FifoTopic: true
-
-      SnsToTeraQueuePolicy:
-        Type: AWS::SQS::QueuePolicy
-        Properties:
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: "allow-sns-messages"
-                Effect: Allow
-                Principal: "*"
-                Resource: !GetAtt
-                  - TeraQueue
-                  - Arn
-                Action: "SQS:SendMessage"
-                Condition:
-                  ArnEquals:
-                    "aws:SourceArn": !Ref EthL1MessageTopic
-          Queues:
-            - !Ref TeraQueue
-
-      TeraQueueSubscription:
-        Type: 'AWS::SNS::Subscription'
-        Properties:
-          TopicArn: !Ref EthL1MessageTopic
-          Endpoint: !GetAtt
-            - TeraQueue
+      
+    #
+    # SQS
+    #
+    EthereumTxQueue:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}EthereumTxQueue.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        VisibilityTimeout: 300 # 5 minutes
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt
+            - EthereumTxDLQ
             - Arn
-          Protocol: sqs
-          RawMessageDelivery: 'true'
+    EthereumTxDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}EthereumTxDLQ.fifo
+        MessageRetentionPeriod: 1209600 # 14 days
+
+
+    # Messages from the Terabethia canister are polled into this queue
+    StarknetMessagesQueue:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}StarknetMessages.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        VisibilityTimeout: 120 # 2 minutes
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt
+            - StarknetMessagesDLQ
+            - Arn
+    
+    StarknetMessagesDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}StarknetMessagesDLQ.fifo
+        MessageRetentionPeriod: 1209600 # 14 days
+
+    # Starknet transactions are queued here, so we can check if the message was accepted on L2/L1
+    # if the transaction fails, we need to replay it
+    StarknetTransactionsQueue:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}StarknetTransactionsQueue.fifo
+        FifoQueue: true
+        VisibilityTimeout: 300 # 5 minutes
+        DelaySeconds: 120 # 2m delay
+        RedrivePolicy:
+          maxReceiveCount: 10 # we only retry if the tx was not processed yet
+          deadLetterTargetArn: !GetAtt
+            - StarknetTransactionsDLQ
+            - Arn
+    
+    StarknetTransactionsDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}StarknetTransactionsDLQ.fifo
+        MessageRetentionPeriod: 1209600 # 14 days
+
+
+    #
+    # KMS
+    #
+    InternetComputerOperator:
+      Type: AWS::KMS::Key
+      Properties: 
+        Description: Internet Computer Operator
+        KeyPolicy:
+          Id: default
+          Statement:
+          # we will delegate IAM policies instead of admin / users / roles
+          # "The new key policy will not allow you to update the key policy in the future"
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            NotAction:
+              - 'kms:Sign'
+            Resource: '*'
+
+          # signatures can be only made by StarknetPollMessages or StoreMessage lambda
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StarknetPollMessages-${self:provider.region}-lambdaRole' 
+                - !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StoreMessage-${self:provider.region}-lambdaRole' 
+            Action:
+              - 'kms:Sign'
+            Resource: '*'
+
+        # secp256k elliptic curve
+        KeySpec: ECC_SECG_P256K1
+        # key is used only for sign/verify operations
+        KeyUsage: SIGN_VERIFY
+        # default settings
+        # MultiRegion: false
+        # PendingWindowInDays: 30
+        # Enabled: true
+        # EnableKeyRotation: false
+
+    # we do not want to expose any raw private keys
+    # so we bootstrap the key via lambda
+    # and encrypt it with this KMS Key 
+    BootstrapKey:
+      Type: AWS::KMS::Key
+      Properties: 
+        Description: Encrypt/Decrypt Bootstrap Secret
+        KeyPolicy:
+          Id: default
+          Statement:
+          # we will delegate IAM policies instead of admin / users / roles
+          # "The new key policy will not allow you to update the key policy in the future"
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            NotAction:
+              - 'kms:Decrypt'
+              - 'kms:Encrypt'
+            Resource: '*'
+
+          # allow encrypt only to SecretsBootstrap lambda
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-SecretsBootstrap-${self:provider.region}-lambdaRole' 
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+            Resource: '*'
+
+          # allow decrypt Starknet PK by specific lambda
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StarknetSendMessages-${self:provider.region}-lambdaRole' 
+            Action:
+              - 'kms:Decrypt'
+            Resource: '*'
+               
+        KeySpec: RSA_4096
+        # key is used only for sign/verify operations
+        KeyUsage: ENCRYPT_DECRYPT
+        # default settings
+        # MultiRegion: false
+        # PendingWindowInDays: 30
+        # Enabled: true
+        # EnableKeyRotation: false
