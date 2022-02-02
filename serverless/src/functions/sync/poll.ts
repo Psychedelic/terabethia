@@ -12,6 +12,7 @@ import { Secp256k1PublicKey } from '@dfinity/identity';
 import {
   KMSClient,
 } from '@aws-sdk/client-kms';
+import _ from 'lodash';
 
 const envs = requireEnv([
   'CANISTER_ID',
@@ -73,16 +74,25 @@ export const main: ScheduledHandler = async () => {
     return;
   }
 
-  const command = new SendMessageBatchCommand({
-    QueueUrl: envs.QUEUE_URL,
-    Entries: entries,
+  // sqs only supports 10 messages per batch
+  const entryChunks = _.chunk(entries, 10);
+
+  await bluebird.each(entryChunks, async (chunk) => {
+    const command = new SendMessageBatchCommand({
+      QueueUrl: envs.QUEUE_URL,
+      Entries: chunk,
+    });
+
+    // push messages to FIFO queue
+    await sqsClient.send(command);
+
+    // store into DynamoDB right after it was published
+    await bluebird.each(chunk, async (entry) => {
+      if (entry.MessageDeduplicationId) {
+        await db.setProcessingMessage(entry.MessageDeduplicationId);
+      }
+    });
   });
-
-  // push messages to FIFO queue
-  await sqsClient.send(command);
-
-  // store into DynamoDB (in case IC message removal fails)
-  await bluebird.each(messages, (message) => db.setProcessingMessage(message.msg_key));
 
   // remove all messages from the IC, since they are processed
   await terabethia.removeMessages(rawMessages);

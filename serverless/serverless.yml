@@ -418,9 +418,9 @@ resources:
         QueueName: ${self:custom.resourcePrefix}StarknetTransactionsQueue.fifo
         FifoQueue: true
         VisibilityTimeout: 300 # 5 minutes
-        DelaySeconds: 300 # 5m delay
+        DelaySeconds: 120 # 2m delay
         RedrivePolicy:
-          maxReceiveCount: 3 # we only retry if the tx was not processed yet
+          maxReceiveCount: 10 # we only retry if the tx was not processed yet
           deadLetterTargetArn: !GetAtt
             - StarknetTransactionsDLQ
             - Arn
