@@ -7,11 +7,11 @@
       "type": "custom"
     },
     "token": {
-		  "build": "bash build.sh token",
-		  "candid": "src/token/token.did",
-		  "wasm": "target/wasm32-unknown-unknown/release/token-opt.wasm",
-		  "type": "custom"
-	  }
+      "build": "bash build.sh token",
+      "candid": "src/token/token.did",
+      "wasm": "target/wasm32-unknown-unknown/release/token-opt.wasm",
+      "type": "custom"
+    }
   },
   "defaults": {
     "build": {

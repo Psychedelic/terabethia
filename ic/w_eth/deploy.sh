@@ -7,7 +7,6 @@ dfx build token
 OWNER="principal \"$( \dfx identity get-principal)\""
 CAP_ID="principal \"e22n6-waaaa-aaaah-qcd2q-cai\""
 ETH_PROXY_ID="principal \"$( \dfx canister id eth_proxy)\""
-ETH_PROXY_ID_PROD="principal \"e22n6-waaaa-aaaah-qcd2q-cai\""
 
 dfx canister --no-wallet install token --argument "(
    \"NA\", 

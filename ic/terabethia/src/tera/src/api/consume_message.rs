@@ -4,7 +4,7 @@ use ic_kit::ic::caller;
 
 use crate::{
     common::{
-        types::{IncomingMessageHashParams, Message, Nonce},
+        types::{ConsumeMessageResponse, IncomingMessageHashParams, Message, Nonce},
         utils::Keccak256HashFn,
     },
     tera::{ToNat, STATE},
@@ -12,13 +12,13 @@ use crate::{
 
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, String> {
+fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> ConsumeMessageResponse {
     let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
     if nonce_exists {
-        return Err(format!(
+        return ConsumeMessageResponse(Err(format!(
             "Message with nonce {} has already been consumed!",
             nonce
-        ));
+        )));
     }
 
     let caller = caller();
@@ -54,7 +54,7 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> Result<bool, Str
     match res {
         Ok(_) => {
             STATE.with(|s| s.update_nonce(nonce));
-            res
+            ConsumeMessageResponse(res)
         }
         Err(error) => panic!("{:?}", error),
     }
@@ -75,7 +75,7 @@ mod tests {
     fn concume_message_with_nonce(
         mock_ctx: &mut MockContext,
         nonce: Nonce,
-    ) -> Result<bool, String> {
+    ) -> ConsumeMessageResponse {
         // originating eth address as pid
         let from = mock_principals::john();
 
@@ -111,7 +111,7 @@ mod tests {
 
         let consume_message = concume_message_with_nonce(mock_ctx, nonce);
 
-        assert!(consume_message.unwrap());
+        assert!(consume_message.0.unwrap());
 
         let get_nonces = STATE.with(|s| s.get_nonces());
 
@@ -125,10 +125,10 @@ mod tests {
 
         let consume_message_1 = concume_message_with_nonce(mock_ctx, nonce.clone());
 
-        assert!(consume_message_1.unwrap());
+        assert!(consume_message_1.0.unwrap());
 
         let consume_message_2 = concume_message_with_nonce(mock_ctx, nonce.clone());
 
-        assert!(consume_message_2.is_err());
+        assert!(consume_message_2.0.is_err());
     }
 }

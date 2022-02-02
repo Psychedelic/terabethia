@@ -13,7 +13,7 @@ contract Terabethia is Initializable, ITerabethiaCore {
 
     // Terabethia Contract on Starknet
     uint256 constant STARKNET_CONTRACT =
-        0x7c3033faf9f2604183bfe28eacedbe0ac3dac2abed74d35f80b7bc71f86db98;
+        0x011478794f516fb7d9d3016a36fdcdbd5121171c2e5199df712d7a8399138553;
 
     struct SimpleStorage {
         mapping(bytes32 => uint256) messages;
@@ -90,5 +90,9 @@ contract Terabethia is Initializable, ITerabethiaCore {
         );
 
         return msgHash;
+    }
+
+    function messages(bytes32 msgHash) external view returns (uint256) {
+        return simpleStorage().messages[msgHash];
     }
 }

@@ -1,3 +1,7 @@
+import _ from 'lodash';
+
+type EnvWithKeys<T extends string> = Record<T, string>;
+
 const sliceToBigInt = (buff: Buffer, ...args: number[]): BigInt => BigInt(`0x${buff.slice(...args).toString('hex')}`);
 
 /**
@@ -19,4 +23,20 @@ export const splitUint256 = (hexString: string): [BigInt, BigInt] => {
   // uint256(uint128(msgInt))
   const b = sliceToBigInt(buff, -16);
   return [a, b];
+};
+
+export const requireEnv = <T extends string>(names: T[]): EnvWithKeys<T> => {
+  const envs = names.reduce((buff, name) => {
+    if (!process.env[name]) {
+      throw new Error(`${name} must be set`);
+    }
+
+    if (name === undefined) {
+      return buff;
+    }
+
+    return _.set(buff, name, process.env[name]);
+  }, {} as EnvWithKeys<T>);
+
+  return envs;
 };

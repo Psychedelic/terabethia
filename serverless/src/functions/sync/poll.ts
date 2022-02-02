@@ -1,34 +1,40 @@
 import { ScheduledHandler } from 'aws-lambda';
-import { Terabethia } from '@libs/dfinity';
-import { DynamoDb } from '@libs/dynamo';
+import StarknetDatabase from '@libs/dynamo/starknet';
+import { requireEnv } from '@libs/utils';
 import {
   SQSClient,
   SendMessageBatchCommand,
   SendMessageBatchRequestEntry,
 } from '@aws-sdk/client-sqs';
+import bluebird from 'bluebird';
+import { Terabethia, KMSIdentity } from '@libs/dfinity';
+import { Secp256k1PublicKey } from '@dfinity/identity';
+import {
+  KMSClient,
+} from '@aws-sdk/client-kms';
+import _ from 'lodash';
 
-const { IC_PRIVATE_KEY, IC_CANISTER_ID, QUEUE_URL } = process.env;
+const envs = requireEnv([
+  'CANISTER_ID',
+  'QUEUE_URL',
+  'STARKNET_TABLE_NAME',
+  'KMS_KEY_ID',
+  'KMS_PUBLIC_KEY',
+]);
 
-if (!IC_PRIVATE_KEY) {
-  throw new Error('IC_PRIVATE_KEY must be set');
-}
-
-if (!IC_CANISTER_ID) {
-  throw new Error('IC_CANISTER_ID must be set');
-}
-
-if (!QUEUE_URL) {
-  throw new Error('QUEUE_URL must be set');
-}
+// Terabethia IC with KMS
+const kms = new KMSClient({});
+const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(envs.KMS_PUBLIC_KEY, 'base64'));
+const identity = new KMSIdentity(publicKey, kms, envs.KMS_KEY_ID);
+const terabethia = new Terabethia(envs.CANISTER_ID, identity);
 
 const sqsClient = new SQSClient({});
-const db = new DynamoDb();
-
-const tera = new Terabethia(IC_CANISTER_ID, IC_PRIVATE_KEY);
+const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 
 export interface MessagePayload {
   key: string;
   hash: string;
+  nonce?: string; // if the message is requeued, we'll use same nonce
 }
 
 /**
@@ -39,7 +45,7 @@ export interface MessagePayload {
  */
 export const main: ScheduledHandler = async () => {
   // fetch messages from Tera canister
-  const rawMessages = await tera.getMessages();
+  const rawMessages = await terabethia.getMessages();
 
   const messages = await Promise.all(
     rawMessages.map(async (m) => {
@@ -59,23 +65,35 @@ export const main: ScheduledHandler = async () => {
       Id: m.msg_key,
       MessageBody: JSON.stringify(payload),
       MessageDeduplicationId: m.msg_key,
+      MessageGroupId: 'starknet',
     };
   });
 
-  const command = new SendMessageBatchCommand({
-    QueueUrl: QUEUE_URL,
-    Entries: entries,
-  });
-
-  // push messages to FIFO queue
-  await sqsClient.send(command);
-
-  // store into DynamoDB (in case IC message removal fails)
-  for (const message of messages) {
-    await db.setProcessingMessage(message.msg_key);
+  // if there are no messages, we skip
+  if (entries.length === 0) {
+    return;
   }
 
+  // sqs only supports 10 messages per batch
+  const entryChunks = _.chunk(entries, 10);
+
+  await bluebird.each(entryChunks, async (chunk) => {
+    const command = new SendMessageBatchCommand({
+      QueueUrl: envs.QUEUE_URL,
+      Entries: chunk,
+    });
+
+    // push messages to FIFO queue
+    await sqsClient.send(command);
+
+    // store into DynamoDB right after it was published
+    await bluebird.each(chunk, async (entry) => {
+      if (entry.MessageDeduplicationId) {
+        await db.setProcessingMessage(entry.MessageDeduplicationId);
+      }
+    });
+  });
+
   // remove all messages from the IC, since they are processed
-  // const messagesToBeRemoved = messages.map((m) => m.id);
-  await tera.removeMessages(rawMessages);
+  await terabethia.removeMessages(rawMessages);
 };

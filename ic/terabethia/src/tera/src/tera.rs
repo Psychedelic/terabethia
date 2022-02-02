@@ -2,7 +2,6 @@ use crate::common::types::{Nonce, OutgoingMessage, OutgoingMessagePair};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
-
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -59,7 +58,10 @@ impl OutgoingMessage {
         hasher.update(index_slice);
         hasher.update(msg_hash_slice);
         msg_key.copy_from_slice(&hasher.finalize());
-        OutgoingMessage { msg_key, msg_hash }
+        OutgoingMessage {
+            msg_key: msg_key.to_vec(),
+            msg_hash,
+        }
     }
 }
 
@@ -72,14 +74,14 @@ impl From<OutgoingMessagePair> for OutgoingMessage {
         msg_key.copy_from_slice(&msg_key_slice);
 
         OutgoingMessage {
-            msg_key,
+            msg_key: msg_key.to_vec(),
             msg_hash: message.msg_hash,
         }
     }
 }
 
 fn msg_key_bytes_to_string(message: &OutgoingMessage) -> OutgoingMessagePair {
-    let msg_key = hex::encode(message.msg_key);
+    let msg_key = hex::encode(&message.msg_key);
 
     OutgoingMessagePair {
         msg_key,
@@ -95,6 +97,28 @@ impl ToNat for Principal {
     #[inline(always)]
     fn to_nat(&self) -> Nat {
         Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+    }
+}
+
+pub trait FromNat {
+    fn from_nat(input: Nat) -> Principal;
+}
+
+impl FromNat for Principal {
+    #[inline(always)]
+    fn from_nat(input: Nat) -> Principal {
+        let be_bytes = input.0.to_bytes_be();
+        let be_bytes_len = be_bytes.len();
+        let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
+            29 - be_bytes_len
+        } else if be_bytes_len < 10 {
+            10 - be_bytes_len
+        } else {
+            0
+        };
+        let mut p_slice = vec![0u8; padding_bytes];
+        p_slice.extend_from_slice(&be_bytes);
+        Principal::from_slice(&p_slice)
     }
 }
 
