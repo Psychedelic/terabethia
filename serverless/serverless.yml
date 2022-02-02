@@ -396,7 +396,7 @@ resources:
         QueueName: ${self:custom.resourcePrefix}StarknetMessages.fifo
         ContentBasedDeduplication: true
         FifoQueue: true
-        VisibilityTimeout: 300 # 5 minutes
+        VisibilityTimeout: 120 # 2 minutes
         RedrivePolicy:
           maxReceiveCount: 3
           deadLetterTargetArn: !GetAtt
