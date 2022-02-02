@@ -198,7 +198,7 @@ functions:
 
   # send messages to L1 through Starknet
   StarknetSendMessages:
-    timeout: 60
+    timeout: 900 # better safe than sorry
     memorySize: 258
     reservedConcurrency: 1
     handler: src/functions/sync/send.main
@@ -251,6 +251,47 @@ functions:
           - !GetAtt
             - BootstrapKey
             - Arn
+
+  StarknetCheckTx:
+    timeout: 900 # better safe than sorry
+    memorySize: 258
+    reservedConcurrency: 1
+    handler: src/functions/sync/check.main
+    environment:
+      QUEUE_URL: !Ref StarknetTransactionsQueue
+      MESSAGES_QUEUE_URL: !Ref StarknetMessagesQueue
+      # STARKNET_TABLE_NAME: !Ref StarknetTable
+    events:
+      - sqs:
+          arn: !GetAtt
+            - StarknetTransactionsQueue
+            - Arn
+          batchSize: 10
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:SendMessage'
+        Resource:
+          - !GetAtt
+            - StarknetMessagesQueue
+            - Arn
+      # allow removing processed messages from queue
+      - Effect: 'Allow'
+        Action:
+            - 'sqs:DeleteMessage'
+        Resource:
+          - !GetAtt
+            - StarknetTransactionsQueue
+            - Arn
+      # - Effect: 'Allow'
+      #   Action:
+      #     - dynamodb:GetItem
+      #     - dynamodb:PutItem
+      #   Resource: 
+      #     - !GetAtt 
+      #       - StarknetTable  
+      #       - Arn
+
   # Expose principal id of KMS key pair
   KMSPrincipal:
     timeout: 10
@@ -370,14 +411,16 @@ resources:
         MessageRetentionPeriod: 1209600 # 14 days
 
     # Starknet transactions are queued here, so we can check if the message was accepted on L2/L1
+    # if the transaction fails, we need to replay it
     StarknetTransactionsQueue:
       Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:custom.resourcePrefix}StarknetTransactionsQueue.fifo
         FifoQueue: true
         VisibilityTimeout: 300 # 5 minutes
+        DelaySeconds: 300 # 5m delay
         RedrivePolicy:
-          maxReceiveCount: 3
+          maxReceiveCount: 3 # we only retry if the tx was not processed yet
           deadLetterTargetArn: !GetAtt
             - StarknetTransactionsDLQ
             - Arn

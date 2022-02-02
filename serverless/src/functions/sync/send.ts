@@ -2,7 +2,7 @@ import 'source-map-support/register';
 
 import { splitUint256, requireEnv, sqsHandler } from '@libs/utils';
 import StarknetDatabase from '@libs/dynamo/starknet';
-import TerabethiaStarknet from '@libs/starknet';
+import TerabethiaStarknet, { NetworkName } from '@libs/starknet';
 import {
   SQSClient,
   SendMessageCommand,
@@ -13,7 +13,14 @@ import {
   EncryptionAlgorithmSpec,
 } from '@aws-sdk/client-kms';
 import BN from 'bn.js';
+import bluebird from 'bluebird';
 import { MessagePayload } from './poll';
+
+export interface TransactionPayload {
+  txHash: string;
+  msgHash: string;
+  msgKey: string;
+}
 
 const envs = requireEnv([
   'STARKNET_ACCOUNT_ADDRESS',
@@ -23,12 +30,15 @@ const envs = requireEnv([
   'CHECK_QUEUE_URL',
   'STARKNET_TABLE_NAME',
   'KMS_KEY_ID',
+  'AWS_STAGE',
 ]);
 
 const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 
 const sqsClient = new SQSClient({});
 const kmsClient = new KMSClient({});
+
+const network = envs.AWS_STAGE === 'dev' ? NetworkName.TESTNET : NetworkName.MAINNET;
 
 let terabethia: TerabethiaStarknet;
 
@@ -47,7 +57,7 @@ const handleMessage = async (body: MessagePayload) => {
       return;
     }
 
-    terabethia = new TerabethiaStarknet(envs.STARKNET_ACCOUNT_ADDRESS, new BN(res.Plaintext), envs.STARKNET_CONTRACT_ADDRESS);
+    terabethia = new TerabethiaStarknet(envs.STARKNET_ACCOUNT_ADDRESS, new BN(res.Plaintext), envs.STARKNET_CONTRACT_ADDRESS, network);
   }
 
   const { hash, key } = body;
@@ -56,12 +66,13 @@ const handleMessage = async (body: MessagePayload) => {
   let tx;
 
   // we fetch nonce from DynamoDB
-  const lastNonce = await db.getLastNonce();
-  const nextNonceBn = lastNonce ? lastNonce.addn(1) : undefined;
+  const nextNonceBn = await db.getLastNonce();
   const nextNonce = nextNonceBn ? nextNonceBn.toString() : undefined;
 
   try {
     tx = await terabethia.sendMessage(a, b, nextNonce);
+    // wait 10s, so message is received by sequencer
+    await bluebird.delay(10000);
   } catch (e) {
     // dump error response
     console.log(JSON.stringify(e.response));
@@ -76,17 +87,23 @@ const handleMessage = async (body: MessagePayload) => {
 
     try {
       if (nextNonceBn) {
-        await db.storeLastNonce(nextNonceBn);
+        // only increment nonce when tx is submitted
+        await db.storeLastNonce(nextNonceBn.addn(1));
       }
 
       await db.storeTransaction(tx.transaction_hash, [key]);
+
+      const payload: TransactionPayload = {
+        msgHash: hash,
+        msgKey: key,
+        txHash: tx.transaction_hash,
+      };
 
       // we need to make sure the tx was accepted
       // so we delay another event
       await sqsClient.send(new SendMessageCommand({
         QueueUrl: envs.CHECK_QUEUE_URL,
-        MessageBody: JSON.stringify(tx),
-        DelaySeconds: 900,
+        MessageBody: JSON.stringify(payload),
         MessageGroupId: 'starknet',
         MessageDeduplicationId: tx.transaction_hash,
       }));

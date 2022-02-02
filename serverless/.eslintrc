@@ -33,7 +33,9 @@
         "ts": "never",
         "tsx": "never"
       }
-   ]
+    ],
+    "no-shadow": "off",
+    "@typescript-eslint/no-shadow": ["error"]
   },
   "parser": "@typescript-eslint/parser",
   "env": {},

@@ -5,14 +5,19 @@ import BN from 'bn.js';
 
 const { getSelectorFromName } = stark;
 
-declare type NetworkName = 'mainnet-alpha' | 'georli-alpha';
+// declare type NetworkName = 'mainnet-alpha' | 'georli-alpha';
+
+export enum NetworkName {
+  MAINNET = 'mainnet-alpha',
+  TESTNET = 'georli-alpha'
+}
 
 class TerabethiaStarknet {
   private provider: Provider;
 
   private address: string;
 
-  constructor(account: string, privateKey: BN, address: string, network: NetworkName = 'georli-alpha') {
+  constructor(account: string, privateKey: BN, address: string, network: NetworkName = NetworkName.TESTNET) {
     const provider = new Provider({ network });
     const keyPair = ec.getKeyPair(privateKey);
     const signer = new Signer(provider, account, keyPair);
