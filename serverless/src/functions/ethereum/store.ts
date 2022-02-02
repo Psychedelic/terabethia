@@ -47,10 +47,17 @@ const handleL1Message = async (message: BlockNativePayload) => {
   await provider.ready;
 
   const receipt = await provider.getTransactionReceipt(hash);
-  const logs = receipt.logs.map((log) => ethContract.interface.parseLog(log)).filter((log) => log.args && log.args.from_address);
 
+  let logs = [];
+  try {
+    logs = receipt.logs.map((log) => ethContract.interface.parseLog(log)).filter((log) => log.args && log.args.from_address);
+  } catch (e) {
+  // ignore tx without event
+    return;
+  }
   if (!logs.length) {
-    throw new Error('Transaction did not emit any logs.');
+    // ignore this tx
+    return;
   }
 
   // we need to loop through the logs, because 1 transaction can emit multiple messages
