@@ -198,7 +198,7 @@ functions:
 
   # send messages to L1 through Starknet
   StarknetSendMessages:
-    timeout: 300 # better safe than sorry
+    timeout: 90
     memorySize: 258
     reservedConcurrency: 1
     handler: src/functions/sync/send.main

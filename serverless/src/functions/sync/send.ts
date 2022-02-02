@@ -82,8 +82,8 @@ const handleMessage = async (body: MessagePayload) => {
 
   try {
     tx = await terabethia.sendMessage(a, b, nextNonce);
-    // wait 10s, so message is received by sequencer
-    await bluebird.delay(10000);
+    // wait 2.5s, so message is received by sequencer
+    await bluebird.delay(2500);
   } catch (e) {
     // dump error response
     console.log(JSON.stringify(e.response));
