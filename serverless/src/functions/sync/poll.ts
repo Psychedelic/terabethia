@@ -33,6 +33,7 @@ const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 export interface MessagePayload {
   key: string;
   hash: string;
+  nonce?: string; // if the message is requeued, we'll use same nonce
 }
 
 /**

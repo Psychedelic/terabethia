@@ -198,7 +198,7 @@ functions:
 
   # send messages to L1 through Starknet
   StarknetSendMessages:
-    timeout: 900 # better safe than sorry
+    timeout: 300 # better safe than sorry
     memorySize: 258
     reservedConcurrency: 1
     handler: src/functions/sync/send.main
@@ -253,7 +253,7 @@ functions:
             - Arn
 
   StarknetCheckTx:
-    timeout: 900 # better safe than sorry
+    timeout: 120
     memorySize: 258
     reservedConcurrency: 1
     handler: src/functions/sync/check.main
@@ -396,7 +396,7 @@ resources:
         QueueName: ${self:custom.resourcePrefix}StarknetMessages.fifo
         ContentBasedDeduplication: true
         FifoQueue: true
-        VisibilityTimeout: 120 # 2 minutes
+        VisibilityTimeout: 300 # 5 minutes
         RedrivePolicy:
           maxReceiveCount: 3
           deadLetterTargetArn: !GetAtt

@@ -20,6 +20,7 @@ export interface TransactionPayload {
   txHash: string;
   msgHash: string;
   msgKey: string;
+  nonce: string;
 }
 
 const envs = requireEnv([
@@ -60,14 +61,24 @@ const handleMessage = async (body: MessagePayload) => {
     terabethia = new TerabethiaStarknet(envs.STARKNET_ACCOUNT_ADDRESS, new BN(res.Plaintext), envs.STARKNET_CONTRACT_ADDRESS, network);
   }
 
-  const { hash, key } = body;
+  const { hash, key, nonce } = body;
 
   const [a, b] = splitUint256(hash);
   let tx;
 
-  // we fetch nonce from DynamoDB
-  const nextNonceBn = await db.getLastNonce();
-  const nextNonce = nextNonceBn ? nextNonceBn.toString() : undefined;
+  let nextNonceBn: BN;
+
+  // if payload includes nonce, we will use that one
+  if (nonce) {
+    nextNonceBn = new BN(nonce);
+  } else {
+    const dbNonce = await db.getLastNonce();
+
+    // if there's no nonce in DynamoDB, we use 0 as default
+    nextNonceBn = dbNonce ?? new BN(0);
+  }
+
+  const nextNonce = nextNonceBn.toString();
 
   try {
     tx = await terabethia.sendMessage(a, b, nextNonce);
@@ -97,6 +108,7 @@ const handleMessage = async (body: MessagePayload) => {
         msgHash: hash,
         msgKey: key,
         txHash: tx.transaction_hash,
+        nonce: nextNonce, // if tx fails, we'll replay it with same nonce
       };
 
       // we need to make sure the tx was accepted

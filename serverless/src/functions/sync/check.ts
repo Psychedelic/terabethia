@@ -29,7 +29,9 @@ const starknet = new Provider({
 });
 
 const handleMessage = async (body: TransactionPayload) => {
-  const { msgKey, msgHash, txHash } = body;
+  const {
+    msgKey, msgHash, txHash, nonce,
+  } = body;
 
   const { tx_status: txStatus } = await starknet.getTransactionStatus(txHash);
 
@@ -45,12 +47,12 @@ const handleMessage = async (body: TransactionPayload) => {
 
     default:
       // throw an error, so we can retry later
-      console.log({ txStatus, txHash });
+      console.log({ txStatus, txHash, nonce });
       throw new Error('Transaction not processed yet');
   }
 
   // only REJECTED transactions are put back to messages queue
-  const payload: MessagePayload = { hash: msgHash, key: msgKey };
+  const payload: MessagePayload = { hash: msgHash, key: msgKey, nonce };
 
   await sqsClient.send(new SendMessageCommand({
     QueueUrl: envs.MESSAGES_QUEUE_URL,
