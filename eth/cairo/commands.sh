@@ -7,12 +7,12 @@ export STARKNET_NETWORK=alpha-goerli
 starknet deploy --contract terabethia_compiled.json
 
 starknet invoke \
- --address 0x016bfd0dba71a89eaacc230982fb575c88c22a6c98c1fc7d3314336487895051 \
+ --address 0x0423c579170065765f81b381d01a81c189b4ba5abed1901a7d9feb488c4fb5e5 \
  --abi terabethia_abi.json \
  --function send_message_batch \
- --inputs 4 276768161078691357748506014484008718823 24127044263607486132772889641222586723 276768161078691357748506014484008718823 24127044263607486132772889641222586723
+ --inputs 20 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
 
- starknet get_transaction_receipt --hash 0x490eb5bf0d486367c546c3518ea74d977870229580bd1eef8ed4c78a340e88d
+ starknet get_transaction_receipt --hash 0x26ecf2d32aa7ab5cb00d7959e8d3d7001cd6afc9e65521ec7ee868b7da6692d
 
  # cairo
  cairo-compile batch.cairo --output batch_compiled.json
