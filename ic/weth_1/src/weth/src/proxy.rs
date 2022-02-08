@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{
     add_record,
     types::{Nonce, OutgoingMessage},
-    Balances, StatsData, TxReceipt, TxError,
+    Balances, StatsData, TxError, TxReceipt,
 };
 use candid::{Nat, Principal};
 use cap_std::dip20::{Operation, TransactionStatus};
@@ -62,6 +62,12 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 #[update(name = "mint")]
 // #[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
+    let caller = ic::caller();
+    let stats = ic::get_mut::<StatsData>();
+    if caller != stats.owner {
+        return Err(TxError::Unauthorized);
+    }
+
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
@@ -76,12 +82,6 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     if consume.0.is_ok() {
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_nat(payload[0].clone());
-
-        let caller = ic::caller();
-        let stats = ic::get_mut::<StatsData>();
-        if caller != stats.owner {
-            return Err(TxError::Unauthorized);
-        }
         let to_balance = balance_of(to);
         let balances = ic::get_mut::<Balances>();
         balances.insert(to, to_balance + amount.clone());
@@ -106,55 +106,54 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 // #[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
-    let payload = [eth_addr.clone().to_nat(), amount.clone()];
-
-    let caller = ic::caller();
     let stats = ic::get_mut::<StatsData>();
     let caller_balance = balance_of(caller);
     if caller_balance.clone() < amount.clone() {
         return Err(TxError::InsufficientBalance);
     }
+
+    let payload = [eth_addr.clone().to_nat(), amount.clone()];
+    let weth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
+    let weth_eth_addr_pid = Principal::from_slice(&hex::decode(weth_addr_hex).unwrap());
     let balances = ic::get_mut::<Balances>();
+
     balances.insert(caller, caller_balance - amount.clone());
     stats.total_supply -= amount.clone();
     stats.history_size += 1;
 
-    add_record(
-        caller,
-        Operation::Burn,
-        caller,
-        caller,
-        amount,
-        Nat::from(0),
-        ic::time(),
-        TransactionStatus::Succeeded,
-    )
-    .await;
-    
-
-    let weth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
-    let weth_eth_addr_pid = Principal::from_slice(&hex::decode(weth_addr_hex).unwrap());
-
-    let send_message: (Result<OutgoingMessage, String>,) = ic::call(
+    let send_message: Result<(OutgoingMessage, String), _> = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "send_message",
         (&weth_eth_addr_pid, &payload),
     )
-    .await
-    .expect("sending message to L1 failed!");
+    .await;
 
     if let Ok(outgoing_message) = send_message.0 {
         let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
             &outgoing_message.msg_key,
         ));
 
+        add_record(
+            caller,
+            Operation::Burn,
+            caller,
+            caller,
+            amount,
+            Nat::from(0),
+            ic::time(),
+            TransactionStatus::Succeeded,
+        )
+        .await;
+
         return Ok(msg_hash_as_nat);
+    } else {
+        balances.insert(caller, balance_of(caller) + amount.clone());
+        stats.total_supply += amount.clone();
+        return Err(TxError::Canister(format!(
+            "Sending message to L1 failed with caller {:?} and {}!",
+            caller, amount
+        )));
     }
-    
-    Err(TxError::Canister(format!(
-        "Canister ETH_PROXY: failed to transferFrom {:?}!",
-        caller
-    )))
 }
 
 #[cfg(test)]
