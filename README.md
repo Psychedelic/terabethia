@@ -27,12 +27,13 @@ You can start building on top of this testnet, communicating contracts across bo
 - [View our ETH/WETH Example](https://docs.terabethia.ooo/terabethia-testnet/eth-weth/)
 
 ## Terabethia's Bridge Protocol Architecture 
-![Group 5972 (3)](https://user-images.githubusercontent.com/73345016/144625840-621cbbed-d723-4624-be89-5f8aa69ce1f0.png)
+![Frame 282 (1)](https://user-images.githubusercontent.com/73345016/152998754-a5d799bd-516f-4986-a55f-0c2edcdf5f42.png)
 
 As seen in the graphic above, Terabethia's architecture is composed of the following pieces:
 
 - Terabethia (Ethereum): One end of the bridge, the protocol's contract on Ethereum.
 - Terabethia (IC): The other end of the bridge. The protocol's contract on the IC.
+- Starknet: Used to relay messages from the IC to Ethereum efficiently.
 - State Sync Infrastructure: An AWS/lambda (for now) infra to send messages Ethereum<->IC.*
 - The Magic Proxies: Contracts for the Ethereum asset mirroring protocol.
 Token Factory: Service in charge of deploying mirrored token contracts on the IC.
