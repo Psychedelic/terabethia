@@ -61,7 +61,3 @@ dfx canister call tera authorize '(principal "avesb-mgo2l-ds25i-g7kd4-3he5l-z7ar
 
 # account
 0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802
-
-curl -s 'https://gateway.pinata.cloud/ipfs/QmdvKdqi6pVaHfxUvfGHjEcSvhZPo4SiWm1hFqRLwvTKTe' | grep '0x62a366F476DAe88ef0E03df0CabFE8BEf72725d7'
-
-curl -s 'https://gateway.pinata.cloud/ipfs/QmNYnvnfR1z7wXHxFuupjLtEaZKGTY2s4DXKDrqv5UMrCQ' | grep '0x62a366F476DAe88ef0E03df0CabFE8BEf72725d7'
