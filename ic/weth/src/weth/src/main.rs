@@ -807,7 +807,7 @@ mod tests {
     use ic_kit::candid::Principal;
     use std::{ops::Mul, str::FromStr};
 
-    use crate::proxy::FromNat;
+    use crate::FromNat;
 
     #[test]
     fn nat_to_pid() {
