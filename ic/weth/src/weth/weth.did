@@ -78,6 +78,5 @@ service : (
   
   // proxy
   burn : (principal, nat) -> (Result);
-  handle_message : (principal, nat, vec nat) -> (Result);
   mint : (nat, vec nat) -> (Result);
 }
