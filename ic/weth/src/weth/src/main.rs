@@ -412,7 +412,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 }
 
 #[update(name = "burn")]
-// #[candid_method(update, rename = "burn")]
+#[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
     let caller_balance = balance_of(caller);
