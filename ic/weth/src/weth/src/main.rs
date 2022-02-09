@@ -370,15 +370,14 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
-    let consume: (Result<bool, String>,) = ic::call(
+    let consume: Result<(bool, String), _> = ic::call(
         Principal::from_str(TERA_ADDRESS).unwrap(),
         "consume_message",
         (&weth_eth_addr_pid, nonce, &payload),
     )
-    .await
-    .expect("consuming message from L1 failed!");
+    .await;
 
-    if consume.0.is_ok() {
+    if consume.is_ok() {
         let amount = Nat::from(payload[1].0.clone());
         let to = Principal::from_nat(payload[0].clone());
         let to_balance = balance_of(to);
@@ -413,7 +412,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 }
 
 #[update(name = "burn")]
-#[candid_method(update, rename = "burn")]
+// #[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
     let caller_balance = balance_of(caller);
@@ -441,39 +440,49 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     )
     .await;
 
-    if let Ok(outgoing_message) = send_message.0 {
-        let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
-            &outgoing_message.msg_key,
-        ));
+    match send_message {
+        Ok(result) => {
+            let outgoing_message = result.0;
 
-        add_record(
-            caller,
-            Operation::Burn,
-            caller,
-            caller,
-            amount,
-            Nat::from(0),
-            ic::time(),
-            TransactionStatus::Succeeded,
-        )
-        .await;
+            let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
+                &outgoing_message.msg_key,
+            ));
+    
+            let add = add_record(
+                caller,
+                Operation::Burn,
+                caller,
+                caller,
+                amount.clone(),
+                Nat::from(0),
+                ic::time(),
+                TransactionStatus::Succeeded,
+            )
+            .await;
 
-        return Ok(msg_hash_as_nat);
+            if add.is_ok() {
+                return Ok(msg_hash_as_nat)
+            }
+
+            Err(TxError::LedgerTrap)
+        },
+        Err(_) => {
+            BALANCES.with(|b| {
+                let mut balances = b.borrow_mut();
+                balances.insert(caller, balance_of(caller) - amount.clone());
+            });
+        
+            STATS.with(|s| {
+                let mut stats = s.borrow_mut();
+                stats.total_supply += amount.clone();
+            });
+        
+            Err(TxError::Canister(format!(
+                "Sending message to L1 failed with caller {:?} and {}!",
+                caller, amount
+            )))
+        },
     }
-
-    BALANCES.with(|b| {
-        let mut balances = b.borrow_mut();
-        balances.insert(caller, balance_of(caller) - amount.clone());
-    });
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        stats.total_supply += amount.clone();
-    });
-
-    Err(TxError::Canister(format!(
-        "Sending message to L1 failed with caller {:?} and {}!",
-        caller, amount
-    )))
 }
 
 #[update(name = "setName")]
