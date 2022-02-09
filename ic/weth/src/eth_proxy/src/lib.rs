@@ -39,7 +39,7 @@ async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 }
 
 #[update(name = "mint")]
-// #[candid_method(update, rename = "mint")]
+#[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
@@ -60,7 +60,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 }
 
 #[update(name = "burn")]
-// #[candid_method(update, rename = "burn")]
+#[candid_method(update, rename = "burn")]
 async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
