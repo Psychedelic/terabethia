@@ -22,8 +22,8 @@ async def test_send_message():
     )
 
     # Invoke send_message() twice.
-    # await contract.send_message(1,1).invoke()
-    # await contract.send_message(2,2).invoke()
+    await contract.send_message(1,1).invoke()
+    await contract.send_message(2,2).invoke()
 
     # Invoke send_message_batch()
     await contract.send_message_batch([
