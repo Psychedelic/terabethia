@@ -44,21 +44,6 @@ impl FromNat for Principal {
     }
 }
 
-#[update(name = "handle_message")]
-// #[candid_method(update, rename = "handle_message")]
-async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
-    let eth_addr_hex = hex::encode(eth_addr);
-
-    if !(eth_addr_hex == WETH_ADDRESS_ETH.trim_start_matches("0x")) {
-        return Err(TxError::Canister(format!(
-            "Eth Contract Address is inccorrect: {}",
-            eth_addr_hex
-        )));
-    }
-
-    mint(nonce, payload).await
-}
-
 #[update(name = "mint")]
 // #[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
