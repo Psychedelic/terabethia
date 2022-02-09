@@ -6,10 +6,10 @@
       "wasm": "target/wasm32-unknown-unknown/release/eth_proxy-opt.wasm",
       "type": "custom"
     },
-    "token": {
-      "build": "bash build.sh token",
-      "candid": "src/token/token.did",
-      "wasm": "target/wasm32-unknown-unknown/release/token-opt.wasm",
+    "weth": {
+      "build": "bash build.sh weth",
+      "candid": "src/weth/weth.did",
+      "wasm": "target/wasm32-unknown-unknown/release/weth-opt.wasm",
       "type": "custom"
     }
   },

@@ -2,7 +2,7 @@
   "eth_proxy": {
     "ic": "tpni3-tiaaa-aaaab-qaeeq-cai"
   },
-  "token": {
+  "weth": {
     "ic": "tgodh-faaaa-aaaab-qaefa-cai"
   }
 }
