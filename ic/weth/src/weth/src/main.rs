@@ -130,8 +130,7 @@ pub enum TxError {
     BlockUsed,
     ErrorOperationStyle,
     ErrorTo,
-    Other,
-    Canister(String),
+    Other(String),
 }
 pub type TxReceipt = Result<Nat, TxError>;
 
@@ -405,7 +404,7 @@ async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
         .await;
     }
 
-    Err(TxError::Canister(format!(
+    Err(TxError::Other(format!(
         "Consuming message from L1 failed with caller {:?}!",
         caller
     )))
@@ -447,7 +446,7 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
             let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
                 &outgoing_message.msg_key,
             ));
-    
+
             let add = add_record(
                 caller,
                 Operation::Burn,
@@ -461,27 +460,27 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
             .await;
 
             if add.is_ok() {
-                return Ok(msg_hash_as_nat)
+                return Ok(msg_hash_as_nat);
             }
 
             Err(TxError::LedgerTrap)
-        },
+        }
         Err(_) => {
             BALANCES.with(|b| {
                 let mut balances = b.borrow_mut();
                 balances.insert(caller, balance_of(caller) - amount.clone());
             });
-        
+
             STATS.with(|s| {
                 let mut stats = s.borrow_mut();
                 stats.total_supply += amount.clone();
             });
-        
-            Err(TxError::Canister(format!(
+
+            Err(TxError::Other(format!(
                 "Sending message to L1 failed with caller {:?} and {}!",
                 caller, amount
             )))
-        },
+        }
     }
 }
 
@@ -797,7 +796,9 @@ async fn insert_into_cap_priv(ie: IndefiniteEvent) -> TxReceipt {
     let insert_res = insert(ie.clone())
         .await
         .map(|tx_id| Nat::from(tx_id))
-        .map_err(|_| TxError::Other);
+        .map_err(|error| {
+            TxError::Other(format!("Inserting into cap failed with error: {:?}", error))
+        });
 
     if insert_res.is_err() {
         TXLOG.with(|t| {
