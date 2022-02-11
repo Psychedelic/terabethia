@@ -209,13 +209,11 @@ impl TerabetiaState {
 
     /// Check if caller is authorized
     pub fn is_authorized(&self) -> Result<(), String> {
-        STATE.with(|s| {
-            s.authorized
-                .borrow()
-                .contains(&caller())
-                .then(|| ())
-                .ok_or("Caller is not authorized".to_string())
-        })
+        self.authorized
+            .borrow()
+            .contains(&caller())
+            .then(|| ())
+            .ok_or("Caller is not authorized".to_string())
     }
 
     /// Add new pid to list of authorized
