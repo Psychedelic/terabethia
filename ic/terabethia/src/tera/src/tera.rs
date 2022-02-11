@@ -129,42 +129,36 @@ impl TerabetiaState {
 
     /// Get outgoing messages to L1
     pub fn get_messages(&self) -> Vec<OutgoingMessagePair> {
-        STATE.with(|s| {
-            s.messages_out
-                .borrow()
-                .iter()
-                .map(msg_key_bytes_to_string)
-                .collect()
-        })
+        self.messages_out
+            .borrow()
+            .iter()
+            .map(msg_key_bytes_to_string)
+            .collect()
     }
 
     /// Store outgoing messages to L1
     pub fn store_outgoing_message(&self, msg_hash: String) -> Result<OutgoingMessage, String> {
-        STATE.with(|s| {
-            // we increment outgoing message counter
-            let mut index = s.message_out_index.borrow_mut();
-            *index += 1;
+        // we increment outgoing message counter
+        let mut index = self.message_out_index.borrow_mut();
+        *index += 1;
 
-            let mut map = s.messages_out.borrow_mut();
-            let message_out_key = OutgoingMessage::new(msg_hash, *index);
-            map.insert(message_out_key.clone());
+        let mut map = self.messages_out.borrow_mut();
+        let message_out_key = OutgoingMessage::new(msg_hash, *index);
+        map.insert(message_out_key.clone());
 
-            Ok(message_out_key)
-        })
+        Ok(message_out_key)
     }
 
     /// Remove outgoing messages to L1
     pub fn remove_messages(&self, messages: Vec<OutgoingMessagePair>) -> Result<bool, String> {
-        STATE.with(|s| {
-            let mut map = s.messages_out.borrow_mut();
+        let mut map = self.messages_out.borrow_mut();
 
-            messages.into_iter().for_each(|message| {
-                let key = OutgoingMessage::from(message);
-                map.remove(&key);
-            });
+        messages.into_iter().for_each(|message| {
+            let key = OutgoingMessage::from(message);
+            map.remove(&key);
+        });
 
-            Ok(true)
-        })
+        Ok(true)
     }
 
     ///
@@ -173,46 +167,40 @@ impl TerabetiaState {
 
     /// Store incoming messages from L1
     pub fn store_incoming_message(&self, msg_hash: String) {
-        STATE.with(|s| {
-            let mut map = s.messages.borrow_mut();
-            *map.entry(msg_hash).or_insert(0) += 1;
-        })
+        let mut map = self.messages.borrow_mut();
+        *map.entry(msg_hash).or_insert(0) += 1;
     }
 
     /// Check if L1 message exists
     pub fn message_exists(&self, msg_hash: String) -> Result<bool, String> {
-        STATE.with(|s| {
-            let map = s.messages.borrow();
-            let message = map.get(&msg_hash);
+        let map = self.messages.borrow();
+        let message = map.get(&msg_hash);
 
-            if message.is_none() {
-                return Err("Message does not exist.".to_string());
-            }
+        if message.is_none() {
+            return Err("Message does not exist.".to_string());
+        }
 
-            Ok(true)
-        })
+        Ok(true)
     }
 
     /// Update incoming message nonce
     pub fn update_nonce(&self, nonce: Nonce) {
-        // self.nonce.borrow_mut().insert(nonce);
-        STATE.with(|s| s.nonce.borrow_mut().insert(nonce));
+        self.nonce.borrow_mut().insert(nonce);
     }
 
     /// Get store nonce from unique set
     pub fn get_nonce(&self, nonce: Nonce) -> Option<Nonce> {
-        // self.nonce.borrow().get(&nonce).cloned()
-        STATE.with(|s| s.nonce.borrow().get(&nonce).cloned())
+        self.nonce.borrow().get(&nonce).cloned()
     }
 
     /// Check if nonce exists in set
     pub fn nonce_exists(&self, nonce: &Nonce) -> bool {
-        STATE.with(|s| s.nonce.borrow().contains(nonce))
+        self.nonce.borrow().contains(nonce)
     }
 
     /// Get all nonces from set
     pub fn get_nonces(&self) -> Vec<Nonce> {
-        STATE.with(|s| s.nonce.borrow().iter().cloned().collect())
+        self.nonce.borrow().iter().cloned().collect()
     }
 
     ///
@@ -221,24 +209,20 @@ impl TerabetiaState {
 
     /// Check if caller is authorized
     pub fn is_authorized(&self) -> Result<(), String> {
-        STATE.with(|s| {
-            s.authorized
-                .borrow()
-                .contains(&caller())
-                .then(|| ())
-                .ok_or("Caller is not authorized".to_string())
-        })
+        self.authorized
+            .borrow()
+            .contains(&caller())
+            .then(|| ())
+            .ok_or("Caller is not authorized".to_string())
     }
 
     /// Add new pid to list of authorized
     pub fn authorize(&self, other: Principal) {
         let caller = caller();
-        STATE.with(|s| {
-            let caller_autorized = s.authorized.borrow().iter().any(|p| *p == caller);
-            if caller_autorized {
-                s.authorized.borrow_mut().push(other);
-            }
-        })
+        let caller_autorized = self.authorized.borrow().iter().any(|p| *p == caller);
+        if caller_autorized {
+            self.authorized.borrow_mut().push(other);
+        }
     }
 
     ///
@@ -248,38 +232,34 @@ impl TerabetiaState {
     /// Return entire state
     /// Before upgrade
     pub fn take_all(&self) -> StableTerabetiaState {
-        STATE.with(|tera| StableTerabetiaState {
-            messages: tera.messages.take(),
-            nonce: tera.nonce.take(),
-            messages_out: tera.messages_out.take(),
-            message_out_index: tera.message_out_index.take(),
-            authorized: tera.authorized.take(),
-        })
+        StableTerabetiaState {
+            messages: self.messages.take(),
+            nonce: self.nonce.take(),
+            messages_out: self.messages_out.take(),
+            message_out_index: self.message_out_index.take(),
+            authorized: self.authorized.take(),
+        }
     }
 
     /// Clear/Reset State
     /// Before upgrade
     pub fn clear_all(&self) {
-        STATE.with(|tera| {
-            tera.messages.borrow_mut().clear();
-            tera.nonce.borrow_mut().clear();
-            tera.messages_out.borrow_mut().clear();
-            tera.message_out_index.replace(0);
-            tera.authorized.borrow_mut().clear();
-        })
+        self.messages.borrow_mut().clear();
+        self.nonce.borrow_mut().clear();
+        self.messages_out.borrow_mut().clear();
+        self.message_out_index.replace(0);
+        self.authorized.borrow_mut().clear();
     }
 
     /// Replace state with new state
     /// After upgrade
     pub fn replace_all(&self, stable_tera_state: StableTerabetiaState) {
-        STATE.with(|tera| {
-            tera.messages.replace(stable_tera_state.messages);
-            tera.nonce.replace(stable_tera_state.nonce);
-            tera.messages_out.replace(stable_tera_state.messages_out);
-            tera.message_out_index
-                .replace(stable_tera_state.message_out_index);
-            tera.authorized.replace(stable_tera_state.authorized);
-        })
+        self.messages.replace(stable_tera_state.messages);
+        self.nonce.replace(stable_tera_state.nonce);
+        self.messages_out.replace(stable_tera_state.messages_out);
+        self.message_out_index
+            .replace(stable_tera_state.message_out_index);
+        self.authorized.replace(stable_tera_state.authorized);
     }
 }
 

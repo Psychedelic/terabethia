@@ -32,7 +32,7 @@ mod tests {
     use super::*;
 
     pub fn msg_hash() -> String {
-        String::from("d0379be15bb6f33737b756e512dad1e71226b31fa648da57811f930badf6c163")
+        String::from("bce2b126cbac772605afb3fe363078f1a5b422b602cbf65bc59006cb77661482")
     }
 
     fn before_each() -> &'static mut MockContext {
