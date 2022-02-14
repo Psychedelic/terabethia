@@ -3,8 +3,10 @@
 
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math import assert_nn
-from starkware.starknet.common.messages import send_message_to_l1
+from starkware.cairo.common.math import unsigned_div_rem
+from starkware.cairo.common.registers import get_fp_and_pc
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.starknet.common.messages import send_message_to_l1
 
 # Terabethia Ethereum Address
 @storage_var
@@ -41,6 +43,36 @@ func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
         msg_hashes_len : felt, msg_hashes : felt*):
     alloc_locals
     assert_nn(msg_hashes_len)
+
+    let (_, r) = unsigned_div_rem(msg_hashes_len, 2)
+
+    if r != 0:
+        return ()
+    end
+
+    recurse_message_send(msg_hash_len=msg_hashes_len / 2, msg_hash=msg_hashes)
+
+    return ()
+end
+
+@external
+func recurse_message_send{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        msg_hash_len, msg_hash : felt*):
+    alloc_locals
+
+    if msg_hash_len == 0:
+        return ()
+    end
+
+    let (contract_addr) = l1_contract.read()
+    let (message_payload : felt*) = alloc()
+
+    assert message_payload[0] = msg_hash[0]
+    assert message_payload[1] = msg_hash[1]
+
+    send_message_to_l1(to_address=contract_addr, payload_size=2, payload=message_payload)
+
+    recurse_message_send(msg_hash_len=msg_hash_len - 1, msg_hash=&msg_hash[2])
 
     return ()
 end
