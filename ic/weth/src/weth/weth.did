@@ -23,9 +23,9 @@ type TxError = variant {
   Unauthorized;
   LedgerTrap;
   ErrorTo;
-  Other;
   BlockUsed;
   AmountTooSmall;
+  Other : text;
 };
 service : (
   text,
@@ -62,4 +62,8 @@ service : (
   totalSupply : () -> (nat) query;
   transfer : (principal, nat) -> (Result);
   transferFrom : (principal, principal, nat) -> (Result);
+
+  // proxy
+  burn : (principal, nat) -> (Result);
+  mint : (nat, vec nat) -> (Result);
 }

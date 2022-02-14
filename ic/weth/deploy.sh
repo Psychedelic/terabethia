@@ -1,14 +1,14 @@
-dfx canister --no-wallet create token
-# cargo run > token.did
+dfx canister --no-wallet create weth
+# cargo run > weth.did
 
-ic-cdk-optimizer target/wasm32-unknown-unknown/release/token.wasm -o target/wasm32-unknown-unknown/release/token-opt.wasm
-dfx build token
+ic-cdk-optimizer target/wasm32-unknown-unknown/release/weth.wasm -o target/wasm32-unknown-unknown/release/weth-opt.wasm
+dfx build weth
 
 OWNER="principal \"$( \dfx identity get-principal)\""
 CAP_ID="principal \"e22n6-waaaa-aaaah-qcd2q-cai\""
 ETH_PROXY_ID="principal \"$( \dfx canister id eth_proxy)\""
 
-dfx canister --no-wallet install token --argument "(
+dfx canister --no-wallet install weth --argument "(
    \"NA\", 
    \"Wrapped Ether\", 
    \"WETH\", 
