@@ -2,7 +2,6 @@ import * as dotenv from "dotenv";
 
 import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
-import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
@@ -35,7 +34,16 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-  }
+  },
+  // This is property is not a memebr of type {HardhatUserConfig}
+  // abiExporter: {
+  //   path: './data/abi',
+  //   clear: true,
+  //   flat: true,
+  //   only: [],
+  //   spacing: 2,
+  //   pretty: true,
+  // },
 };
 
 export default config;

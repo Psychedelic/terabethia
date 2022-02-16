@@ -7,6 +7,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import "@shardlabs/starknet-hardhat-plugin";
 
 dotenv.config();
 
@@ -35,7 +36,24 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-  }
+  },
+  cairo: {
+    // The default in this version of the plugin
+    // version: "0.6.2",
+    venv: "/Users/vojtechstudenka/cairo_venv",
+  },
+  paths: {
+    starknetSources: "cairo",
+  },
+  // This is property is not a memebr of type {HardhatUserConfig}
+  // abiExporter: {
+  //   path: './data/abi',
+  //   clear: true,
+  //   flat: true,
+  //   only: [],
+  //   spacing: 2,
+  //   pretty: true,
+  // },
 };
 
 export default config;

@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 import "./ITerabethiaCore.sol";
 
 contract EthProxy {
-    // The StarkNet core contract.
+    // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
 
-    // The selector of the "deposit" l1_handler.
+    // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001090101;
 
     /**

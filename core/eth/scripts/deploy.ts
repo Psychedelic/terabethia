@@ -21,19 +21,11 @@ async function main() {
   const tera = await upgrades.deployProxy(Terabethia, [STARKNET_CONTRACT]);
   await tera.deployed();
 
-  // set proxy
-  const EthProxy = await ethers.getContractFactory("EthProxy");
-  const ethProxy = await EthProxy.deploy(tera.address);
-
   console.log("Terabethia deployed to:", impl.address);
   console.log("Terabethia proxy deployed to:", tera.address);
-  console.log("Eth Bridge deployed to:", ethProxy.address);
 
   console.log("Execute these commands to verify contracts on Etherscan:");
   console.log(`npx hardhat verify --network goerli ${impl.address}`);
-  console.log(
-    `npx hardhat verify --network goerli ${ethProxy.address} ${tera.address}`
-  );
 }
 
 main().catch((error) => {
