@@ -12,7 +12,7 @@ import TerabethiaService, {
   ConsumeMessageResponse,
   OutgoingMessagePair,
   StoreMessageResponse,
-} from './idls/tera/tera.d';
+} from './idls/tera/tera';
 
 export { KMSIdentity } from './kms';
 
