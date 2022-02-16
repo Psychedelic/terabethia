@@ -1,0 +1,3 @@
+[submodule "ic/terabethia/src/DIP20"]
+	path = magic_bridge/src/DIP20
+	url = git@github.com:Psychedelic/DIP20.git
