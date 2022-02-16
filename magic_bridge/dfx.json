@@ -1,0 +1,23 @@
+{
+  "canisters": {
+    "magic_bridge": {
+      "candid": "src/magic_bridge/magic_bridge.did",
+      "package": "magic_bridge",
+      "type": "rust"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "dfx": "0.8.4",
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}
