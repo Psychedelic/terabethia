@@ -2,18 +2,18 @@ use ic_kit::candid::{CandidType, Deserialize, Nat, Principal};
 
 #[derive(CandidType, Deserialize)]
 pub enum TokenType {
-  DIP20,
-  DIP721,
-  DIP1155,
+    DIP20,
+    DIP721,
+    DIP1155,
 }
 
 #[derive(CandidType, Deserialize)]
 pub enum FactoryError {
-  CreateCanisterError,
-  CanisterStatusNotAvailableError,
-  EncodeError,
-  CodeAlreadyInstalled,
-  InstallCodeError,
+    CreateCanisterError,
+    CanisterStatusNotAvailableError,
+    EncodeError,
+    CodeAlreadyInstalled,
+    InstallCodeError,
 }
 
 pub type Nonce = Nat;
