@@ -1,0 +1,12 @@
+{
+  "name": "terabethia",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:Psychedelic/terabethia.git",
+  "author": "b0xtch",
+  "license": "MIT",
+  "scripts": {
+    "dip20:init": "git submodule update --init --recursive",
+    "dip20:update": "git submodule update --remote --merge"
+  }
+}
