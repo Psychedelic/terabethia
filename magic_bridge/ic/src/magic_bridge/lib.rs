@@ -1,4 +1,4 @@
-use factory::create;
+use factory::{create, CreateCanisterParam};
 use ic_kit::candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::Principal;
 use ic_kit::{ic, macros::*};
@@ -51,33 +51,22 @@ async fn handler(
     let canister_id = if let Some(canister_id) = canister_exits {
         canister_id
     } else {
-        let logo = "";
-        let name = "";
-        let symbol = "";
-        let decimals: u8;
-        let total_supply: Nat;
-        let owner: Principal;
-        let controllers: Vec<Principal>;
-        let cycles: u64;
-        let fee: Nat;
-        let fee_to: Principal;
-        let cap: Principal;
-
-        let create_canister = create(
-            logo.to_string(),
-            name.to_string(),
-            symbol.to_string(),
-            decimals,
-            total_supply,
-            owner,
-            controllers,
-            cycles,
-            fee,
-            fee_to,
-            cap,
+        let create_param = CreateCanisterParam {
+            logo: payload[2].to_string(),
+            name: payload[2].to_string(),
+            symbol: payload[2].to_string(),
+            decimals: payload[2].to_string(),
+            total_supply: Nat::from(0),
+            owner: ic::id(),
+            controllers: vec![ic::id()],
+            cycles: 10_000_000_000_000,
+            fee: Nat::from(0),
+            fee_to: ic::id(),
+            cap: Principal::from_text("e22n6-waaaa-aaaah-qcd2q-cai").unwrap(),
             token_type,
-        )
-        .await;
+        };
+
+        let create_canister = create(create_param).await;
 
         match create_canister {
             Ok(canister_id) => {
