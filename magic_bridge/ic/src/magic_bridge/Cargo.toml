@@ -10,5 +10,13 @@ path = "lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.3"
+ic-kit = "0.4.3"
+ic-cdk = "0.3.1"
+serde = "1.0.133"
 ic-cdk-macros = "0.3"
+serde_cbor = "0.11.2"
+serde_bytes = "0.11.5"
+assert-panic = "1.0.1"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+async-std = { version="1.10.0", features = ["attributes"] }

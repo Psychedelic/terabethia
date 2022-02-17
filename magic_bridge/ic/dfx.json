@@ -4,6 +4,11 @@
       "candid": "src/magic_bridge/magic_bridge.did",
       "package": "magic_bridge",
       "type": "rust"
+    },
+    "factory": {
+      "candid": "src/factory/factory.did",
+      "package": "factory",
+      "type": "rust"
     }
   },
   "defaults": {
