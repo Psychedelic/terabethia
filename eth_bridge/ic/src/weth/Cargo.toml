@@ -11,7 +11,6 @@ candid = "0.7.4"
 ic-kit = "0.4.3"
 ic-cdk = "0.3.1"
 serde = "1.0.116"
-bigdecimal = "0.3.0"
 ic-cdk-macros = "0.3"
 assert-panic = "1.0.1"
 cap-std = { git = "https://github.com/Psychedelic/cap", branch = "main", package="cap-standards", features = ["alpha-dip20", "cap-sdk", "sdk-impls"] }
