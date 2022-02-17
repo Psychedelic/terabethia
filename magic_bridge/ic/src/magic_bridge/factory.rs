@@ -1,16 +1,15 @@
 use crate::types::*;
 use ic_kit::{
-    candid::{candid_method, encode_args, CandidType, Deserialize, Nat},
+    candid::{encode_args, CandidType, Deserialize, Nat},
     ic,
     interfaces::{management, Method},
-    macros::*,
     Principal, RejectionCode,
 };
 
 const WASM_DIP20: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
+const WASM_DIP721: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
+const WASM_DIP1155: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
 
-#[update]
-#[candid_method(update)]
 pub async fn create(
     logo: String,
     name: String,
@@ -23,7 +22,7 @@ pub async fn create(
     fee: Nat,
     fee_to: Principal,
     cap: Principal,
-    _token_type: TokenType,
+    token_type: TokenType,
 ) -> Result<Principal, FactoryError> {
     assert_eq!(
         ic_kit::ic::caller(),
@@ -99,7 +98,12 @@ pub async fn create(
     let install_config = InstallCodeArgumentBorrowed {
         mode: InstallMode::Install,
         canister_id,
-        wasm_module: WASM_DIP20,
+        /// ToDo dynamic dispatch
+        wasm_module: match token_type {
+            TokenType::DIP20 => WASM_DIP20,
+            TokenType::DIP721 => WASM_DIP721,
+            TokenType::DIP1155 => WASM_DIP1155,
+        },
         arg,
     };
 

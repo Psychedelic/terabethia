@@ -6,6 +6,12 @@ use ic_kit::Principal;
 use crate::StableMagicState;
 use crate::STATE;
 
+#[query]
+#[candid_method(query)]
+pub fn owner() -> Principal {
+    *ic::get_maybe::<Principal>().expect("owner not set")
+}
+
 #[init]
 pub fn init(owner: Principal) {
     ic::store(owner);
@@ -30,10 +36,4 @@ fn post_upgrade() {
     ic::store(owner);
 
     STATE.with(|s| s.0.replace(stable_magic_state.0));
-}
-
-#[query]
-#[candid_method(query)]
-pub fn owner() -> Principal {
-    *ic::get_maybe::<Principal>().expect("owner not set")
 }

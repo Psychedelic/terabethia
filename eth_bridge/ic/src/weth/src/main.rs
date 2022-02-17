@@ -468,7 +468,7 @@ async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
         Err(_) => {
             BALANCES.with(|b| {
                 let mut balances = b.borrow_mut();
-                balances.insert(caller, balance_of(caller) - amount.clone());
+                balances.insert(caller, balance_of(caller) + amount.clone());
             });
 
             STATS.with(|s| {

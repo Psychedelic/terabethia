@@ -6,7 +6,7 @@ use ic_kit::{
 pub struct Dip20Proxy {}
 
 impl Dip20Proxy {
-    pub async fn create(
+    pub async fn mint(
     ) {
     }
 }
@@ -14,7 +14,7 @@ impl Dip20Proxy {
 pub struct Dip721Proxy {}
 
 impl Dip721Proxy {
-    pub async fn create(
+    pub async fn mint(
     ) {
     }
 }
@@ -22,7 +22,7 @@ impl Dip721Proxy {
 pub struct Dip1155Proxy {}
 
 impl Dip1155Proxy {
-    pub async fn create(
+    pub async fn mint(
     ) {
     }
 }
