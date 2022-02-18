@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ITerabethiaCore.sol";
 
 contract ERC20Bridge {
@@ -29,7 +30,7 @@ contract ERC20Bridge {
         terabethiaCore.consumeMessage(CANISTER_ADDRESS, payload);
 
         // withdraw erc20
-        IERC20(token).transfer(msg.sender, amount);
+        SafeERC20.safeTransfer(IERC20(token), msg.sender, amount);
     }
 
     function deposit(
@@ -37,13 +38,15 @@ contract ERC20Bridge {
         uint256 amount,
         uint256 user
     ) external payable {
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
 
         // Construct the deposit message's payload.
         uint256[] memory payload = new uint256[](3);
         payload[0] = uint256(uint160(token));
         payload[1] = user;
         payload[2] = amount;
+
+        // @todo: do we need to pass token info here?
 
         // Send the message to the IC
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
