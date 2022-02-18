@@ -9,6 +9,10 @@ impl Dip20Proxy {
     pub async fn mint(
     ) {
     }
+
+    pub async fn burn(
+    ) {
+    }
 }
 
 pub struct Dip721Proxy {}
@@ -17,12 +21,8 @@ impl Dip721Proxy {
     pub async fn mint(
     ) {
     }
-}
 
-pub struct Dip1155Proxy {}
-
-impl Dip1155Proxy {
-    pub async fn mint(
+    pub async fn burn(
     ) {
     }
 }

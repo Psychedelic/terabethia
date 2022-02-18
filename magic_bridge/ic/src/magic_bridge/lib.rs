@@ -53,9 +53,9 @@ async fn handler(
     } else {
         let create_param = CreateCanisterParam {
             logo: payload[2].to_string(),
-            name: payload[2].to_string(),
-            symbol: payload[2].to_string(),
-            decimals: payload[2].to_string(),
+            name: payload[3].to_string(),
+            symbol: payload[4].to_string(),
+            decimals: payload[5].to_string(),
             total_supply: Nat::from(0),
             owner: ic::id(),
             controllers: vec![ic::id()],
