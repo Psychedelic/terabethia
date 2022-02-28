@@ -4,3 +4,4 @@
 [submodule "magic_bridge/ic/DIP721"]
 	path = magic_bridge/ic/DIP721
 	url = https://github.com/Psychedelic/DIP721.git
+	branch = v2
