@@ -1386,7 +1386,6 @@ version = "0.1.0"
 dependencies = [
  "assert-panic",
  "async-std",
- "bigdecimal",
  "candid",
  "cap-sdk",
  "cap-standards",

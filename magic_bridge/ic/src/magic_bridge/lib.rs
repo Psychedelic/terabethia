@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use types::*;
 
 mod factory;
+mod proxy;
 mod types;
 mod upgrade;
 
@@ -66,6 +67,10 @@ async fn handler(
             token_type,
         };
 
+        // chnage to Factory::init()
+        // then Factory::create()
+        // Factory::mint()
+
         let create_canister = create(create_param).await;
 
         match create_canister {
@@ -77,7 +82,6 @@ async fn handler(
         }
     };
 
-    // call mint function
     let mint: (TxReceipt,) = match ic::call(canister_id, "mint", (&nonce, &payload)).await {
         Ok(res) => res,
         Err((code, err)) => {

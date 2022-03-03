@@ -9,7 +9,6 @@ type FactoryError = variant {
 type TokenType = variant {
   DIP20;
   DIP721;
-  DIP1155;
 };
 
 type Result = variant { Ok : principal; Err : FactoryError };

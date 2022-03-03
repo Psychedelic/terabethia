@@ -161,6 +161,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "677d306121baf53310a3fd342d88dc0824f6bbeace68347593658525565abee8"
 
 [[package]]
+name = "async-trait"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "061a7acccaa286c011ddc30970520b98fa40e00c9d644633fb26b5fc63a265e3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -836,6 +847,7 @@ version = "0.1.0"
 dependencies = [
  "assert-panic",
  "async-std",
+ "async-trait",
  "ic-cdk",
  "ic-cdk-macros",
  "ic-kit",
