@@ -728,9 +728,6 @@ impl FromNat for Principal {
 #[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let caller = ic::caller();
-    if caller != _get_owner() {
-        return Err(TxError::Unauthorized);
-    }
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
