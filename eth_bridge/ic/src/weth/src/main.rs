@@ -1,8 +1,8 @@
 /**
 * Module     : main.rs
-* Copyright  : 2021 DFinance Team
-* License    : Apache 2.0 with LLVM Exception
-* Maintainer : DFinance Team <hello@dfinance.ai>
+* Copyright  : 2022 Fleek
+* License    : GPL 3.0
+* Maintainer : Psychedelic <support@fleek.co>
 * Stability  : Experimental
 */
 use candid::{candid_method, CandidType, Deserialize, Int, Nat};
@@ -145,55 +145,9 @@ fn init(
     );
 }
 
-fn _transfer(from: Principal, to: Principal, value: Nat) {
-    BALANCES.with(|b| {
-        let mut balances = b.borrow_mut();
-        let from_balance = balance_of(from);
-        let from_balance_new: Nat = from_balance - value.clone();
-        if from_balance_new != 0 {
-            balances.insert(from, from_balance_new);
-        } else {
-            balances.remove(&from);
-        }
-        let to_balance = balance_of(to);
-        let to_balance_new = to_balance + value;
-        if to_balance_new != 0 {
-            balances.insert(to, to_balance_new);
-        }
-    });
-}
+/* UPDATE FNS */
 
-fn _charge_fee(user: Principal, fee: Nat) {
-    STATS.with(|s| {
-        let stats = s.borrow();
-        if stats.fee > Nat::from(0) {
-            _transfer(user, stats.fee_to, fee);
-        }
-    });
-}
-
-fn _get_fee() -> Nat {
-    STATS.with(|s| {
-        let stats = s.borrow();
-        stats.fee.clone()
-    })
-}
-
-fn _get_owner() -> Principal {
-    STATS.with(|s| {
-        let stats = s.borrow();
-        stats.owner
-    })
-}
-
-fn _history_inc() {
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        stats.history_size += 1;
-    })
-}
-
-#[update(name = "transfer")]
+#[update]
 #[candid_method(update)]
 async fn transfer(to: Principal, value: Nat) -> TxReceipt {
     let from = ic::caller();
@@ -262,14 +216,14 @@ async fn transfer_from(from: Principal, to: Principal, value: Nat) -> TxReceipt 
         from,
         to,
         value,
-        fee.clone(),
+        fee,
         ic::time(),
         TransactionStatus::Succeeded,
     )
     .await
 }
 
-#[update(name = "approve")]
+#[update]
 #[candid_method(update)]
 async fn approve(spender: Principal, value: Nat) -> TxReceipt {
     let owner = ic::caller();
@@ -300,7 +254,6 @@ async fn approve(spender: Principal, value: Nat) -> TxReceipt {
                 if v.clone() != 0 {
                     let mut inner = HashMap::new();
                     inner.insert(spender, v.clone());
-                    let allowances = ic::get_mut::<Allowances>();
                     allowances.insert(owner, inner);
                 }
             }
@@ -314,67 +267,14 @@ async fn approve(spender: Principal, value: Nat) -> TxReceipt {
         owner,
         spender,
         v,
-        fee.clone(),
+        fee,
         ic::time(),
         TransactionStatus::Succeeded,
     )
     .await
 }
 
-#[update(name = "setName")]
-#[candid_method(update, rename = "setName")]
-fn set_name(name: String) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.name = name;
-    });
-}
-
-#[update(name = "setLogo")]
-#[candid_method(update, rename = "setLogo")]
-fn set_logo(logo: String) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.logo = logo;
-    });
-}
-
-#[update(name = "setFee")]
-#[candid_method(update, rename = "setFee")]
-fn set_fee(fee: Nat) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.fee = fee;
-    });
-}
-
-#[update(name = "setFeeTo")]
-#[candid_method(update, rename = "setFeeTo")]
-fn set_fee_to(fee_to: Principal) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.fee_to = fee_to;
-    });
-}
-
-#[update(name = "setOwner")]
-#[candid_method(update, rename = "setOwner")]
-fn set_owner(owner: Principal) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.owner = owner;
-    });
-}
+/* QUERY FNS */
 
 #[query(name = "balanceOf")]
 #[candid_method(query, rename = "balanceOf")]
@@ -388,7 +288,7 @@ fn balance_of(id: Principal) -> Nat {
     })
 }
 
-#[query(name = "allowance")]
+#[query]
 #[candid_method(query)]
 fn allowance(owner: Principal, spender: Principal) -> Nat {
     ALLOWS.with(|a| {
@@ -403,16 +303,16 @@ fn allowance(owner: Principal, spender: Principal) -> Nat {
     })
 }
 
-#[query(name = "logo")]
-#[candid_method(query, rename = "logo")]
-fn get_logo() -> String {
+#[query]
+#[candid_method(query)]
+fn logo() -> String {
     STATS.with(|s| {
         let stats = s.borrow();
         stats.logo.clone()
     })
 }
 
-#[query(name = "name")]
+#[query]
 #[candid_method(query)]
 fn name() -> String {
     STATS.with(|s| {
@@ -421,7 +321,7 @@ fn name() -> String {
     })
 }
 
-#[query(name = "symbol")]
+#[query]
 #[candid_method(query)]
 fn symbol() -> String {
     STATS.with(|s| {
@@ -430,7 +330,7 @@ fn symbol() -> String {
     })
 }
 
-#[query(name = "decimals")]
+#[query]
 #[candid_method(query)]
 fn decimals() -> u8 {
     STATS.with(|s| {
@@ -448,7 +348,7 @@ fn total_supply() -> Nat {
     })
 }
 
-#[query(name = "owner")]
+#[query]
 #[candid_method(query)]
 fn owner() -> Principal {
     STATS.with(|s| {
@@ -461,15 +361,15 @@ fn owner() -> Principal {
 #[candid_method(query, rename = "getMetadata")]
 fn get_metadata() -> Metadata {
     STATS.with(|stats| {
-        let s = stats.borrow();
+        let s = stats.borrow().clone();
         Metadata {
-            logo: s.logo.clone(),
-            name: s.name.clone(),
-            symbol: s.symbol.clone(),
+            logo: s.logo,
+            name: s.name,
+            symbol: s.symbol,
             decimals: s.decimals,
-            totalSupply: s.total_supply.clone(),
+            totalSupply: s.total_supply,
             owner: s.owner,
-            fee: s.fee.clone(),
+            fee: s.fee,
         }
     })
 }
@@ -486,31 +386,28 @@ fn history_size() -> usize {
 #[query(name = "getTokenInfo")]
 #[candid_method(query, rename = "getTokenInfo")]
 fn get_token_info() -> TokenInfo {
-    let mut len = 0;
-    BALANCES.with(|b| {
-        let balances = b.borrow();
-        len = balances.len();
-    });
-
     STATS.with(|s| {
         let stats = s.borrow();
-        TokenInfo {
-            metadata: get_metadata(),
-            feeTo: stats.fee_to,
-            historySize: stats.history_size,
-            deployTime: stats.deploy_time,
-            holderNumber: len,
-            cycles: ic::balance(),
-        }
+        BALANCES.with(|b| {
+            let balances = b.borrow();
+            TokenInfo {
+                metadata: get_metadata(),
+                feeTo: stats.fee_to,
+                historySize: stats.history_size,
+                deployTime: stats.deploy_time,
+                holderNumber: balances.len(),
+                cycles: ic::balance(),
+            }
+        })
     })
 }
 
 #[query(name = "getHolders")]
 #[candid_method(query, rename = "getHolders")]
 fn get_holders(start: usize, limit: usize) -> Vec<(Principal, Nat)> {
-    let mut balance = Vec::new();
     BALANCES.with(|b| {
         let balances = b.borrow();
+        let mut balance = Vec::new();
         for (k, v) in balances.iter() {
             balance.push((k.clone(), v.clone()));
         }
@@ -527,9 +424,9 @@ fn get_holders(start: usize, limit: usize) -> Vec<(Principal, Nat)> {
 #[query(name = "getAllowanceSize")]
 #[candid_method(query, rename = "getAllowanceSize")]
 fn get_allowance_size() -> usize {
-    let mut size = 0;
     ALLOWS.with(|a| {
         let allowances = a.borrow();
+        let mut size = 0;
         for (_, v) in allowances.iter() {
             size += v.len();
         }
@@ -546,6 +443,129 @@ fn get_user_approvals(who: Principal) -> Vec<(Principal, Nat)> {
             Some(allow) => Vec::from_iter(allow.clone().into_iter()),
             None => Vec::new(),
         }
+    })
+}
+
+/* CONTROLLER FNS */
+
+#[update(name = "setName", guard = "_is_auth")]
+#[candid_method(update, rename = "setName")]
+fn set_name(name: String) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.name = name;
+    });
+}
+
+#[update(name = "setLogo", guard = "_is_auth")]
+#[candid_method(update, rename = "setLogo")]
+fn set_logo(logo: String) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.logo = logo;
+    });
+}
+
+#[update(name = "setFee", guard = "_is_auth")]
+#[candid_method(update, rename = "setFee")]
+fn set_fee(fee: Nat) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.fee = fee;
+    });
+}
+
+#[update(name = "setFeeTo", guard = "_is_auth")]
+#[candid_method(update, rename = "setFeeTo")]
+fn set_fee_to(fee_to: Principal) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.fee_to = fee_to;
+    });
+}
+
+#[update(name = "setOwner", guard = "_is_auth")]
+#[candid_method(update, rename = "setOwner")]
+fn set_owner(owner: Principal) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.owner = owner;
+    });
+}
+
+/* INTERNAL FNS */
+
+// TODO: use controllers for ownership
+// this will require the canister to be a controller of itself (like dip721)
+fn _is_auth() -> Result<(), String> {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        if ic::caller() == stats.owner {
+            Ok(())
+        } else {
+            Err("Error: Unauthorized principal ID".to_string())
+        }
+    })
+}
+
+fn _balance_ins(from: Principal, value: Nat) {
+    BALANCES.with(|b| {
+        let mut balances = b.borrow_mut();
+        balances.insert(from, value);
+    });
+}
+
+fn _balance_rem(from: Principal) {
+    BALANCES.with(|b| {
+        let mut balances = b.borrow_mut();
+        balances.remove(&from);
+    });
+}
+
+fn _transfer(from: Principal, to: Principal, value: Nat) {
+    let from_balance = balance_of(from);
+    let from_balance_new = from_balance - value.clone();
+
+    // TODO: check this logic ↴
+    if from_balance_new != 0 {
+        _balance_ins(from, from_balance_new);
+    } else {
+        _balance_rem(from)
+    }
+    let to_balance = balance_of(to);
+    let to_balance_new = to_balance + value;
+    if to_balance_new != 0 {
+        _balance_ins(to, to_balance_new);
+    }
+}
+
+fn _charge_fee(user: Principal, fee: Nat) {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        if stats.fee > Nat::from(0) {
+            _transfer(user, stats.fee_to, fee);
+        }
+    });
+}
+
+fn _get_fee() -> Nat {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        stats.fee.clone()
+    })
+}
+
+fn _get_owner() -> Principal {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        stats.owner
+    })
+}
+
+fn _history_inc() {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.history_size += 1;
     })
 }
 
@@ -704,7 +724,7 @@ impl FromNat for Principal {
     }
 }
 
-#[update(name = "mint")]
+#[update(name = "mint", guard = "_is_auth")]
 #[candid_method(update, rename = "mint")]
 async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let caller = ic::caller();

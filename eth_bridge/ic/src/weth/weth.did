@@ -23,9 +23,9 @@ type TxError = variant {
   Unauthorized;
   LedgerTrap;
   ErrorTo;
+  Other : text;
   BlockUsed;
   AmountTooSmall;
-  Other : text;
 };
 service : (
   text,
@@ -41,7 +41,7 @@ service : (
   allowance : (principal, principal) -> (nat) query;
   approve : (principal, nat) -> (Result);
   balanceOf : (principal) -> (nat) query;
-  burn : (nat) -> (Result);
+  burn : (principal, nat) -> (Result);
   decimals : () -> (nat8) query;
   getAllowanceSize : () -> (nat64) query;
   getHolders : (nat64, nat64) -> (vec record { principal; nat }) query;
@@ -50,7 +50,7 @@ service : (
   getUserApprovals : (principal) -> (vec record { principal; nat }) query;
   historySize : () -> (nat64) query;
   logo : () -> (text) query;
-  mint : (principal, nat) -> (Result);
+  mint : (nat, vec nat) -> (Result);
   name : () -> (text) query;
   owner : () -> (principal) query;
   setFee : (nat) -> ();
@@ -62,8 +62,4 @@ service : (
   totalSupply : () -> (nat) query;
   transfer : (principal, nat) -> (Result);
   transferFrom : (principal, principal, nat) -> (Result);
-
-  // proxy
-  burn : (principal, nat) -> (Result);
-  mint : (nat, vec nat) -> (Result);
 }
