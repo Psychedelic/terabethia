@@ -1,5 +1,5 @@
 [workspace]
 members = [
-    "src/eth_proxy",
+    "src/proxy",
     "src/weth"
 ]

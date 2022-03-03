@@ -14,8 +14,20 @@ dfx canister --no-wallet install weth --argument "(
    \"WETH\", 
    18:nat8, 
    0,
-   $ETH_PROXY_ID_PROD, 
+   $ETH_PROXY_ID, 
    0,
    $OWNER, 
    $CAP_ID, 
 )" -m=reinstall
+
+# dfx canister --no-wallet install weth --argument "(
+#    # logo 
+#    # name
+#    # symbol
+#    # decimals 
+#    # total_supply
+#    # owner 
+#    # fee
+#    # fee_to
+#    # cap 
+# )" -m=reinstall
