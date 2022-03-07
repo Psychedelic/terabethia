@@ -1,4 +1,6 @@
 [workspace]
 members = [
+    "src/dip20_proxy",
     "src/magic_bridge",
+    "src/dip721_proxy",
 ]

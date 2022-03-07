@@ -1,4 +1,4 @@
-use factory::{create, CreateCanisterParam};
+use factory::{CreateCanisterParam, Factory};
 use ic_kit::candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::Principal;
 use ic_kit::{ic, macros::*};
@@ -71,7 +71,7 @@ async fn handler(
         // then Factory::create()
         // Factory::mint()
 
-        let create_canister = create(create_param).await;
+        let create_canister = Factory::create(create_param).await;
 
         match create_canister {
             Ok(canister_id) => {

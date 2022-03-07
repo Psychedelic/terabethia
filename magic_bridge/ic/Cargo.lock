@@ -421,6 +421,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "dip20_proxy"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "hex",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "ic-kit",
+ "serde",
+]
+
+[[package]]
+name = "dip721_proxy"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "hex",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "ic-kit",
+ "serde",
+]
+
+[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

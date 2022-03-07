@@ -1,0 +1,17 @@
+type Result = variant { Ok : nat; Err : TxError };
+type TxError = variant {
+  InsufficientAllowance;
+  InsufficientBalance;
+  ErrorOperationStyle;
+  Unauthorized;
+  LedgerTrap;
+  ErrorTo;
+  BlockUsed;
+  AmountTooSmall;
+  Other : text;
+};
+service : () -> {
+  burn : (principal, nat) -> (Result);
+  handle_message : (principal, nat, vec nat) -> (Result);
+  mint : (nat, vec nat) -> (Result);
+}

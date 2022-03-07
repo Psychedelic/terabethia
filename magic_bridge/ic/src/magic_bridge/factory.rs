@@ -6,8 +6,8 @@ use ic_kit::{
     Principal, RejectionCode,
 };
 
-const WASM_DIP20: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
-const WASM_DIP721: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
+const DIP20_WASM: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
+const DIP721_WASM: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
 
 pub struct CreateCanisterParam {
     logo: String,
@@ -49,7 +49,7 @@ impl CreateCanisterParam {
     }
 }
 
-struct Factory;
+pub struct Factory;
 
 impl Factory {
     pub async fn create(mut param: CreateCanisterParam) -> Result<Principal, FactoryError> {
@@ -127,10 +127,9 @@ impl Factory {
         let install_config = InstallCodeArgumentBorrowed {
             mode: InstallMode::Install,
             canister_id,
-            /// ToDo dynamic dispatch
             wasm_module: match param.token_type {
-                TokenType::DIP20 => WASM_DIP20,
-                TokenType::DIP721 => WASM_DIP721,
+                TokenType::DIP20 => DIP20_WASM,
+                TokenType::DIP721 => DIP721_WASM,
             },
             arg,
         };
