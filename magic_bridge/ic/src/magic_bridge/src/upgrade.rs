@@ -3,8 +3,8 @@ use ic_kit::ic;
 use ic_kit::macros::*;
 use ic_kit::Principal;
 
-use crate::StableMagicState;
-use crate::STATE;
+use crate::magic::StableMagicState;
+use crate::magic::STATE;
 
 #[query]
 #[candid_method(query)]

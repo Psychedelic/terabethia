@@ -1,4 +1,4 @@
-use ic_kit::candid::{CandidType, Deserialize, Nat, Principal};
+use ic_cdk::export::candid::{CandidType, Deserialize, Nat, Principal};
 
 pub type Nonce = Nat;
 

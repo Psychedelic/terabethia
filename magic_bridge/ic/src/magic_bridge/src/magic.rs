@@ -1,15 +1,10 @@
-use factory::{CreateCanisterParam, Factory};
-use ic_kit::candid::{candid_method, CandidType, Deserialize, Nat};
+use crate::factory::{CreateCanisterParam, Factory};
+use crate::types::*;
+use ic_kit::candid::{CandidType, Deserialize, Nat};
 use ic_kit::Principal;
 use ic_kit::{ic, macros::*};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use types::*;
-
-mod factory;
-mod proxy;
-mod types;
-mod upgrade;
 
 thread_local! {
     pub static STATE: MagicState = MagicState::default();
@@ -19,7 +14,7 @@ thread_local! {
 pub struct MagicState(RefCell<HashMap<EthereumAdr, CanisterId>>);
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct StableMagicState(HashMap<EthereumAdr, CanisterId>);
+pub struct StableMagicState(pub HashMap<EthereumAdr, CanisterId>);
 
 impl MagicState {
     pub fn get_canister(&self, eth_addr: EthereumAdr) -> Option<CanisterId> {
@@ -39,8 +34,8 @@ impl MagicState {
     }
 }
 
-#[update(name = "handle_message")]
-// #[candid_method(update, rename = "handle_message")]
+#[update(name = "handle_proxy_call")]
+// #[candid_method(update, rename = "handle_proxy_call")]
 async fn handler(
     eth_addr: Principal,
     token_type: TokenType,
@@ -53,7 +48,7 @@ async fn handler(
         canister_id
     } else {
         let create_param = CreateCanisterParam {
-            logo: payload[2].to_string(),
+            logo: payload[2].to_string(), // logo support???
             name: payload[3].to_string(),
             symbol: payload[4].to_string(),
             decimals: payload[5].to_string(),
@@ -67,10 +62,6 @@ async fn handler(
             token_type,
         };
 
-        // chnage to Factory::init()
-        // then Factory::create()
-        // Factory::mint()
-
         let create_canister = Factory::create(create_param).await;
 
         match create_canister {
@@ -82,6 +73,7 @@ async fn handler(
         }
     };
 
+    // Factory::mint based on tokentype
     let mint: (TxReceipt,) = match ic::call(canister_id, "mint", (&nonce, &payload)).await {
         Ok(res) => res,
         Err((code, err)) => {
@@ -96,15 +88,4 @@ async fn handler(
         (Ok(tx_id),) => Ok(tx_id),
         (Err(error),) => Err(error),
     }
-}
-
-#[cfg(any(target_arch = "wasm32", test))]
-fn main() {}
-
-#[cfg(not(any(target_arch = "wasm32", test)))]
-fn main() {
-    use ic_kit::candid;
-
-    candid::export_service!();
-    std::print!("{}", __export_service());
 }
