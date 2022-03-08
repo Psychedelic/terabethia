@@ -5,20 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ITerabethiaCore.sol";
 
-function strToUint(string memory _str) returns(uint256 res, bool err) {
-    bytes memory b = bytes(_str);
-
-    for (uint256 i = 0; i < b.length; i++) {
-        if ((uint8(b[i]) - 48) < 0 || (uint8(b[i]) - 48) > 9) {
-            return (0, true);
-        }
-        res += (uint8(b[i]) - 48) * 10**(b.length - i - 1);
-    }
-    
-    return (res, false);
-}
-
-
 contract ERC20Bridge {
     // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
@@ -52,14 +38,10 @@ contract ERC20Bridge {
         address token,
         uint256 amount,
         uint256 user
-    ) external payable {
-        // Convert token name to uint256
-        (uint256 tokenName, bool tokenNameHasError) = strToUint(IERC20Metadata(token).name());
-        require(tokenNameHasError == false, "Unable to convert token name to uint256");
-
-        // Convert token symbol to uint256
-        (uint256 tokenSymbol, bool tokenSymbolHasError) = strToUint(IERC20Metadata(token).symbol());
-        require(tokenSymbolHasError == false, "Unable to convert token symbol to uint256");
+    ) external {
+        // convert string -> bytes -> uint256
+        uint256 tokenName = uint256(stringToBytes32(IERC20Metadata(token).name()));
+        uint256 tokenSymbol = uint256(stringToBytes32(IERC20Metadata(token).symbol()));
 
         SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
 
@@ -74,5 +56,16 @@ contract ERC20Bridge {
 
         // Send the message to the IC
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
+    }
+
+    function stringToBytes32(string memory source) public pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+
+        assembly {
+            result := mload(add(source, 32))
+        }
     }
 }
