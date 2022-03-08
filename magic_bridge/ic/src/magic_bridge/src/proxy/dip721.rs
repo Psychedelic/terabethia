@@ -14,12 +14,7 @@ pub trait Dip721 {
 #[async_trait]
 impl Dip721 for Principal {
     async fn mint(&self, to: Principal, amount: Nat) -> Result<TxReceipt, (RejectionCode, String)> {
-        ic::call(*self, "mint", (to, amount)).await
-
-        // .map_err(|_| MPApiError::TransferFungibleError)?
-        // .0
-        // .map_err(|_| MPApiError::TransferFungibleError)
-        // .map(|res| convert_nat_to_u64(res).unwrap())
+        call(*self, "mint", (to, amount)).await
     }
 
     async fn burn(&self, amount: Nat) -> Result<TxReceipt, (RejectionCode, String)> {

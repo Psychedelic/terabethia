@@ -1,22 +1,23 @@
-use ic_cdk::call;
 use async_trait::async_trait;
-use ic_kit::{Principal, candid::Nat, RejectionCode, ic};
+use ic_cdk::api::call::RejectionCode;
+use ic_cdk::call;
+use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::types::{TxReceipt, TxError};
+use crate::types::TxReceipt;
 
 #[async_trait]
 pub trait Dip20 {
-    async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
-    async fn burn(&self, amount: Nat) -> TxReceipt;
+    async fn mint(&self, to: Principal, amount: Nat) -> Result<TxReceipt, (RejectionCode, String)>;
+    async fn burn(&self, amount: Nat) -> Result<TxReceipt, (RejectionCode, String)>;
 }
 
 #[async_trait]
 impl Dip20 for Principal {
     async fn mint(&self, to: Principal, amount: Nat) -> Result<TxReceipt, (RejectionCode, String)> {
-      ic::call(*self, "mint", (to, amount)).await
+        call(*self, "mint", (to, amount)).await
     }
 
-    async fn burn(&self, amount: Nat) -> TxReceipt {
-        ic::call(*self, "burn", (amount,)).await
+    async fn burn(&self, amount: Nat) -> Result<TxReceipt, (RejectionCode, String)> {
+        call(*self, "burn", (amount,)).await
     }
 }

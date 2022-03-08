@@ -1,8 +1,8 @@
-use candid::{candid_method, CandidType, Deserialize, Nat};
-use ic_kit::{ic, macros::*, Principal};
+use ic_kit::{ic, macros::*, candid};
+use ic_kit::candid::{CandidType, Deserialize, Nat, Principal, candid_method};
 
 const MAGIC_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
-const ERC20_ADDRESS_ETH: &str = "0x2e130e57021bb4dfb95eb4dd0dd8cfceb936148a";
+const ERC20_ADDRESS_ETH: &str = "0xfFb1165923c83B5C17623fD5d30AB42BFfA8a22e";
 
 pub type Nonce = Nat;
 
@@ -10,7 +10,7 @@ pub type TxReceipt = Result<Nat, TxError>;
 
 #[derive(CandidType, Deserialize, Clone, Copy)]
 pub enum TokenType {
-    DIP20,
+    DIP20, 
     DIP721,
 }
 
@@ -28,7 +28,7 @@ pub enum TxError {
 }
 
 #[update(name = "handle_message")]
-#[candid_method(update, rename = "handle_message")]
+// #[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let erc20_addr_hex = hex::encode(eth_addr);
 

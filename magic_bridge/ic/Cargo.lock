@@ -424,9 +424,8 @@ dependencies = [
 name = "dip20_proxy"
 version = "0.1.0"
 dependencies = [
- "candid",
  "hex",
- "ic-cdk 0.3.3",
+ "ic-cdk 0.4.0",
  "ic-cdk-macros 0.3.3",
  "ic-kit",
  "serde",
@@ -436,9 +435,8 @@ dependencies = [
 name = "dip721_proxy"
 version = "0.1.0"
 dependencies = [
- "candid",
  "hex",
- "ic-cdk 0.3.3",
+ "ic-cdk 0.4.0",
  "ic-cdk-macros 0.3.3",
  "ic-kit",
  "serde",
@@ -898,7 +896,7 @@ version = "0.1.0"
 dependencies = [
  "assert-panic",
  "async-trait",
- "ic-cdk 0.3.3",
+ "ic-cdk 0.4.0",
  "ic-cdk-macros 0.3.3",
  "ic-kit",
  "serde",

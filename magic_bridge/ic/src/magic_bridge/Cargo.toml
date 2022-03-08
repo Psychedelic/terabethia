@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ic-kit = "0.4.4"
-ic-cdk = "0.3.1"
+ic-cdk = "0.4.0"
 serde = "1.0.133"
 async-trait = "0.1.51"
 ic-cdk-macros = "0.3"

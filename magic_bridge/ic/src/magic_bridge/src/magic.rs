@@ -73,6 +73,7 @@ async fn handler(
         }
     };
 
+    // ToDo
     // Factory::mint based on tokentype
     let mint: (TxReceipt,) = match ic::call(canister_id, "mint", (&nonce, &payload)).await {
         Ok(res) => res,
