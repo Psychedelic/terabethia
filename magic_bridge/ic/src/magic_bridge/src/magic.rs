@@ -11,23 +11,23 @@ thread_local! {
 }
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct MagicState(RefCell<HashMap<EthereumAdr, CanisterId>>);
+pub struct MagicState(RefCell<HashMap<EthereumAddr, CanisterId>>);
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct StableMagicState(pub HashMap<EthereumAdr, CanisterId>);
+pub struct StableMagicState(pub HashMap<EthereumAddr, CanisterId>);
 
 impl MagicState {
-    pub fn get_canister(&self, eth_addr: EthereumAdr) -> Option<CanisterId> {
+    pub fn get_canister(&self, eth_addr: EthereumAddr) -> Option<CanisterId> {
         self.0.borrow().get(&eth_addr).cloned()
     }
 
-    pub fn canister_exits(&self, eth_addr: EthereumAdr) -> bool {
+    pub fn canister_exits(&self, eth_addr: EthereumAddr) -> bool {
         self.0.borrow().contains_key(&eth_addr)
     }
 
     pub fn insert_canister(
         &self,
-        eth_addr: EthereumAdr,
+        eth_addr: EthereumAddr,
         canister_id: CanisterId,
     ) -> Option<CanisterId> {
         self.0.borrow_mut().insert(eth_addr, canister_id)
@@ -41,6 +41,8 @@ async fn handler(
     token_type: TokenType,
     payload: Vec<Nat>,
 ) -> MagicResponse {
+    let caller = ic::caller();
+    let canister_id = ic::id();
     let canister_exits = STATE.with(|s| s.get_canister(eth_addr));
 
     let canister_id = if let Some(canister_id) = canister_exits {
@@ -51,11 +53,11 @@ async fn handler(
             name: payload[3].to_string(),
             symbol: payload[4].to_string(),
             decimals: payload[5].to_string(),
-            total_supply: Nat::from(0),
-            owner: ic::id(),
-            controllers: vec![ic::id()],
+            total_supply: Nat::from(0_u32),
+            owner: caller,
+            controllers: vec![caller, canister_id],
             cycles: 10_000_000_000_000,
-            fee: Nat::from(0),
+            fee: Nat::from(0_u32),
             fee_to: ic::id(),
             cap: Principal::from_text("e22n6-waaaa-aaaah-qcd2q-cai").unwrap(),
             token_type,

@@ -2,7 +2,7 @@ use ic_cdk::export::candid::{CandidType, Deserialize, Nat, Principal};
 
 pub type Nonce = Nat;
 
-pub type EthereumAdr = Principal;
+pub type EthereumAddr = Principal;
 
 pub type CanisterId = Principal;
 
