@@ -6,7 +6,7 @@ pub type EthereumAdr = Principal;
 
 pub type CanisterId = Principal;
 
-pub type TxReceipt = Result<Nat, TxError>;
+pub type MagicResponse = Result<Principal, TxError>;
 
 #[derive(CandidType, Deserialize, Clone, Copy)]
 pub enum TokenType {

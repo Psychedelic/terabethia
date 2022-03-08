@@ -1,6 +1,5 @@
 mod factory;
 mod magic;
-mod proxy;
 mod types;
 mod upgrade;
 

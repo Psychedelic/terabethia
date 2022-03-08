@@ -39,9 +39,8 @@ impl MagicState {
 async fn handler(
     eth_addr: Principal,
     token_type: TokenType,
-    nonce: Nonce,
     payload: Vec<Nat>,
-) -> TxReceipt {
+) -> MagicResponse {
     let canister_exits = STATE.with(|s| s.get_canister(eth_addr));
 
     let canister_id = if let Some(canister_id) = canister_exits {
@@ -73,20 +72,5 @@ async fn handler(
         }
     };
 
-    // ToDo
-    // Factory::mint based on tokentype
-    let mint: (TxReceipt,) = match ic::call(canister_id, "mint", (&nonce, &payload)).await {
-        Ok(res) => res,
-        Err((code, err)) => {
-            return Err(TxError::Other(format!(
-                "RejectionCode: {:?}\n{}",
-                code, err
-            )))
-        }
-    };
-
-    match mint {
-        (Ok(tx_id),) => Ok(tx_id),
-        (Err(error),) => Err(error),
-    }
+    Ok(canister_id)
 }
