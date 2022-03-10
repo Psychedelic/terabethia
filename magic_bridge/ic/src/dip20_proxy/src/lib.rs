@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use ic_kit::{candid, ic, macros::*, RejectionCode};
 use ic_kit::candid::{candid_method, CandidType, Deserialize, Nat, Principal};
+use ic_kit::{candid, ic, macros::*, RejectionCode};
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 const MAGIC_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
@@ -24,26 +24,14 @@ pub type MagicResponse = Result<Principal, TxError>;
 
 #[derive(Clone, CandidType, Deserialize, Eq, PartialEq)]
 pub enum MessageStatus {
-    Received,
-    Consuming,
+    Received(MessageHash),
+    Consuming(MessageHash),
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq, Hash)]
 pub struct OutgoingMessage {
-    pub(crate) msg_key: [u8; 32],
-    pub(crate) msg_hash: String,
-}
-
-#[derive(Deserialize, CandidType)]
-pub struct ConsumeMessageParam {
-    pub eth_addr: Principal,
-    pub payload: Vec<Nat>,
-}
-
-#[derive(Deserialize, CandidType)]
-pub struct SendMessageParam {
-    pub eth_addr: Principal,
-    pub payload: Vec<Nat>,
+    msg_key: [u8; 32],
+    msg_hash: String,
 }
 
 pub trait ToNat {
@@ -82,10 +70,20 @@ impl FromNat for Principal {
 pub struct MessageState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
-    /// 
-    pub balances: RefCell<HashMap<MessageHash, MessageStatus>>,
+    ///
+    pub balances: RefCell<HashMap<Principal, MessageStatus>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
+}
+
+#[derive(CandidType, Deserialize, Default)]
+pub struct StableMessageState {
+    /// store incoming messages against status locks
+    pub incoming_messages: HashMap<MessageHash, MessageStatus>,
+    ///
+    pub balances: HashMap<Principal, MessageStatus>,
+    /// authorized principals
+    pub controllers: Vec<Principal>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Copy)]
@@ -105,6 +103,53 @@ pub enum TxError {
     ErrorOperationStyle,
     ErrorTo,
     Other(String),
+}
+
+impl MessageState {
+    pub fn store_incoming_message() {
+        todo!()
+    }
+
+    pub fn remove_outoging_message(&self, message: MessageHash) -> Result<bool, String> {
+        todo!()
+    }
+
+    pub fn authorize(&self, other: Principal) {
+        let caller = ic::caller();
+        let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
+        if caller_autorized {
+            self.controllers.borrow_mut().push(other);
+        }
+    }
+
+    pub fn is_authorized(&self) -> Result<(), String> {
+        self.controllers
+            .borrow()
+            .contains(&ic::caller())
+            .then(|| ())
+            .ok_or("Caller is not authorized".to_string())
+    }
+
+    pub fn take_all(&self) -> StableMessageState {
+        StableMessageState {
+            balances: self.balances.take(),
+            controllers: self.controllers.take(),
+            incoming_messages: self.incoming_messages.take(),
+        }
+    }
+
+    pub fn clear_all(&self) {
+        self.balances.borrow_mut().clear();
+        self.controllers.borrow_mut().clear();
+        self.incoming_messages.borrow_mut().clear();
+    }
+
+    pub fn replace_all(&self, stable_message_state: StableMessageState) {
+        self.balances.replace(stable_message_state.balances);
+        self.controllers.replace(stable_message_state.controllers);
+        self.incoming_messages
+            .replace(stable_message_state.incoming_messages);
+    }
 }
 
 #[update(name = "handle_message")]
@@ -142,9 +187,7 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
     // call mint with params
 
     match proxy_call {
-        (Ok(canister_id),) => {
-            mint(canister_id, nonce, payload).await
-        },
+        (Ok(canister_id),) => mint(canister_id, nonce, payload).await,
         (Err(error),) => Err(error),
     }
 }
@@ -157,11 +200,11 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 
     // construct hash from payload
     //
-    // let message = 
+    // let message =
 
-    if (message.status == MessageStatus::Consuming) {
-        return Err(TxError::BlockUsed);
-    }
+    // if (message.status == MessageStatus::Consuming) {
+    //     return Err(TxError::BlockUsed);
+    // }
 
     let consume: Result<(bool, String), _> = ic::call(
         Principal::from_text(TERA_ADDRESS).unwrap(),
@@ -169,7 +212,6 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
         (&erc20_addr_pid, &nonce, &payload),
     )
     .await;
-
 
     if consume.is_ok() {
         // set message status to consuming
@@ -182,20 +224,20 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
                 return Err(TxError::Other(format!(
                     "RejectionCode: {:?}\n{}",
                     code, err
-                )))
+                )));
             }
         };
-    
+
         return match mint {
             (Ok(tx_id),) => {
                 // remove message from messages
                 Ok(tx_id)
-            },
+            }
             (Err(error),) => {
                 // set message status to Received
                 Err(error)
-            },
-        }
+            }
+        };
     }
 
     Err(TxError::Other(format!(
@@ -208,42 +250,38 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 #[candid_method(update, rename = "burn")]
 async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
-    let canister_id = ic::id();
-    let weth_ic_addr_pid = Principal::from_text(WETH_ADDRESS_IC).unwrap();
     let payload = [eth_addr.clone().to_nat(), amount.clone()];
 
-    // 1) Check if canister is alive
-    if (ic::call(weth_ic_addr_pid, "name", ()).await as Result<(), (RejectionCode, String)>)
-        .is_err()
-    {
+    // 1) Check if canister is alives
+    if (ic::call(canister_id, "name", ()).await as Result<(), (RejectionCode, String)>).is_err() {
         return Err(TxError::Other(format!(
             "WETH {} canister is not responding!",
-            weth_ic_addr_pid
+            canister_id
         )));
     }
 
-    let burn: Result<(TxReceipt,), _> = ic::call(
-        weth_ic_addr_pid,
-        "burnFrom",
-        (&caller, &canister_id, &amount),
-    )
-    .await;
+    let burn: Result<(TxReceipt,), _> =
+        ic::call(canister_id, "burnFrom", (&caller, ic::id(), &amount)).await;
 
     if burn.is_ok() {
-        // balance += 
-        // credit user with balance 
+        // balance +=
+        // credit user with balance
         let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
         let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
-    
+
         // 4) Send outgoing message to tera canister
         let send_message: (Result<OutgoingMessage, String>,) = ic::call(
             Principal::from_text(TERA_ADDRESS).unwrap(),
             "send_message",
             (&erc20_addr_pid, &payload),
-        ).await.expect("");
+        )
+        .await
+        .expect("");
 
         if let Ok(outgoing_message) = send_message.0 {
-            let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(&outgoing_message.msg_key));
+            let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
+                &outgoing_message.msg_key,
+            ));
 
             // -= balance
             return Ok(msg_hash_as_nat);
@@ -252,7 +290,8 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
 
     Err(TxError::Other(format!(
         "Canister ETH_PROXY: failed to transferFrom {:?} to {}!",
-        caller, canister_id
+        caller,
+        ic::id()
     )))
 }
 
@@ -294,4 +333,3 @@ mod tests {
         assert_eq!(eth_addr, expected_eth_addr);
     }
 }
-
