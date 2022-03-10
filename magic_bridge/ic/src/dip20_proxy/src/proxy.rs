@@ -7,8 +7,8 @@ use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::types::{
     EthereumAddr, IncomingMessageHashParams, MagicResponse, Message, MessageHash, MessageState,
-    Nonce, OutgoingMessage, OutgoingMessageHashParams, StableMessageState, TokenType, TxError,
-    TxReceipt,
+    MessageStatus, Nonce, OutgoingMessage, OutgoingMessageHashParams, StableMessageState,
+    TokenType, TxError, TxReceipt,
 };
 use crate::utils::Keccak256HashFn;
 
@@ -53,13 +53,31 @@ impl FromNat for Principal {
 }
 
 impl MessageState {
-    pub fn store_incoming_message() {
-        // entry or add
+    pub fn store_incoming_message(&self, msg_hash: MessageHash, status: MessageStatus) {
+        let mut map = self.incoming_messages.borrow_mut();
+        *map.entry(msg_hash).or_insert(status);
+    }
+
+    pub fn get_message(&self, msg_hash: &MessageHash) -> Option<&MessageStatus> {
+        self.incoming_messages.borrow().get(msg_hash)
+    }
+
+    pub fn update_incoming_message_status(
+        &self,
+        msg_hash: MessageHash,
+        status: MessageStatus,
+    ) -> Result<bool, String> {
         todo!()
     }
 
-    pub fn remove_outoging_message(&self, message: MessageHash) -> Result<bool, String> {
-        todo!()
+    pub fn remove_message(&self, message: MessageHash) -> Result<bool, String> {
+        let mut map = self.incoming_messages.borrow_mut();
+
+        messages.into_iter().for_each(|key| {
+            map.remove(&key);
+        });
+
+        Ok(true)
     }
 
     pub fn authorize(&self, other: Principal) {
@@ -186,44 +204,58 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let message = Message;
-    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+    let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
         from: erc20_addr_pid.to_nat(),
         to: self_id.to_nat(),
         nonce: nonce.clone(),
         payload: payload.clone(),
     });
 
-    // get MessageHash from map
-    // check if message is consuming
-    // if (message.status == MessageStatus::Consuming) {
-    //     return Err(TxError::BlockUsed);
-    // }
+    let msg_exists = STATE.with(|s| s.get_message(&msg_hash).cloned());
 
-    let consume: Result<(bool, String), _> = ic::call(
-        Principal::from_text(TERA_ADDRESS).unwrap(),
-        "consume_message",
-        (&erc20_addr_pid, &nonce, &payload),
-    )
-    .await;
-
-    if consume.is_ok() {
-        let amount = Nat::from(payload[1].0.clone());
-        let to = Principal::from_nat(payload[0].clone());
-
-        return match erc20_addr_pid.mint(to, amount).await {
-            Ok(txn_id) => {
-                //
-                Ok(txn_id)
+    if let Some(status) = msg_exists {
+        match status {
+            MessageStatus::Consuming => {
+                return Err(TxError::Other(format!(
+                    "Meesage {}: is being consumed with caller {:?}!",
+                    msg_hash,
+                    ic::caller()
+                )));
             }
-            Err(error) => Err(error),
-        };
-    }
+            _ => (),
+        }
+    } else {
+        let consume: Result<(bool, String), _> = ic::call(
+            Principal::from_text(TERA_ADDRESS).unwrap(),
+            "consume_message",
+            (&erc20_addr_pid, &nonce, &payload),
+        )
+        .await;
 
-    Err(TxError::Other(format!(
-        "Consuming message from L1 failed with caller {:?}!",
-        ic::caller()
-    )))
+        if consume.is_err() {
+            return Err(TxError::Other(format!(
+                "Consuming message from L1 failed with caller {:?}!",
+                ic::caller()
+            )));
+        }
+        STATE.with(|s| s.store_incoming_message(msg_hash.clone(), MessageStatus::Consuming))
+    };
+
+    let amount = Nat::from(payload[1].0.clone());
+    let to = Principal::from_nat(payload[0].clone());
+
+    match canister_id.mint(to, amount).await {
+        Ok(txn_id) => {
+            STATE.with(|s| s.remove_message(msg_hash.clone()));
+            Ok(txn_id)
+        }
+        Err(error) => {
+            STATE.with(|s| {
+                s.update_incoming_message_status(msg_hash.clone(), MessageStatus::ConsumedNotMinted)
+            });
+            Err(error)
+        }
+    }
 }
 
 #[update(name = "burn")]
@@ -235,8 +267,7 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let message = Message;
-    let msg_hash = message.calculate_hash(OutgoingMessageHashParams {
+    let msg_hash = Message.calculate_hash(OutgoingMessageHashParams {
         from: self_id.to_nat(),
         to: erc20_addr_pid.to_nat(),
         payload: payload.clone(),
@@ -281,4 +312,48 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
         caller,
         ic::id()
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use ic_kit::{mock_principals, MockContext};
+
+    use super::*;
+
+    fn before_each() -> &'static mut MockContext {
+        MockContext::new()
+            .with_caller(mock_principals::alice())
+            .inject()
+    }
+
+    fn consume_message_with_nonce(
+        mock_ctx: &mut MockContext,
+        nonce: Nonce,
+    ) -> ConsumeMessageResponse {
+        // originating eth address as pid
+        let from = mock_principals::john();
+
+        // eth_proxy
+        let to = mock_principals::xtc();
+
+        // token owner
+        let receiver = mock_principals::bob();
+
+        let amount = Nat::from(44444);
+        let payload = [receiver.to_nat(), amount].to_vec();
+
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
+            from: from.to_nat(),
+            to: to.to_nat(),
+            nonce: nonce.clone(),
+            payload: payload.clone(),
+        });
+
+        STATE.with(|s| s.store_incoming_message(msg_hash));
+
+        // switch context to eth_proxy mock caller
+        mock_ctx.update_caller(to);
+
+        consume(from, nonce, payload)
+    }
 }

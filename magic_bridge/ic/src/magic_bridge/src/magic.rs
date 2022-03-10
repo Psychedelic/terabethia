@@ -37,8 +37,8 @@ impl MagicState {
 #[update(name = "handle_proxy_call")]
 // #[candid_method(update, rename = "handle_proxy_call")]
 async fn handler(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
+    let self_id = ic::id();
     let caller = ic::caller();
-    let canister_id = ic::id();
     let canister_exits = STATE.with(|s| s.get_canister(eth_addr));
 
     let canister_id = if let Some(canister_id) = canister_exits {
@@ -51,7 +51,7 @@ async fn handler(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) 
             decimals: payload[5].to_string(),
             total_supply: Nat::from(0_u32),
             owner: caller,
-            controllers: vec![caller, canister_id],
+            controllers: vec![caller, self_id],
             cycles: 10_000_000_000_000,
             fee: Nat::from(0_u32),
             fee_to: ic::id(),

@@ -19,8 +19,8 @@ pub struct Message;
 
 #[derive(Clone, CandidType, Deserialize, Eq, PartialEq)]
 pub enum MessageStatus {
-    Received(MessageHash),
-    Consuming(MessageHash),
+    Consuming,
+    ConsumedNotMinted,
 }
 
 #[derive(CandidType, Deserialize)]
