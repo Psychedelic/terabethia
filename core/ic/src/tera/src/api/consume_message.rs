@@ -23,8 +23,7 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> ConsumeMessageRe
 
     let caller = caller();
 
-    let message = Message;
-    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+    let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
         from: from.to_nat(),
         to: caller.to_nat(),
         nonce: nonce.clone(),
@@ -88,8 +87,7 @@ mod tests {
         let amount = Nat::from(44444);
         let payload = [receiver.to_nat(), amount].to_vec();
 
-        let message = Message;
-        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
             from: from.to_nat(),
             to: to.to_nat(),
             nonce: nonce.clone(),

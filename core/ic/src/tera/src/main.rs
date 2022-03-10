@@ -47,8 +47,7 @@ mod tests {
         ]
         .to_vec();
 
-        let message = Message;
-        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
             from,
             to,
             nonce,
@@ -77,8 +76,7 @@ mod tests {
         ]
         .to_vec();
 
-        let message = Message;
-        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
             from,
             to,
             nonce,
