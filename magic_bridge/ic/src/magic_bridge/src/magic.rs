@@ -11,18 +11,24 @@ thread_local! {
 }
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct MagicState(RefCell<HashMap<EthereumAddr, CanisterId>>);
+pub struct MagicState {
+    canisters: RefCell<HashMap<EthereumAddr, CanisterId>>,
+    controllers: RefCell<Vec<Principal>>,
+}
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct StableMagicState(pub HashMap<EthereumAddr, CanisterId>);
+pub struct StableMagicState {
+    canisters: HashMap<EthereumAddr, CanisterId>,
+    controllers: Vec<Principal>,
+}
 
 impl MagicState {
     pub fn get_canister(&self, eth_addr: EthereumAddr) -> Option<CanisterId> {
-        self.0.borrow().get(&eth_addr).cloned()
+        self.canisters.borrow().get(&eth_addr).cloned()
     }
 
     pub fn canister_exits(&self, eth_addr: EthereumAddr) -> bool {
-        self.0.borrow().contains_key(&eth_addr)
+        self.canisters.borrow().contains_key(&eth_addr)
     }
 
     pub fn insert_canister(
@@ -30,13 +36,55 @@ impl MagicState {
         eth_addr: EthereumAddr,
         canister_id: CanisterId,
     ) -> Option<CanisterId> {
-        self.0.borrow_mut().insert(eth_addr, canister_id)
+        self.canisters.borrow_mut().insert(eth_addr, canister_id)
+    }
+
+    pub fn authorize(&self, other: Principal) {
+        let caller = ic::caller();
+        let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
+        if caller_autorized {
+            self.controllers.borrow_mut().push(other);
+        }
+    }
+
+    pub fn is_authorized(&self) -> Result<(), String> {
+        self.controllers
+            .borrow()
+            .contains(&ic::caller())
+            .then(|| ())
+            .ok_or("Caller is not authorized".to_string())
+    }
+
+    pub fn take_all(&self) -> StableMagicState {
+        StableMagicState {
+            canisters: self.canisters.take(),
+            controllers: self.controllers.take(),
+        }
+    }
+
+    pub fn clear_all(&self) {
+        self.canisters.borrow_mut().clear();
+        self.controllers.borrow_mut().clear();
+    }
+
+    pub fn replace_all(&self, stable_magic_state: StableMagicState) {
+        self.canisters.replace(stable_magic_state.canisters);
+        self.controllers.replace(stable_magic_state.controllers);
     }
 }
 
-#[update(name = "handle_proxy_call")]
-// #[candid_method(update, rename = "handle_proxy_call")]
-async fn handler(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
+pub fn is_authorized() -> Result<(), String> {
+    STATE.with(|s| s.is_authorized())
+}
+
+#[init]
+fn init() {
+    STATE.with(|s| s.controllers.borrow_mut().push(ic::caller()));
+}
+
+#[update(name = "create", guard = "is_authorized")]
+#[candid_method(update, rename = "create")]
+async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
     let self_id = ic::id();
     let caller = ic::caller();
     let canister_exits = STATE.with(|s| s.get_canister(eth_addr));

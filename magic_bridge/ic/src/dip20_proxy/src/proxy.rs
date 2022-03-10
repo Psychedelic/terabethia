@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::*, RejectionCode};
 
+use crate::utils::Keccak256HashFn;
 use ic_cdk::call;
 use ic_cdk::export::candid::{Nat, Principal};
 
@@ -10,7 +11,6 @@ use crate::types::{
     MessageStatus, Nonce, OutgoingMessage, OutgoingMessageHashParams, StableMessageState,
     TokenType, TxError, TxReceipt,
 };
-use crate::utils::Keccak256HashFn;
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 const MAGIC_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
@@ -54,12 +54,13 @@ impl FromNat for Principal {
 
 impl MessageState {
     pub fn store_incoming_message(&self, msg_hash: MessageHash, status: MessageStatus) {
-        let mut map = self.incoming_messages.borrow_mut();
-        *map.entry(msg_hash).or_insert(status);
+        // let mut map = self.incoming_messages.borrow_mut();
+        // *map.entry(msg_hash).or_insert(status);
+        todo!()
     }
 
-    pub fn get_message(&self, msg_hash: &MessageHash) -> Option<&MessageStatus> {
-        self.incoming_messages.borrow().get(msg_hash)
+    pub fn get_message(&self, msg_hash: &MessageHash) -> Option<MessageStatus> {
+        self.incoming_messages.borrow().get(msg_hash).cloned()
     }
 
     pub fn update_incoming_message_status(
@@ -71,13 +72,14 @@ impl MessageState {
     }
 
     pub fn remove_message(&self, message: MessageHash) -> Result<bool, String> {
-        let mut map = self.incoming_messages.borrow_mut();
+        // let mut map = self.incoming_messages.borrow_mut();
 
-        messages.into_iter().for_each(|key| {
-            map.remove(&key);
-        });
+        // messages.into_iter().for_each(|key| {
+        //     map.remove(&key);
+        // });
 
-        Ok(true)
+        // Ok(true)
+        todo!()
     }
 
     pub fn authorize(&self, other: Principal) {
@@ -161,8 +163,13 @@ impl Dip20 for Principal {
     }
 }
 
+#[init]
+fn init() {
+    STATE.with(|s| s.controllers.borrow_mut().push(ic::caller()));
+}
+
 #[update(name = "handle_message")]
-// #[candid_method(update, rename = "handle_message")]
+#[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let erc20_addr_hex = hex::encode(eth_addr);
 
@@ -198,7 +205,7 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
 }
 
 #[update(name = "mint")]
-// #[candid_method(update, rename = "mint")]
+#[candid_method(update, rename = "mint")]
 async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let self_id = ic::id();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
@@ -211,7 +218,7 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
         payload: payload.clone(),
     });
 
-    let msg_exists = STATE.with(|s| s.get_message(&msg_hash).cloned());
+    let msg_exists = STATE.with(|s| s.get_message(&msg_hash));
 
     if let Some(status) = msg_exists {
         match status {
@@ -259,7 +266,7 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 }
 
 #[update(name = "burn")]
-// #[candid_method(update, rename = "burn")]
+#[candid_method(update, rename = "burn")]
 async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
     let self_id = ic::id();
     let caller = ic::caller();
@@ -273,7 +280,6 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
         payload: payload.clone(),
     });
 
-    // 1) Check if canister is alives
     if (ic::call(canister_id, "name", ()).await as Result<(), (RejectionCode, String)>).is_err() {
         return Err(TxError::Other(format!(
             "WETH {} canister is not responding!",
@@ -281,14 +287,9 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
         )));
     }
 
-    let burn: Result<(TxReceipt,), _> =
-        ic::call(canister_id, "burnFrom", (&caller, &self_id, &amount)).await;
+    let burn = canister_id.burn_from(caller, self_id, amount).await;
 
     if burn.is_ok() {
-        // balance +=
-        // credit user with balance
-
-        // 4) Send outgoing message to tera canister
         let send_message: (Result<OutgoingMessage, String>,) = ic::call(
             Principal::from_text(TERA_ADDRESS).unwrap(),
             "send_message",
@@ -302,7 +303,7 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
                 &outgoing_message.msg_key,
             ));
 
-            // -= balance
+            // = balance
             return Ok(msg_hash_as_nat);
         }
     }
@@ -326,34 +327,35 @@ mod tests {
             .inject()
     }
 
-    fn consume_message_with_nonce(
-        mock_ctx: &mut MockContext,
-        nonce: Nonce,
-    ) -> ConsumeMessageResponse {
-        // originating eth address as pid
-        let from = mock_principals::john();
+    #[test]
+    fn test_store_incoming_message() {
+        let _ = before_each();
 
-        // eth_proxy
-        let to = mock_principals::xtc();
+        let msg_exists = None;
 
-        // token owner
-        let receiver = mock_principals::bob();
+        if let Some(status) = msg_exists {
+            match status {
+                MessageStatus::Consuming => {
+                    println!("{:?}", MessageStatus::Consuming);
+                    return;
+                }
+                _ => (),
+            }
+        } else {
+            let consume: bool = true;
+            // Err(TxError::Other(format!(
+            //     "Meesage {}: is being consumed with caller {:?}!",
+            //     "msg_hash".to_string(),
+            //     ic::caller()
+            // )));
 
-        let amount = Nat::from(44444);
-        let payload = [receiver.to_nat(), amount].to_vec();
+            if consume == false {
+                return;
+            }
+            println!("{:?}", MessageStatus::Consuming);
+            // STATE.with(|s| s.store_incoming_message(msg_hash.clone(), MessageStatus::Consuming))
+        };
 
-        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
-            from: from.to_nat(),
-            to: to.to_nat(),
-            nonce: nonce.clone(),
-            payload: payload.clone(),
-        });
-
-        STATE.with(|s| s.store_incoming_message(msg_hash));
-
-        // switch context to eth_proxy mock caller
-        mock_ctx.update_caller(to);
-
-        consume(from, nonce, payload)
+        println!("{:?}", MessageStatus::ConsumedNotMinted);
     }
 }

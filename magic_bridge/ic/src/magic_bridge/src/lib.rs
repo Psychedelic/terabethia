@@ -1,4 +1,5 @@
 mod factory;
+mod inspect_message;
 mod magic;
 mod types;
 mod upgrade;
