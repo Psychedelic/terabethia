@@ -338,9 +338,8 @@ mod tests {
 
         let payload = [receiver, amount].to_vec();
 
-        let message = Message;
         let msg_hash_expected = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
-        let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
             from,
             to: to.clone(),
             nonce,
@@ -375,9 +374,8 @@ mod tests {
 
         let payload = [receiver, amount].to_vec();
 
-        let message = Message;
         let msg_hash_expected = "d0379be15bb6f33737b756e512dad1e71226b31fa648da57811f930badf6c163";
-        let msg_hash = message.calculate_hash(OutgoingMessageHashParams { from, to, payload });
+        let msg_hash = Message.calculate_hash(OutgoingMessageHashParams { from, to, payload });
 
         assert_eq!(msg_hash, msg_hash_expected);
 

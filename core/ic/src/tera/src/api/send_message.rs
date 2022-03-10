@@ -15,8 +15,7 @@ use crate::{
 fn send(to: Principal, payload: Vec<Nat>) -> SendMessageResponse {
     let caller = caller();
 
-    let message = Message;
-    let msg_hash = message.calculate_hash(OutgoingMessageHashParams {
+    let msg_hash = Message.calculate_hash(OutgoingMessageHashParams {
         from: caller.to_nat(),
         to: to.to_nat(),
         payload: payload.clone(),

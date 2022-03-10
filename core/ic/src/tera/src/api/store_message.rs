@@ -27,8 +27,7 @@ async fn trigger_call(
         )));
     }
 
-    let message = Message;
-    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+    let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
         from: from.to_nat(),
         to: to.to_nat(),
         nonce: nonce.clone(),
@@ -68,8 +67,7 @@ async fn store_message(
         )));
     }
 
-    let message = Message;
-    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+    let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
         from: from.to_nat(),
         to: to.to_nat(),
         nonce: nonce.clone(),
