@@ -1,5 +1,6 @@
 mod proxy;
 mod types;
+mod upgrade;
 mod utils;
 
 #[cfg(any(target_arch = "wasm32", test))]
@@ -7,10 +8,7 @@ fn main() {}
 
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
-    use crate::types::*;
     use ic_kit::candid;
-    use ic_kit::candid::Nat;
-    use ic_kit::Principal;
 
     candid::export_service!();
     std::print!("{}", __export_service());

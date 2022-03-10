@@ -431,6 +431,7 @@ dependencies = [
 name = "dip20_proxy"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "hex",
  "ic-cdk 0.4.0",
  "ic-cdk-macros 0.3.3",
@@ -911,7 +912,6 @@ name = "magic_bridge"
 version = "0.1.0"
 dependencies = [
  "assert-panic",
- "async-trait",
  "ic-cdk 0.4.0",
  "ic-cdk-macros 0.3.3",
  "ic-kit",

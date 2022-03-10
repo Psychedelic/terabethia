@@ -1,11 +1,16 @@
-use ic_kit::candid::{candid_method, Nat, Principal};
+use async_trait::async_trait;
+use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::*, RejectionCode};
 
-use crate::utils::Keccak256HashFn;
+use ic_cdk::call;
+use ic_cdk::export::candid::{Nat, Principal};
+
 use crate::types::{
-    EthereumAddr, MagicResponse, MessageHash, MessageState, Nonce, OutgoingMessage,
-    StableMessageState, TokenType, TxError, TxReceipt, Message, OutgoingMessageHashParams, IncomingMessageHashParams,
+    EthereumAddr, IncomingMessageHashParams, MagicResponse, Message, MessageHash, MessageState,
+    Nonce, OutgoingMessage, OutgoingMessageHashParams, StableMessageState, TokenType, TxError,
+    TxReceipt,
 };
+use crate::utils::Keccak256HashFn;
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 const MAGIC_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
@@ -49,6 +54,7 @@ impl FromNat for Principal {
 
 impl MessageState {
     pub fn store_incoming_message() {
+        // entry or add
         todo!()
     }
 
@@ -94,6 +100,49 @@ impl MessageState {
     }
 }
 
+#[async_trait]
+pub trait Dip20 {
+    async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
+    async fn burn_from(&self, from: Principal, to: Principal, value: Nat) -> TxReceipt;
+}
+
+#[async_trait]
+impl Dip20 for Principal {
+    async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt {
+        let mint: (TxReceipt,) = match call(*self, "mint", (to, amount)).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(TxError::Other(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
+
+        match mint {
+            (Ok(tx_id),) => Ok(tx_id),
+            (Err(error),) => Err(error),
+        }
+    }
+
+    async fn burn_from(&self, from: Principal, to: Principal, value: Nat) -> TxReceipt {
+        let burn_from: (TxReceipt,) = match call(*self, "burnFrom", (from, to, value)).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(TxError::Other(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
+
+        match burn_from {
+            (Ok(tx_id),) => Ok(tx_id),
+            (Err(error),) => Err(error),
+        }
+    }
+}
+
 #[update(name = "handle_message")]
 // #[candid_method(update, rename = "handle_message")]
 async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
@@ -105,16 +154,6 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
             erc20_addr_hex
         )));
     }
-
-    let message = Message;
-    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
-        from: eth_addr.to_nat(),
-        to: ic::id().to_nat(),
-        nonce: nonce.clone(),
-        payload: payload.clone(),
-    });
-
-    // store message as recieved
 
     let magic_ic_addr_pid = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
 
@@ -141,11 +180,22 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
 }
 
 #[update(name = "mint")]
-#[candid_method(update, rename = "mint")]
+// #[candid_method(update, rename = "mint")]
 async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
+    let self_id = ic::id();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
+    let message = Message;
+    let msg_hash = message.calculate_hash(IncomingMessageHashParams {
+        from: erc20_addr_pid.to_nat(),
+        to: self_id.to_nat(),
+        nonce: nonce.clone(),
+        payload: payload.clone(),
+    });
+
+    // get MessageHash from map
+    // check if message is consuming
     // if (message.status == MessageStatus::Consuming) {
     //     return Err(TxError::BlockUsed);
     // }
@@ -158,29 +208,15 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
     .await;
 
     if consume.is_ok() {
-        // set message status to consuming
+        let amount = Nat::from(payload[1].0.clone());
+        let to = Principal::from_nat(payload[0].clone());
 
-        let mint: (TxReceipt,) = match ic::call(canister_id, "mint", (&nonce, &payload)).await {
-            Ok(res) => res,
-            Err((code, err)) => {
-                // set message status to Received
-
-                return Err(TxError::Other(format!(
-                    "RejectionCode: {:?}\n{}",
-                    code, err
-                )));
+        return match erc20_addr_pid.mint(to, amount).await {
+            Ok(txn_id) => {
+                //
+                Ok(txn_id)
             }
-        };
-
-        return match mint {
-            (Ok(tx_id),) => {
-                // remove message from messages
-                Ok(tx_id)
-            }
-            (Err(error),) => {
-                // set message status to Received
-                Err(error)
-            }
+            Err(error) => Err(error),
         };
     }
 
@@ -193,6 +229,7 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 #[update(name = "burn")]
 // #[candid_method(update, rename = "burn")]
 async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
+    let self_id = ic::id();
     let caller = ic::caller();
     let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
@@ -200,7 +237,7 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
 
     let message = Message;
     let msg_hash = message.calculate_hash(OutgoingMessageHashParams {
-        from: caller.to_nat(),
+        from: self_id.to_nat(),
         to: erc20_addr_pid.to_nat(),
         payload: payload.clone(),
     });
@@ -214,7 +251,7 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
     }
 
     let burn: Result<(TxReceipt,), _> =
-        ic::call(canister_id, "burnFrom", (&caller, ic::id(), &amount)).await;
+        ic::call(canister_id, "burnFrom", (&caller, &self_id, &amount)).await;
 
     if burn.is_ok() {
         // balance +=
