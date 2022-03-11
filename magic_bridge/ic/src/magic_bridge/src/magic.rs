@@ -2,8 +2,8 @@ use crate::factory::{CreateCanisterParam, Factory};
 use crate::types::*;
 use ic_kit::candid::{CandidType, Deserialize, Nat};
 use ic_kit::interfaces::management::{
-    CanisterStatus, CanisterStatusResponse, DeleteCanister, InstallCode, StartCanister,
-    StopCanister, UninstallCode, UpdateSettings, WithCanisterId,
+    CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, InstallCode,
+    StartCanister, StopCanister, UninstallCode, UpdateSettings, WithCanisterId,
 };
 use ic_kit::interfaces::Method;
 use ic_kit::{ic, interfaces::management, macros::*};
@@ -98,8 +98,16 @@ impl MagicState {
         .await
     }
 
-    pub async fn deposit_cycles(canister_id: CanisterId, cycles: u64) {
-        todo!()
+    pub async fn deposit_cycles(
+        canister_id: CanisterId,
+        cycles: u64,
+    ) -> Result<(), (RejectionCode, String)> {
+        DepositCycles::perform_with_payment(
+            Principal::management_canister(),
+            (WithCanisterId { canister_id },),
+            cycles,
+        )
+        .await
     }
 
     pub fn authorize(&self, other: Principal) {
