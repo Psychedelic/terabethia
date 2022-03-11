@@ -2,7 +2,9 @@ use crate::factory::{CreateCanisterParam, Factory};
 use crate::types::*;
 use ic_kit::candid::{CandidType, Deserialize, Nat};
 use ic_kit::Principal;
-use ic_kit::{ic, macros::*};
+use ic_kit::{ic, interfaces::management, macros::*};
+use management::{InstallCodeArgument, UpdateSettingsArgument};
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -37,6 +39,38 @@ impl MagicState {
         canister_id: CanisterId,
     ) -> Option<CanisterId> {
         self.canisters.borrow_mut().insert(eth_addr, canister_id)
+    }
+
+    pub async fn update_settings(args: UpdateSettingsArgument) {
+        todo!()
+    }
+
+    pub async fn install_code(args: InstallCodeArgument) {
+        todo!()
+    }
+
+    pub async fn uninstall_code(args: CanisterId) {
+        todo!()
+    }
+
+    pub async fn start_canister(args: CanisterId) {
+        todo!()
+    }
+
+    pub async fn stop_canister(args: CanisterId) {
+        todo!()
+    }
+
+    pub async fn canister_status(args: CanisterId) {
+        todo!()
+    }
+
+    pub async fn delete_canister(args: CanisterId) {
+        todo!()
+    }
+
+    pub async fn deposit_cycles(canister_id: CanisterId, cycles: u64) {
+        todo!()
     }
 
     pub fn authorize(&self, other: Principal) {

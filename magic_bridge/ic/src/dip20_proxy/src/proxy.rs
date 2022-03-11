@@ -182,9 +182,9 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
 
     let magic_ic_addr_pid = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
 
-    let proxy_call: (MagicResponse,) = match ic::call(
+    let create_canister: (MagicResponse,) = match ic::call(
         magic_ic_addr_pid,
-        "handle_proxy_call",
+        "create",
         (&eth_addr, TokenType::DIP20, &payload),
     )
     .await
@@ -198,7 +198,7 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
         }
     };
 
-    match proxy_call {
+    match create_canister {
         (Ok(canister_id),) => mint(canister_id, nonce, payload).await,
         (Err(error),) => Err(error),
     }
@@ -229,6 +229,7 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
                     ic::caller()
                 )));
             }
+            // otherwise replay txn that was consumed but not minted
             _ => (),
         }
     } else {
@@ -279,13 +280,6 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
         to: erc20_addr_pid.to_nat(),
         payload: payload.clone(),
     });
-
-    if (ic::call(canister_id, "name", ()).await as Result<(), (RejectionCode, String)>).is_err() {
-        return Err(TxError::Other(format!(
-            "WETH {} canister is not responding!",
-            canister_id
-        )));
-    }
 
     let burn = canister_id.burn_from(caller, self_id, amount).await;
 
