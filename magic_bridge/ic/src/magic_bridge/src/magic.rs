@@ -1,6 +1,6 @@
 use crate::factory::{CreateCanisterParam, Factory};
 use crate::types::*;
-use ic_kit::candid::{CandidType, Deserialize, Nat};
+use ic_kit::candid::{CandidType, Deserialize, Nat, candid_method};
 use ic_kit::interfaces::management::{
     CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, InstallCode,
     StartCanister, StopCanister, UninstallCode, UpdateSettings, WithCanisterId,

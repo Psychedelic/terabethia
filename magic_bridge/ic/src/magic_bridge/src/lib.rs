@@ -11,6 +11,8 @@ fn main() {}
 fn main() {
     use ic_kit::candid;
     use ic_kit::Principal;
+    use ic_kit::candid::Nat;
+    use types::*;
 
     candid::export_service!();
     std::print!("{}", __export_service());
