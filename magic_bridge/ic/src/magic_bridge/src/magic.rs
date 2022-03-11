@@ -1,8 +1,13 @@
 use crate::factory::{CreateCanisterParam, Factory};
 use crate::types::*;
 use ic_kit::candid::{CandidType, Deserialize, Nat};
-use ic_kit::Principal;
+use ic_kit::interfaces::management::{
+    CanisterStatus, CanisterStatusResponse, DeleteCanister, InstallCode, StartCanister,
+    StopCanister, UninstallCode, UpdateSettings, WithCanisterId,
+};
+use ic_kit::interfaces::Method;
 use ic_kit::{ic, interfaces::management, macros::*};
+use ic_kit::{Principal, RejectionCode};
 use management::{InstallCodeArgument, UpdateSettingsArgument};
 
 use std::cell::RefCell;
@@ -41,32 +46,56 @@ impl MagicState {
         self.canisters.borrow_mut().insert(eth_addr, canister_id)
     }
 
-    pub async fn update_settings(args: UpdateSettingsArgument) {
-        todo!()
+    pub async fn update_settings(
+        args: UpdateSettingsArgument,
+    ) -> Result<(), (RejectionCode, String)> {
+        UpdateSettings::perform(Principal::management_canister(), (args,)).await
     }
 
-    pub async fn install_code(args: InstallCodeArgument) {
-        todo!()
+    pub async fn install_code(args: InstallCodeArgument) -> Result<(), (RejectionCode, String)> {
+        InstallCode::perform(Principal::management_canister(), (args,)).await
     }
 
-    pub async fn uninstall_code(args: CanisterId) {
-        todo!()
+    pub async fn uninstall_code(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+        UninstallCode::perform(
+            Principal::management_canister(),
+            (WithCanisterId { canister_id },),
+        )
+        .await
     }
 
-    pub async fn start_canister(args: CanisterId) {
-        todo!()
+    pub async fn start_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+        StartCanister::perform(
+            Principal::management_canister(),
+            (WithCanisterId { canister_id },),
+        )
+        .await
     }
 
-    pub async fn stop_canister(args: CanisterId) {
-        todo!()
+    pub async fn stop_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+        StopCanister::perform(
+            Principal::management_canister(),
+            (WithCanisterId { canister_id },),
+        )
+        .await
     }
 
-    pub async fn canister_status(args: CanisterId) {
-        todo!()
+    pub async fn canister_status(
+        canister_id: CanisterId,
+    ) -> Result<(CanisterStatusResponse,), (RejectionCode, String)> {
+        CanisterStatus::perform(
+            Principal::management_canister(),
+            (WithCanisterId { canister_id },),
+        )
+        .await
     }
 
-    pub async fn delete_canister(args: CanisterId) {
-        todo!()
+    pub async fn delete_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+        DeleteCanister::perform(
+            Principal::management_canister(),
+            (WithCanisterId { canister_id },),
+        )
+        .await
     }
 
     pub async fn deposit_cycles(canister_id: CanisterId, cycles: u64) {
