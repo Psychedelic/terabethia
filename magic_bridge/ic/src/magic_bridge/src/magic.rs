@@ -1,6 +1,6 @@
 use crate::factory::{CreateCanisterParam, Factory};
 use crate::types::*;
-use ic_kit::candid::{CandidType, Deserialize, Nat, candid_method};
+use ic_kit::candid::{candid_method, CandidType, Deserialize, Nat};
 use ic_kit::interfaces::management::{
     CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, InstallCode,
     StartCanister, StopCanister, UninstallCode, UpdateSettings, WithCanisterId,
@@ -154,7 +154,7 @@ fn init() {
 }
 
 #[update(name = "create", guard = "is_authorized")]
-#[candid_method(update, rename = "create")]
+// #[candid_method(update, rename = "create")]
 async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
     let self_id = ic::id();
     let caller = ic::caller();
@@ -163,11 +163,20 @@ async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -
     let canister_id = if let Some(canister_id) = canister_exits {
         canister_id
     } else {
+        let logo = String::from("/s");
+        let name = std::str::from_utf8(&payload[3].0.to_bytes_be()[..])
+            .unwrap()
+            .to_string();
+        let symbol = std::str::from_utf8(&payload[4].0.to_bytes_be()[..])
+            .unwrap()
+            .to_string();
+        let decimals = u8::from_str_radix(&payload[5].to_string(), 10).unwrap();
+
         let create_param = CreateCanisterParam {
-            logo: payload[2].to_string(), // logo support???
-            name: payload[3].to_string(),
-            symbol: payload[4].to_string(),
-            decimals: payload[5].to_string(),
+            logo,
+            name,
+            symbol,
+            decimals,
             total_supply: Nat::from(0_u32),
             owner: caller,
             controllers: vec![caller, self_id],

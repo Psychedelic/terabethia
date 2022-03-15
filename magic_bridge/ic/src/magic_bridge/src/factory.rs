@@ -10,18 +10,18 @@ const DIP20_WASM: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
 const DIP721_WASM: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
 
 pub struct CreateCanisterParam {
-    logo: String,
-    name: String,
-    symbol: String,
-    decimals: u8,
-    total_supply: Nat,
-    owner: Principal,
-    controllers: Vec<Principal>,
-    cycles: u64,
-    fee: Nat,
-    fee_to: Principal,
-    cap: Principal,
-    token_type: TokenType,
+    pub logo: String,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub total_supply: Nat,
+    pub owner: Principal,
+    pub controllers: Vec<Principal>,
+    pub cycles: u64,
+    pub fee: Nat,
+    pub fee_to: Principal,
+    pub cap: Principal,
+    pub token_type: TokenType,
 }
 
 impl Default for CreateCanisterParam {
