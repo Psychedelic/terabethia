@@ -6,6 +6,8 @@ use serde::Serialize;
 
 pub type Nonce = Nat;
 
+pub type TokendId = Principal;
+
 pub type MessageHash = String;
 
 pub type EthereumAddr = Principal;
@@ -45,21 +47,21 @@ pub struct OutgoingMessage {
 }
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct MessageState {
+pub struct ProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
-    ///
-    pub balances: RefCell<HashMap<Principal, MessageStatus>>,
+    /// user balances
+    pub balances: RefCell<HashMap<Principal, HashMap<TokendId, Nat>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
-pub struct StableMessageState {
+pub struct StableProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: HashMap<MessageHash, MessageStatus>,
-    ///
-    pub balances: HashMap<Principal, MessageStatus>,
+    /// user balances
+    pub balances: HashMap<Principal, HashMap<Principal, Nat>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
 }

@@ -1,8 +1,8 @@
 use ic_kit::ic;
 use ic_kit::macros::*;
 
+use crate::common::types::StableProxyState;
 use crate::proxy::STATE;
-use crate::types::StableMessageState;
 
 #[pre_upgrade]
 fn pre_upgrade() {
@@ -15,7 +15,7 @@ fn pre_upgrade() {
 fn post_upgrade() {
     STATE.with(|s| s.clear_all());
 
-    let (stable_message_state,): (StableMessageState,) =
+    let (stable_message_state,): (StableProxyState,) =
         ic::stable_restore().expect("failed to restore stable messsage state");
 
     STATE.with(|s| s.replace_all(stable_message_state));

@@ -1,7 +1,7 @@
 use ic_kit::candid::Nat;
 use sha3::{Digest, Keccak256};
 
-use crate::types::{IncomingMessageHashParams, Message, MessageHash, OutgoingMessageHashParams};
+use super::types::{IncomingMessageHashParams, Message, MessageHash, OutgoingMessageHashParams};
 
 pub trait Keccak256HashFn<T> {
     fn calculate_hash(&self, params: T) -> MessageHash;

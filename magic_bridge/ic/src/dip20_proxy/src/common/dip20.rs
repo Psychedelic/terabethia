@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use ic_cdk::call;
 use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::types::{TxError, TxReceipt};
+use crate::common::types::{TxError, TxReceipt};
 
 #[async_trait]
 pub trait Dip20 {
