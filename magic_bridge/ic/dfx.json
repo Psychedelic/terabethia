@@ -5,6 +5,11 @@
       "package": "magic_bridge",
       "type": "rust"
     },
+    "dip20_proxy": {
+      "candid": "src/dip20_proxy/dip20_proxy.did",
+      "package": "dip20_proxy",
+      "type": "rust"
+    },
     "factory": {
       "candid": "src/factory/factory.did",
       "package": "factory",
