@@ -1,15 +1,14 @@
-use async_trait::async_trait;
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::*};
 
+use crate::dip20::Dip20;
+use crate::tera::Tera;
 use crate::utils::Keccak256HashFn;
-use ic_cdk::call;
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::types::{
     EthereumAddr, IncomingMessageHashParams, MagicResponse, Message, MessageHash, MessageState,
-    MessageStatus, Nonce, OutgoingMessage, OutgoingMessageHashParams, StableMessageState,
-    TokenType, TxError, TxReceipt,
+    MessageStatus, Nonce, OutgoingMessage, StableMessageState, TokenType, TxError, TxReceipt,
 };
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -113,49 +112,6 @@ impl MessageState {
     }
 }
 
-#[async_trait]
-pub trait Dip20 {
-    async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
-    async fn burn_from(&self, from: Principal, to: Principal, value: Nat) -> TxReceipt;
-}
-
-#[async_trait]
-impl Dip20 for Principal {
-    async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt {
-        let mint: (TxReceipt,) = match call(*self, "mint", (to, amount)).await {
-            Ok(res) => res,
-            Err((code, err)) => {
-                return Err(TxError::Other(format!(
-                    "RejectionCode: {:?}\n{}",
-                    code, err
-                )))
-            }
-        };
-
-        match mint {
-            (Ok(tx_id),) => Ok(tx_id),
-            (Err(error),) => Err(error),
-        }
-    }
-
-    async fn burn_from(&self, from: Principal, to: Principal, value: Nat) -> TxReceipt {
-        let burn_from: (TxReceipt,) = match call(*self, "burnFrom", (from, to, value)).await {
-            Ok(res) => res,
-            Err((code, err)) => {
-                return Err(TxError::Other(format!(
-                    "RejectionCode: {:?}\n{}",
-                    code, err
-                )))
-            }
-        };
-
-        match burn_from {
-            (Ok(tx_id),) => Ok(tx_id),
-            (Err(error),) => Err(error),
-        }
-    }
-}
-
 #[init]
 fn init() {
     STATE.with(|s| s.controllers.borrow_mut().push(ic::caller()));
@@ -218,21 +174,20 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
             MessageStatus::ConsumedNotMinted => (),
             _ => {
                 return Err(TxError::Other(format!(
-                    "Meesage {}: is being consumed with caller {:?}!",
+                    "Meesage {}: is being consumed/minted with caller {:?}!",
                     &msg_hash,
                     ic::caller()
                 )));
             }
         }
     } else {
-        let consume: Result<(bool, String), _> = ic::call(
-            Principal::from_text(TERA_ADDRESS).unwrap(),
-            "consume_message",
-            (&erc20_addr_pid, &nonce, &payload),
-        )
-        .await;
+        let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
 
-        if consume.is_err() {
+        if tera_id
+            .consume_message(erc20_addr_pid, nonce, payload.clone())
+            .await
+            .is_err()
+        {
             return Err(TxError::Other(format!(
                 "Consuming message from L1 failed with caller {:?}!",
                 ic::caller()
@@ -270,35 +225,27 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let msg_hash = Message.calculate_hash(OutgoingMessageHashParams {
-        from: self_id.to_nat(),
-        to: erc20_addr_pid.to_nat(),
-        payload: payload.clone(),
-    });
+    let transfer_from = canister_id
+        .transfer_from(caller, self_id, amount.clone())
+        .await;
 
-    let burn = canister_id.burn_from(caller, self_id, amount).await;
+    if transfer_from.is_ok() {
+        let burn = canister_id.burn(amount.clone()).await;
 
-    if burn.is_ok() {
-        let send_message: (Result<OutgoingMessage, String>,) = ic::call(
-            Principal::from_text(TERA_ADDRESS).unwrap(),
-            "send_message",
-            (&erc20_addr_pid, &payload),
-        )
-        .await
-        .expect("");
-
-        if let Ok(outgoing_message) = send_message.0 {
-            let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
-                &outgoing_message.msg_key,
-            ));
-
-            // = balance
-            return Ok(msg_hash_as_nat);
-        }
+        match burn {
+            Ok(txn_id) => {
+                let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
+                match tera_id.send_message(erc20_addr_pid, payload).await {
+                    Ok(_) => return Ok(txn_id),
+                    Err(_) => todo!(),
+                }
+            }
+            Err(_) => todo!(),
+        };
     }
 
     Err(TxError::Other(format!(
-        "Canister ETH_PROXY: failed to transferFrom {:?} to {}!",
+        "Canister PROXY: failed to burnFrom {:?} to {}!",
         caller,
         ic::id()
     )))

@@ -1,4 +1,6 @@
+mod dip20;
 mod proxy;
+mod tera;
 mod types;
 mod upgrade;
 mod utils;
