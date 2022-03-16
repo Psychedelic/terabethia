@@ -1,6 +1,4 @@
-use ic_cdk::export::candid::{CandidType, Deserialize, Nat, Principal};
-
-pub type Nonce = Nat;
+use ic_cdk::export::candid::{CandidType, Deserialize, Principal};
 
 pub type EthereumAddr = Principal;
 

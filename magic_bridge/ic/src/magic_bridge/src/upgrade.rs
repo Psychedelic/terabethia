@@ -1,7 +1,5 @@
-use ic_kit::candid::candid_method;
 use ic_kit::ic;
 use ic_kit::macros::*;
-use ic_kit::Principal;
 
 use crate::magic::StableMagicState;
 use crate::magic::STATE;

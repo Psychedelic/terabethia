@@ -7,8 +7,8 @@ use crate::utils::Keccak256HashFn;
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::types::{
-    EthereumAddr, IncomingMessageHashParams, MagicResponse, Message, MessageHash, MessageState,
-    MessageStatus, Nonce, OutgoingMessage, StableMessageState, TokenType, TxError, TxReceipt,
+    EthereumAddr, IncomingMessageHashParams, MagicResponse, Message, MessageState, MessageStatus,
+    Nonce, TokenType, TxError, TxReceipt,
 };
 
 const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -48,67 +48,6 @@ impl FromNat for Principal {
         let mut p_slice = vec![0u8; padding_bytes];
         p_slice.extend_from_slice(&be_bytes);
         Principal::from_slice(&p_slice)
-    }
-}
-
-impl MessageState {
-    pub fn store_incoming_message(&self, msg_hash: MessageHash) {
-        self.incoming_messages
-            .borrow_mut()
-            .entry(msg_hash)
-            .or_insert(MessageStatus::Consuming);
-    }
-
-    pub fn get_message(&self, msg_hash: &MessageHash) -> Option<MessageStatus> {
-        self.incoming_messages.borrow().get(msg_hash).cloned()
-    }
-
-    pub fn update_incoming_message_status(&self, msg_hash: MessageHash, status: MessageStatus) {
-        self.incoming_messages.borrow_mut().insert(msg_hash, status);
-    }
-
-    pub fn remove_message(&self, message: MessageHash) -> Result<MessageStatus, String> {
-        self.incoming_messages
-            .borrow_mut()
-            .remove(&message)
-            .ok_or(String::from("messages does not exist!"))
-    }
-
-    pub fn _authorize(&self, other: Principal) {
-        let caller = ic::caller();
-        let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
-        if caller_autorized {
-            self.controllers.borrow_mut().push(other);
-        }
-    }
-
-    pub fn _is_authorized(&self) -> Result<(), String> {
-        self.controllers
-            .borrow()
-            .contains(&ic::caller())
-            .then(|| ())
-            .ok_or("Caller is not authorized".to_string())
-    }
-
-    pub fn take_all(&self) -> StableMessageState {
-        StableMessageState {
-            balances: self.balances.take(),
-            controllers: self.controllers.take(),
-            incoming_messages: self.incoming_messages.take(),
-        }
-    }
-
-    pub fn clear_all(&self) {
-        self.balances.borrow_mut().clear();
-        self.controllers.borrow_mut().clear();
-        self.incoming_messages.borrow_mut().clear();
-    }
-
-    pub fn replace_all(&self, stable_message_state: StableMessageState) {
-        self.balances.replace(stable_message_state.balances);
-        self.controllers.replace(stable_message_state.controllers);
-        self.incoming_messages
-            .replace(stable_message_state.incoming_messages);
     }
 }
 
@@ -154,7 +93,7 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
 }
 
 #[update(name = "mint")]
-#[candid_method(update, rename = "mint")]
+// #[candid_method(update, rename = "mint")]
 async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let self_id = ic::id();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
@@ -182,7 +121,6 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
         }
     } else {
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
-
         if tera_id
             .consume_message(erc20_addr_pid, nonce, payload.clone())
             .await
@@ -217,7 +155,7 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 }
 
 #[update(name = "burn")]
-#[candid_method(update, rename = "burn")]
+// #[candid_method(update, rename = "burn")]
 async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
     let self_id = ic::id();
     let caller = ic::caller();
@@ -230,25 +168,43 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
         .await;
 
     if transfer_from.is_ok() {
+        // credit user here
+
         let burn = canister_id.burn(amount.clone()).await;
 
         match burn {
             Ok(txn_id) => {
                 let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
-                match tera_id.send_message(erc20_addr_pid, payload).await {
-                    Ok(_) => return Ok(txn_id),
-                    Err(_) => todo!(),
+                if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
+                    // credit user balance
+
+                    return Err(TxError::Other(format!(
+                        "Sending message to L1 failed with caller {:?}!",
+                        ic::caller()
+                    )));
                 }
+
+                // remove credit for user
+                return Ok(txn_id);
             }
-            Err(_) => todo!(),
+            Err(error) => {
+                // if burn fails
+                //
+                return Err(error);
+            }
         };
     }
 
     Err(TxError::Other(format!(
-        "Canister PROXY: failed to burnFrom {:?} to {}!",
+        "Canister PROXY: failed to transferFrom {:?} to {}!",
         caller,
         ic::id()
     )))
+}
+
+/// Allow user to widthdraw any left over tokens
+pub fn widthdraw() {
+    todo!()
 }
 
 #[cfg(test)]
