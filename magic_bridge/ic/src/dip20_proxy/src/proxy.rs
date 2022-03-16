@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use ic_kit::candid::candid_method;
-use ic_kit::{ic, macros::*, RejectionCode};
+use ic_kit::{ic, macros::*};
 
 use crate::utils::Keccak256HashFn;
 use ic_cdk::call;
@@ -53,36 +53,29 @@ impl FromNat for Principal {
 }
 
 impl MessageState {
-    pub fn store_incoming_message(&self, msg_hash: MessageHash, status: MessageStatus) {
-        // let mut map = self.incoming_messages.borrow_mut();
-        // *map.entry(msg_hash).or_insert(status);
-        todo!()
+    pub fn store_incoming_message(&self, msg_hash: MessageHash) {
+        self.incoming_messages
+            .borrow_mut()
+            .entry(msg_hash)
+            .or_insert(MessageStatus::Consuming);
     }
 
     pub fn get_message(&self, msg_hash: &MessageHash) -> Option<MessageStatus> {
         self.incoming_messages.borrow().get(msg_hash).cloned()
     }
 
-    pub fn update_incoming_message_status(
-        &self,
-        msg_hash: MessageHash,
-        status: MessageStatus,
-    ) -> Result<bool, String> {
-        todo!()
+    pub fn update_incoming_message_status(&self, msg_hash: MessageHash, status: MessageStatus) {
+        self.incoming_messages.borrow_mut().insert(msg_hash, status);
     }
 
-    pub fn remove_message(&self, message: MessageHash) -> Result<bool, String> {
-        // let mut map = self.incoming_messages.borrow_mut();
-
-        // messages.into_iter().for_each(|key| {
-        //     map.remove(&key);
-        // });
-
-        // Ok(true)
-        todo!()
+    pub fn remove_message(&self, message: MessageHash) -> Result<MessageStatus, String> {
+        self.incoming_messages
+            .borrow_mut()
+            .remove(&message)
+            .ok_or(String::from("messages does not exist!"))
     }
 
-    pub fn authorize(&self, other: Principal) {
+    pub fn _authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
         if caller_autorized {
@@ -90,7 +83,7 @@ impl MessageState {
         }
     }
 
-    pub fn is_authorized(&self) -> Result<(), String> {
+    pub fn _is_authorized(&self) -> Result<(), String> {
         self.controllers
             .borrow()
             .contains(&ic::caller())
@@ -222,15 +215,14 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
 
     if let Some(status) = msg_exists {
         match status {
-            MessageStatus::Consuming => {
+            MessageStatus::ConsumedNotMinted => (),
+            _ => {
                 return Err(TxError::Other(format!(
                     "Meesage {}: is being consumed with caller {:?}!",
-                    msg_hash,
+                    &msg_hash,
                     ic::caller()
                 )));
             }
-            // otherwise replay txn that was consumed but not minted
-            _ => (),
         }
     } else {
         let consume: Result<(bool, String), _> = ic::call(
@@ -246,17 +238,20 @@ async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRece
                 ic::caller()
             )));
         }
-        STATE.with(|s| s.store_incoming_message(msg_hash.clone(), MessageStatus::Consuming))
+        STATE.with(|s| s.store_incoming_message(msg_hash.clone()))
     };
 
     let amount = Nat::from(payload[1].0.clone());
     let to = Principal::from_nat(payload[0].clone());
 
     match canister_id.mint(to, amount).await {
-        Ok(txn_id) => {
-            STATE.with(|s| s.remove_message(msg_hash.clone()));
-            Ok(txn_id)
-        }
+        Ok(txn_id) => match STATE.with(|s| s.remove_message(msg_hash.clone())) {
+            Ok(_) => Ok(txn_id),
+            _ => Err(TxError::Other(format!(
+                "Failed to remove message hash: {:?}!",
+                &msg_hash,
+            ))),
+        },
         Err(error) => {
             STATE.with(|s| {
                 s.update_incoming_message_status(msg_hash.clone(), MessageStatus::ConsumedNotMinted)

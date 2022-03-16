@@ -12,6 +12,7 @@ use management::{InstallCodeArgument, UpdateSettingsArgument};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::str;
 
 thread_local! {
     pub static STATE: MagicState = MagicState::default();
@@ -34,10 +35,6 @@ impl MagicState {
         self.canisters.borrow().get(&eth_addr).cloned()
     }
 
-    pub fn canister_exits(&self, eth_addr: EthereumAddr) -> bool {
-        self.canisters.borrow().contains_key(&eth_addr)
-    }
-
     pub fn insert_canister(
         &self,
         eth_addr: EthereumAddr,
@@ -46,17 +43,17 @@ impl MagicState {
         self.canisters.borrow_mut().insert(eth_addr, canister_id)
     }
 
-    pub async fn update_settings(
+    pub async fn _update_settings(
         args: UpdateSettingsArgument,
     ) -> Result<(), (RejectionCode, String)> {
         UpdateSettings::perform(Principal::management_canister(), (args,)).await
     }
 
-    pub async fn install_code(args: InstallCodeArgument) -> Result<(), (RejectionCode, String)> {
+    pub async fn _install_code(args: InstallCodeArgument) -> Result<(), (RejectionCode, String)> {
         InstallCode::perform(Principal::management_canister(), (args,)).await
     }
 
-    pub async fn uninstall_code(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+    pub async fn _uninstall_code(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
         UninstallCode::perform(
             Principal::management_canister(),
             (WithCanisterId { canister_id },),
@@ -64,7 +61,7 @@ impl MagicState {
         .await
     }
 
-    pub async fn start_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+    pub async fn _start_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
         StartCanister::perform(
             Principal::management_canister(),
             (WithCanisterId { canister_id },),
@@ -72,7 +69,7 @@ impl MagicState {
         .await
     }
 
-    pub async fn stop_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+    pub async fn _stop_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
         StopCanister::perform(
             Principal::management_canister(),
             (WithCanisterId { canister_id },),
@@ -80,7 +77,7 @@ impl MagicState {
         .await
     }
 
-    pub async fn canister_status(
+    pub async fn _canister_status(
         canister_id: CanisterId,
     ) -> Result<(CanisterStatusResponse,), (RejectionCode, String)> {
         CanisterStatus::perform(
@@ -90,7 +87,7 @@ impl MagicState {
         .await
     }
 
-    pub async fn delete_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
+    pub async fn _delete_canister(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {
         DeleteCanister::perform(
             Principal::management_canister(),
             (WithCanisterId { canister_id },),
@@ -98,7 +95,7 @@ impl MagicState {
         .await
     }
 
-    pub async fn deposit_cycles(
+    pub async fn _deposit_cycles(
         canister_id: CanisterId,
         cycles: u64,
     ) -> Result<(), (RejectionCode, String)> {
@@ -110,7 +107,7 @@ impl MagicState {
         .await
     }
 
-    pub fn authorize(&self, other: Principal) {
+    pub fn _authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
         if caller_autorized {
@@ -150,11 +147,12 @@ pub fn is_authorized() -> Result<(), String> {
 
 #[init]
 fn init() {
+    // todo: add each of the proxies as controllers
     STATE.with(|s| s.controllers.borrow_mut().push(ic::caller()));
 }
 
 #[update(name = "create", guard = "is_authorized")]
-// #[candid_method(update, rename = "create")]
+#[candid_method(update, rename = "create")]
 async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
     let self_id = ic::id();
     let caller = ic::caller();
@@ -164,12 +162,13 @@ async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -
         canister_id
     } else {
         let logo = String::from("/s");
-        let name = std::str::from_utf8(&payload[3].0.to_bytes_be()[..])
+        let name = str::from_utf8(&payload[3].0.to_bytes_be()[..])
             .unwrap()
             .to_string();
-        let symbol = std::str::from_utf8(&payload[4].0.to_bytes_be()[..])
+        let symbol = str::from_utf8(&payload[4].0.to_bytes_be()[..])
             .unwrap()
             .to_string();
+        // verify this payload[5] to be a base 10 or not, should be
         let decimals = u8::from_str_radix(&payload[5].to_string(), 10).unwrap();
 
         let create_param = CreateCanisterParam {
