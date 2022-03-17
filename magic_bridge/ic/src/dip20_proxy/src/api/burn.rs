@@ -1,15 +1,17 @@
+use std::ops::AddAssign;
+
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::*};
 
 use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
-use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, TERA_ADDRESS};
+use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{TxError, TxReceipt};
 
 #[update(name = "burn")]
-#[candid_method(update, rename = "burn")]
+// #[candid_method(update, rename = "burn")]
 async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
     let self_id = ic::id();
     let caller = ic::caller();
@@ -22,8 +24,7 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
         .await;
 
     if transfer_from.is_ok() {
-        // credit user here
-        // (caller, canister_id, amount);
+        STATE.with(|s| s.add_balance(caller, canister_id, amount.clone()));
 
         let burn = canister_id.burn(amount.clone()).await;
 
@@ -31,20 +32,17 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
             Ok(txn_id) => {
                 let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
                 if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
-                    // credit user balance
-
                     return Err(TxError::Other(format!(
                         "Sending message to L1 failed with caller {:?}!",
                         ic::caller()
                     )));
                 }
 
-                // remove credit for user
+                let zero = Nat::from(0_u32);
+                STATE.with(|s| s.update_balance(caller, canister_id, zero));
                 return Ok(txn_id);
             }
             Err(error) => {
-                // if burn fails
-                //
                 return Err(error);
             }
         };

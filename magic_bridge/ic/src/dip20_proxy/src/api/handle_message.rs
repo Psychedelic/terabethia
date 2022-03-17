@@ -1,4 +1,4 @@
-use crate::api::mint::*;
+use crate::api::mint::mint;
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::*};
 
