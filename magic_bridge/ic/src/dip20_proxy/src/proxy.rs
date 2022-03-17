@@ -1,8 +1,4 @@
-use std::{
-    borrow::Borrow,
-    collections::HashMap,
-    ops::{AddAssign, Sub},
-};
+use std::{collections::HashMap, ops::AddAssign};
 
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
@@ -175,11 +171,5 @@ mod tests {
         let balance_after_update = STATE.with(|s| s.get_balance(caller, canister_id));
 
         assert_eq!(balance_after_update.unwrap(), new_balance);
-
-        // let new_balance = Nat::from(0_u32);
-        // STATE.with(|s| s.update_balance(caller, canister_id, new_balance.clone()));
-
-        // let balance_after_update = STATE.with(|s| s.get_balance(caller, canister_id));
-        // println!("{:#?}", balance_after_update.unwrap());
     }
 }

@@ -1,5 +1,5 @@
 use ic_kit::ic;
-use ic_kit::macros::*;
+use ic_kit::macros::{post_upgrade, pre_upgrade};
 
 use crate::common::types::StableProxyState;
 use crate::proxy::STATE;

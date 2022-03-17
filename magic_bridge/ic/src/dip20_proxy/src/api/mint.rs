@@ -1,5 +1,5 @@
 use ic_kit::candid::candid_method;
-use ic_kit::{ic, macros::*};
+use ic_kit::{ic, macros::update};
 
 use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;

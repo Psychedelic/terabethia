@@ -1,7 +1,5 @@
-use std::ops::AddAssign;
-
 use ic_kit::candid::candid_method;
-use ic_kit::{ic, macros::*};
+use ic_kit::{ic, macros::update};
 
 use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
@@ -11,7 +9,7 @@ use ic_cdk::export::candid::{Nat, Principal};
 use crate::common::types::{TxError, TxReceipt};
 
 #[update(name = "burn")]
-// #[candid_method(update, rename = "burn")]
+#[candid_method(update, rename = "burn")]
 async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
     let self_id = ic::id();
     let caller = ic::caller();

@@ -1,6 +1,6 @@
 use crate::api::mint::mint;
 use ic_kit::candid::candid_method;
-use ic_kit::{ic, macros::*};
+use ic_kit::{ic, macros::update};
 
 use ic_cdk::export::candid::{Nat, Principal};
 
