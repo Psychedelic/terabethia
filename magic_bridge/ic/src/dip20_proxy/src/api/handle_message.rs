@@ -38,7 +38,7 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
     };
 
     match create_canister {
-        (Ok(canister_id),) => mint(canister_id, nonce, payload).await,
+        (Ok(token_id),) => mint(token_id, nonce, payload).await,
         (Err(error),) => Err(error),
     }
 }

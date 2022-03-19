@@ -13,7 +13,7 @@ use crate::common::types::{
 
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
-pub async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
+pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let self_id = ic::id();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
@@ -46,24 +46,27 @@ pub async fn mint(canister_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> Tx
             .is_err()
         {
             return Err(TxError::Other(format!(
-                "Consuming message from L1 failed with caller {:?}!",
-                ic::caller()
+                "Consuming message from L1 failed with message {:?}!",
+                msg_hash
             )));
         }
-        STATE.with(|s| s.store_incoming_message(msg_hash.clone()))
     };
+
+    STATE.with(|s| s.store_or_update_incoming_message(msg_hash.clone()));
 
     let amount = Nat::from(payload[1].0.clone());
     let to = Principal::from_nat(payload[0].clone());
 
-    match canister_id.mint(to, amount).await {
-        Ok(txn_id) => match STATE.with(|s| s.remove_message(msg_hash.clone())) {
-            Ok(_) => Ok(txn_id),
-            _ => Err(TxError::Other(format!(
-                "Failed to remove message hash: {:?}!",
-                &msg_hash,
-            ))),
-        },
+    match token_id.mint(to, amount).await {
+        Ok(txn_id) => {
+            if STATE.with(|s| s.remove_message(msg_hash.clone())).is_some() {
+                return Ok(txn_id);
+            }
+            Err(TxError::Other(format!(
+                "Message {:?} does not exist!",
+                &msg_hash
+            )))
+        }
         Err(error) => {
             STATE.with(|s| {
                 s.update_incoming_message_status(msg_hash.clone(), MessageStatus::ConsumedNotMinted)

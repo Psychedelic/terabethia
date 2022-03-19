@@ -14,7 +14,7 @@ thread_local! {
 }
 
 impl ProxyState {
-    pub fn store_incoming_message(&self, msg_hash: MessageHash) {
+    pub fn store_or_update_incoming_message(&self, msg_hash: MessageHash) {
         self.incoming_messages
             .borrow_mut()
             .entry(msg_hash)
@@ -29,38 +29,35 @@ impl ProxyState {
         self.incoming_messages.borrow_mut().insert(msg_hash, status);
     }
 
-    pub fn remove_message(&self, message: MessageHash) -> Result<MessageStatus, String> {
-        self.incoming_messages
-            .borrow_mut()
-            .remove(&message)
-            .ok_or(String::from("messages does not exist!"))
+    pub fn remove_message(&self, message: MessageHash) -> Option<MessageStatus> {
+        self.incoming_messages.borrow_mut().remove(&message)
     }
 
-    pub fn get_balance(&self, caller: Principal, canister_id: Principal) -> Option<Nat> {
+    pub fn get_balance(&self, caller: Principal, token_id: Principal) -> Option<Nat> {
         self.balances
             .borrow()
             .get(&caller)
-            .map(|s| s.get(&canister_id))
+            .map(|s| s.get(&token_id))
             .map(|b| match b {
                 Some(balance) => balance.clone(),
                 None => Nat::from(0_u32),
             })
     }
 
-    pub fn add_balance(&self, caller: Principal, canister_id: Principal, amount: Nat) {
+    pub fn add_balance(&self, caller: Principal, token_id: Principal, amount: Nat) {
         self.balances
             .borrow_mut()
             .entry(caller)
             .or_default()
-            .entry(canister_id)
+            .entry(token_id)
             .or_default()
             .add_assign(amount.clone())
     }
 
-    pub fn update_balance(&self, caller: Principal, canister_id: Principal, amount: Nat) {
+    pub fn update_balance(&self, caller: Principal, token_id: Principal, amount: Nat) {
         self.balances
             .borrow_mut()
-            .insert(caller, HashMap::from([(canister_id, amount)]));
+            .insert(caller, HashMap::from([(token_id, amount)]));
     }
 
     pub fn _authorize(&self, other: Principal) {
@@ -139,14 +136,28 @@ mod tests {
     use ic_kit::mock_principals;
 
     #[test]
+    fn test_update_message_status() {
+        let amount = Nat::from(100_u32);
+        let pid = mock_principals::bob();
+        let token_id = mock_principals::alice();
+
+        STATE.with(|s| s.add_balance(pid, token_id, amount.clone()));
+
+        let balance_of = STATE.with(|s| s.get_balance(pid, token_id));
+        let balance = balance_of.unwrap();
+
+        assert_eq!(balance, amount.clone());
+    }
+
+    #[test]
     fn test_add_balance() {
         let amount = Nat::from(100_u32);
         let pid = mock_principals::bob();
-        let canister_id = mock_principals::alice();
+        let token_id = mock_principals::alice();
 
-        STATE.with(|s| s.add_balance(pid, canister_id, amount.clone()));
+        STATE.with(|s| s.add_balance(pid, token_id, amount.clone()));
 
-        let balance_of = STATE.with(|s| s.get_balance(pid, canister_id));
+        let balance_of = STATE.with(|s| s.get_balance(pid, token_id));
         let balance = balance_of.unwrap();
 
         assert_eq!(balance, amount.clone());
@@ -156,19 +167,19 @@ mod tests {
     fn test_update_balance() {
         let amount = Nat::from(100_u32);
         let caller = mock_principals::bob();
-        let canister_id = mock_principals::alice();
+        let token_id = mock_principals::alice();
 
-        STATE.with(|s| s.add_balance(caller, canister_id, amount.clone()));
+        STATE.with(|s| s.add_balance(caller, token_id, amount.clone()));
 
-        let balance_of = STATE.with(|s| s.get_balance(caller, canister_id));
+        let balance_of = STATE.with(|s| s.get_balance(caller, token_id));
         let balance = balance_of.unwrap();
 
         assert_eq!(balance, amount.clone());
 
         let new_balance = Nat::from(134_u32);
-        STATE.with(|s| s.update_balance(caller, canister_id, new_balance.clone()));
+        STATE.with(|s| s.update_balance(caller, token_id, new_balance.clone()));
 
-        let balance_after_update = STATE.with(|s| s.get_balance(caller, canister_id));
+        let balance_after_update = STATE.with(|s| s.get_balance(caller, token_id));
 
         assert_eq!(balance_after_update.unwrap(), new_balance);
     }

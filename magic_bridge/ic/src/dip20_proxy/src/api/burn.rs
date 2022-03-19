@@ -10,21 +10,21 @@ use crate::common::types::{TxError, TxReceipt};
 
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
-async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
+async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
     let self_id = ic::id();
     let caller = ic::caller();
     let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let transfer_from = canister_id
+    let transfer_from = token_id
         .transfer_from(caller, self_id, amount.clone())
         .await;
 
     if transfer_from.is_ok() {
-        STATE.with(|s| s.add_balance(caller, canister_id, amount.clone()));
+        STATE.with(|s| s.add_balance(caller, token_id, amount.clone()));
 
-        let burn = canister_id.burn(amount.clone()).await;
+        let burn = token_id.burn(amount.clone()).await;
 
         match burn {
             Ok(txn_id) => {
@@ -37,7 +37,7 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
                 }
 
                 let zero = Nat::from(0_u32);
-                STATE.with(|s| s.update_balance(caller, canister_id, zero));
+                STATE.with(|s| s.update_balance(caller, token_id, zero));
                 return Ok(txn_id);
             }
             Err(error) => {
@@ -48,7 +48,6 @@ async fn burn(canister_id: Principal, eth_addr: Principal, amount: Nat) -> TxRec
 
     Err(TxError::Other(format!(
         "Canister PROXY: failed to transferFrom {:?} to {}!",
-        caller,
-        ic::id()
+        caller, self_id,
     )))
 }
