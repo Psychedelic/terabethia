@@ -7,7 +7,7 @@ use crate::{
 use ic_kit::{
     candid::{candid_method, Nat},
     ic,
-    macros::*,
+    macros::update,
     Principal,
 };
 
