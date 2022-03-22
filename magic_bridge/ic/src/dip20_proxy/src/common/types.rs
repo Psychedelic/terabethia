@@ -19,7 +19,7 @@ pub type MagicResponse = Result<Principal, TxError>;
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
 
-#[derive(Clone, CandidType, Deserialize, Eq, PartialEq)]
+#[derive(Clone, CandidType, Deserialize, Eq, PartialEq, Debug)]
 pub enum MessageStatus {
     Consuming,
     ConsumedNotMinted,

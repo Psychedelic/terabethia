@@ -14,7 +14,7 @@ thread_local! {
 }
 
 impl ProxyState {
-    pub fn store_or_update_incoming_message(&self, msg_hash: MessageHash) {
+    pub fn store_incoming_message(&self, msg_hash: MessageHash) {
         self.incoming_messages
             .borrow_mut()
             .entry(msg_hash)
@@ -29,8 +29,8 @@ impl ProxyState {
         self.incoming_messages.borrow_mut().insert(msg_hash, status);
     }
 
-    pub fn remove_message(&self, message: MessageHash) -> Option<MessageStatus> {
-        self.incoming_messages.borrow_mut().remove(&message)
+    pub fn remove_incoming_message(&self, msg_hash: MessageHash) -> Option<MessageStatus> {
+        self.incoming_messages.borrow_mut().remove(&msg_hash)
     }
 
     pub fn get_balance(&self, caller: Principal, token_id: Principal) -> Option<Nat> {
@@ -136,17 +136,58 @@ mod tests {
     use ic_kit::mock_principals;
 
     #[test]
-    fn test_update_message_status() {
-        let amount = Nat::from(100_u32);
-        let pid = mock_principals::bob();
-        let token_id = mock_principals::alice();
+    fn test_message_status_new_message() {
+        let msg_hash =
+            String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
 
-        STATE.with(|s| s.add_balance(pid, token_id, amount.clone()));
+        STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
 
-        let balance_of = STATE.with(|s| s.get_balance(pid, token_id));
-        let balance = balance_of.unwrap();
+        let message_status = STATE.with(|s| s.get_message(&msg_hash));
 
-        assert_eq!(balance, amount.clone());
+        assert_eq!(message_status.unwrap(), MessageStatus::Consuming);
+    }
+
+    #[test]
+    fn test_message_status_update_message() {
+        let msg_hash =
+            String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
+
+        STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
+
+        STATE.with(|s| {
+            s.update_incoming_message_status(msg_hash.clone(), MessageStatus::ConsumedNotMinted)
+        });
+
+        let message_status = STATE.with(|s| s.get_message(&msg_hash));
+
+        assert_eq!(
+            message_status.clone().unwrap(),
+            MessageStatus::ConsumedNotMinted
+        );
+
+        STATE
+            .with(|s| s.update_incoming_message_status(msg_hash.clone(), MessageStatus::Consuming));
+
+        let message_status1 = STATE.with(|s| s.get_message(&msg_hash));
+
+        assert_eq!(message_status1.clone().unwrap(), MessageStatus::Consuming);
+        // println!("{:#?}", message_status);
+    }
+
+    #[test]
+    fn test_remove_message() {
+        let msg_hash =
+            String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
+
+        STATE.with(|s| {
+            s.update_incoming_message_status(msg_hash.clone(), MessageStatus::ConsumedNotMinted)
+        });
+
+        let _ = STATE.with(|s| s.remove_incoming_message(msg_hash.clone()));
+
+        let message_status = STATE.with(|s| s.get_message(&msg_hash));
+
+        assert_eq!(message_status.is_none(), true);
     }
 
     #[test]
