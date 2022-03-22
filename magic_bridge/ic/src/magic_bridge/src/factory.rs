@@ -29,7 +29,7 @@ const DIP721_WASM: &[u8] = include_bytes!("./wasm/dip721/nft-v2-opt.wasm");
 // DIP721 init args
 
 // pub trait CreateCaniseterParam {
-    
+
 // }
 
 #[derive(CandidType, Deserialize)]

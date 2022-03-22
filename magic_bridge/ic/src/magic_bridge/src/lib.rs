@@ -1,8 +1,7 @@
+mod api;
 mod factory;
-mod inspect_message;
 mod magic;
 mod types;
-mod upgrade;
 
 #[cfg(any(target_arch = "wasm32", test))]
 fn main() {}
