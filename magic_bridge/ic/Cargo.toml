@@ -8,3 +8,8 @@ exclude = [
     "DIP20/rust",
     "DIP721/nft-v2"
 ]
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
