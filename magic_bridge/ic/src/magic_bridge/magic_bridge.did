@@ -5,27 +5,9 @@ type FactoryError = variant {
   CodeAlreadyInstalled;
   InstallCodeError;
 };
-
-type TokenType = variant {
-  DIP20;
-  DIP721;
-};
-
 type Result = variant { Ok : principal; Err : FactoryError };
-service : (principal) -> {
-  create : (
-      text,
-      text,
-      text,
-      nat8,
-      nat,
-      principal,
-      vec principal,
-      nat64,
-      nat,
-      principal,
-      principal,
-      TokenType,
-    ) -> (Result);
-  owner : () -> (principal) query;
+type TokenType = variant { DIP20; DIP721 };
+service : {
+  authorize : (principal) -> ();
+  create : (principal, TokenType, vec nat) -> (Result);
 }

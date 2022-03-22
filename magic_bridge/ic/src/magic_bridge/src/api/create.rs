@@ -2,7 +2,7 @@ use crate::api::admin::is_authorized;
 use crate::{
     factory::{CreateCanisterParam, Factory},
     magic::STATE,
-    types::{MagicResponse, TokenType, TxError},
+    types::{MagicResponse, TokenType},
 };
 use ic_kit::{
     candid::{candid_method, Nat},
@@ -55,7 +55,7 @@ async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -
                 STATE.with(|s| s.insert_canister(eth_addr, canister_id));
                 canister_id
             }
-            Err(error) => return Err(TxError::Other(format!("FactoryError: {:?}", error))),
+            Err(error) => return Err(error),
         }
     };
 

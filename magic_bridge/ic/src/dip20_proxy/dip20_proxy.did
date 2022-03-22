@@ -6,10 +6,13 @@ type TxError = variant {
   Unauthorized;
   LedgerTrap;
   ErrorTo;
+  Other : text;
   BlockUsed;
   AmountTooSmall;
-  Other : text;
 };
-service : () -> {
+service : {
+  burn : (principal, principal, nat) -> (Result);
   handle_message : (principal, nat, vec nat) -> (Result);
+  mint : (principal, nat, vec nat) -> (Result);
+  widthdraw : (principal, principal) -> (Result);
 }
