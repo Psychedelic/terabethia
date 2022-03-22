@@ -8,6 +8,8 @@ use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{TxError, TxReceipt};
 
+// should we allow users to just pass in the corresponding eth_addr on ETH
+// or should we use our magic_bridge to check if a key exists
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {

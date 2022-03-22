@@ -55,8 +55,8 @@ pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRec
 
     STATE.with(|s| s.update_incoming_message_status(msg_hash.clone(), MessageStatus::Consuming));
 
-    let amount = Nat::from(payload[1].0.clone());
-    let to = Principal::from_nat(payload[0].clone());
+    let amount = Nat::from(payload[2].0.clone());
+    let to = Principal::from_nat(payload[1].clone());
 
     match token_id.mint(to, amount).await {
         Ok(txn_id) => {

@@ -9,6 +9,28 @@ use ic_kit::{
 const DIP20_WASM: &[u8] = include_bytes!("../../wasm/dip20/token-opt.wasm");
 const DIP721_WASM: &[u8] = include_bytes!("../../wasm/dip721/nft-v2-opt.wasm");
 
+pub trait FromNat {
+    fn from_nat(input: Nat) -> Principal;
+}
+
+impl FromNat for Principal {
+    #[inline(always)]
+    fn from_nat(input: Nat) -> Principal {
+        let be_bytes = input.0.to_bytes_be();
+        let be_bytes_len = be_bytes.len();
+        let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
+            29 - be_bytes_len
+        } else if be_bytes_len < 10 {
+            10 - be_bytes_len
+        } else {
+            0
+        };
+        let mut p_slice = vec![0u8; padding_bytes];
+        p_slice.extend_from_slice(&be_bytes);
+        Principal::from_slice(&p_slice)
+    }
+}
+
 // logo: String,
 // name: String,
 // symbol: String,

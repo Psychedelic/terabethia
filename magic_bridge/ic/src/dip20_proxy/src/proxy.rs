@@ -132,6 +132,13 @@ impl FromNat for Principal {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use crate::common::{
+        types::{IncomingMessageHashParams, Message},
+        utils::Keccak256HashFn,
+    };
+
     use super::*;
     use ic_kit::mock_principals;
 
@@ -223,5 +230,38 @@ mod tests {
         let balance_after_update = STATE.with(|s| s.get_balance(caller, token_id));
 
         assert_eq!(balance_after_update.unwrap(), new_balance);
+    }
+
+    #[test]
+    fn test_store_incoming_message() {
+        let nonce = Nat::from(4_u32);
+        let receiver =
+            Nat::from_str("5575946531581959547228116840874869615988566799087422752926889285441538")
+                .unwrap();
+
+        let token_id = Principal::from_text("tcy4r-qaaaa-aaaab-qadyq-cai").unwrap();
+        let to = token_id.to_nat();
+
+        let from_slice = hex::decode("1b864e1CA9189CFbD8A14a53A02E26B00AB5e91a").unwrap();
+        let from = Nat::from(num_bigint::BigUint::from_bytes_be(&from_slice[..]));
+
+        let amount = Nat::from_str("69000000").unwrap();
+        let payload = [receiver, amount].to_vec();
+
+        let msg_hash_expected = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
+            from,
+            to: to.clone(),
+            nonce,
+            payload,
+        });
+
+        println!("{}", msg_hash);
+        assert_eq!(msg_hash, msg_hash_expected);
+
+        STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
+
+        let msg_exists = STATE.with(|s| s.get_message(&msg_hash));
+        assert_eq!(msg_exists.unwrap(), MessageStatus::Consuming);
     }
 }

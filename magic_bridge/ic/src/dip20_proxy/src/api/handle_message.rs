@@ -21,24 +21,19 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
 
     let magic_ic_addr_pid = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
 
-    let create_canister: (MagicResponse,) = match ic::call(
-        magic_ic_addr_pid,
-        "create",
-        (&eth_addr, TokenType::DIP20, &payload),
-    )
-    .await
-    {
-        Ok(res) => res,
-        Err((code, err)) => {
-            return Err(TxError::Other(format!(
-                "RejectionCode: {:?}\n{}",
-                code, err
-            )))
-        }
-    };
+    let create_canister: (MagicResponse,) =
+        match ic::call(magic_ic_addr_pid, "create", (TokenType::DIP20, &payload)).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(TxError::Other(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
 
     match create_canister {
         (Ok(token_id),) => mint(token_id, nonce, payload).await,
-        (Err(error),) => Err(error),
+        (Err(error),) => Err(TxError::Other(error.to_string())),
     }
 }

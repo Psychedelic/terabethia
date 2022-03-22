@@ -1,4 +1,5 @@
 use crate::api::admin::is_authorized;
+use crate::factory::FromNat;
 use crate::{
     factory::{CreateCanisterParam, Factory},
     magic::STATE,
@@ -15,9 +16,11 @@ use std::str;
 
 #[update(name = "create", guard = "is_authorized")]
 #[candid_method(update, rename = "create")]
-async fn create(eth_addr: Principal, token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
+async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
     let self_id = ic::id();
     let caller = ic::caller();
+    let eth_addr = Principal::from_nat(payload[0].clone());
+
     let canister_exits = STATE.with(|s| s.get_canister(eth_addr));
 
     let canister_id = if let Some(canister_id) = canister_exits {

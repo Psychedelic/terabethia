@@ -1,7 +1,25 @@
+use std::fmt;
+
 use ic_kit::candid::Nat;
 use sha3::{Digest, Keccak256};
 
-use super::types::{IncomingMessageHashParams, Message, MessageHash, OutgoingMessageHashParams};
+use super::types::{
+    FactoryError, IncomingMessageHashParams, Message, MessageHash, OutgoingMessageHashParams,
+};
+
+impl fmt::Display for FactoryError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FactoryError::CreateCanisterError => write!(f, "CreateCanisterError"),
+            FactoryError::CanisterStatusNotAvailableError => {
+                write!(f, "CanisterStatusNotAvailableError")
+            }
+            FactoryError::EncodeError => write!(f, "EncodeError"),
+            FactoryError::CodeAlreadyInstalled => write!(f, "CodeAlreadyInstalled"),
+            FactoryError::InstallCodeError => write!(f, "InstallCodeError"),
+        }
+    }
+}
 
 pub trait Keccak256HashFn<T> {
     fn calculate_hash(&self, params: T) -> MessageHash;

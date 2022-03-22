@@ -14,10 +14,19 @@ pub type EthereumAddr = Principal;
 
 pub type TxReceipt = Result<Nat, TxError>;
 
-pub type MagicResponse = Result<Principal, TxError>;
+pub type MagicResponse = Result<Principal, FactoryError>;
 
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
+
+#[derive(CandidType, Deserialize, Debug)]
+pub enum FactoryError {
+    CreateCanisterError,
+    CanisterStatusNotAvailableError,
+    EncodeError,
+    CodeAlreadyInstalled,
+    InstallCodeError,
+}
 
 #[derive(Clone, CandidType, Deserialize, Eq, PartialEq, Debug)]
 pub enum MessageStatus {
