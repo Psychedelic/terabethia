@@ -6,9 +6,33 @@ use ic_kit::{
     Principal, RejectionCode,
 };
 
-const DIP20_WASM: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
-const DIP721_WASM: &[u8] = include_bytes!("./wasm/dip20/token.wasm");
+const DIP20_WASM: &[u8] = include_bytes!("./wasm/dip20/token-opt.wasm");
+const DIP721_WASM: &[u8] = include_bytes!("./wasm/dip721/nft-v2-opt.wasm");
 
+// logo: String,
+// name: String,
+// symbol: String,
+// decimals: u8,
+// total_supply: Nat,
+// owner: Principal,
+// fee: Nat,
+// fee_to: Principal,
+// cap: Principal,
+// DIP20 init args
+
+// struct InitArgs {
+//     name: Option<String>,
+//     logo: Option<String>,
+//     symbol: Option<String>,
+//     custodians: Option<HashSet<Principal>>,
+// }
+// DIP721 init args
+
+// pub trait CreateCaniseterParam {
+    
+// }
+
+#[derive(CandidType, Deserialize)]
 pub struct CreateCanisterParam {
     pub logo: String,
     pub name: String,
