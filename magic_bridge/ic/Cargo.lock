@@ -434,7 +434,7 @@ dependencies = [
  "async-trait",
  "hex",
  "ic-cdk 0.4.0",
- "ic-cdk-macros 0.3.3",
+ "ic-cdk-macros 0.4.0",
  "ic-kit",
  "num-bigint",
  "serde",

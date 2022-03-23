@@ -13,6 +13,9 @@ use crate::common::types::{TxError, TxReceipt};
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
+    let caller = ic::caller();
+    let self_id = ic::id();
+
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
@@ -20,8 +23,6 @@ async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceip
         )));
     }
 
-    let self_id = ic::id();
-    let caller = ic::caller();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
@@ -62,7 +63,6 @@ async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceip
     }
 
     Err(TxError::Other(format!(
-        "Canister PROXY: failed to transferFrom {:?} to {}!",
-        caller, self_id,
+        "Canister PROXY: failed to transferFrom!",
     )))
 }

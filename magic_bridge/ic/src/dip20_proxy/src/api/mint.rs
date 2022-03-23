@@ -39,9 +39,8 @@ pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRec
             MessageStatus::ConsumedNotMinted => (),
             _ => {
                 return Err(TxError::Other(format!(
-                    "Meesage {}: is being consumed/minted with caller {:?}!",
-                    &msg_hash,
-                    ic::caller()
+                    "Meesage {}: is already being consumed/minted!",
+                    &msg_hash
                 )));
             }
         }

@@ -9,5 +9,6 @@ type Result = variant { Ok : principal; Err : FactoryError };
 type TokenType = variant { DIP20; DIP721 };
 service : {
   authorize : (principal) -> ();
-  create : (principal, TokenType, vec nat) -> (Result);
+  create : (TokenType, vec nat) -> (Result);
+  get_canister : (principal) -> (opt principal);
 }

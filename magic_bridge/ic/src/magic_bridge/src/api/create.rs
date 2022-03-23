@@ -64,3 +64,51 @@ async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
 
     Ok(canister_id)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_to_hex() {
+        let expexted_name = String::from("fighters");
+        let expexted_symbol = String::from("foo");
+        let expexted_decimals = 18;
+
+        let payload = [
+            // token
+            Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
+            // to
+            Nat::from_str("5575946531581959547228116840874869615988566799087422752926889285441538")
+                .unwrap(),
+            // amount
+            Nat::from_str("100000000000000000").unwrap(),
+            // name
+            Nat::from(num_bigint::BigUint::from_bytes_be(expexted_name.as_bytes())),
+            // symbol
+            Nat::from(num_bigint::BigUint::from_bytes_be(
+                expexted_symbol.as_bytes(),
+            )),
+            // decimals
+            Nat::from(expexted_decimals),
+        ]
+        .to_vec();
+
+        let name = str::from_utf8(&payload[3].0.to_bytes_be()[..])
+            .unwrap()
+            .to_string();
+
+        assert_eq!(expexted_name, name);
+
+        let symbol = str::from_utf8(&payload[4].0.to_bytes_be()[..])
+            .unwrap()
+            .to_string();
+
+        assert_eq!(expexted_symbol, symbol);
+
+        let decimals = u8::from_str_radix(&payload[5].to_string(), 10).unwrap();
+
+        assert_eq!(expexted_decimals, decimals);
+    }
+}
