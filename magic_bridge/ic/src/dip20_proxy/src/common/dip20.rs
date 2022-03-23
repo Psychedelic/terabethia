@@ -63,15 +63,16 @@ impl Dip20 for Principal {
     }
 
     async fn transfer_from(&self, from: Principal, to: Principal, amount: Nat) -> TxReceipt {
-        let transfer_from: (TxReceipt,) = match call(*self, "transferFrom", (from, to, amount)).await {
-            Ok(res) => res,
-            Err((code, err)) => {
-                return Err(TxError::Other(format!(
-                    "RejectionCode: {:?}\n{}",
-                    code, err
-                )))
-            }
-        };
+        let transfer_from: (TxReceipt,) =
+            match call(*self, "transferFrom", (from, to, amount)).await {
+                Ok(res) => res,
+                Err((code, err)) => {
+                    return Err(TxError::Other(format!(
+                        "RejectionCode: {:?}\n{}",
+                        code, err
+                    )))
+                }
+            };
 
         match transfer_from {
             (Ok(tx_id),) => Ok(tx_id),
