@@ -7,6 +7,7 @@ use ic_kit::{
 
 use crate::{
     common::{
+        dip20::Dip20,
         tera::Tera,
         types::{TxError, TxReceipt},
     },
@@ -16,6 +17,13 @@ use crate::{
 #[update(name = "widthdraw")]
 #[candid_method(update, rename = "widthdraw")]
 pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
+    if (token_id.name().await).is_err() {
+        return Err(TxError::Other(format!(
+            "Token {} canister is not responding!",
+            token_id
+        )));
+    }
+
     let caller = ic::caller();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());

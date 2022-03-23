@@ -147,11 +147,18 @@ mod tests {
         let msg_hash =
             String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
 
-        STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
+        STATE.with(|s| {
+            let mut message = s.incoming_messages.borrow_mut();
+            let status = message
+                .entry(msg_hash.clone())
+                .or_insert(MessageStatus::Consuming);
+
+            *status = MessageStatus::ConsumedNotMinted;
+        });
 
         let message_status = STATE.with(|s| s.get_message(&msg_hash));
 
-        assert_eq!(message_status.unwrap(), MessageStatus::Consuming);
+        assert_eq!(message_status.unwrap(), MessageStatus::ConsumedNotMinted);
     }
 
     #[test]

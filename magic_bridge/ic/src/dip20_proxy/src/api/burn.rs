@@ -13,9 +13,15 @@ use crate::common::types::{TxError, TxReceipt};
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
+    if (token_id.name().await).is_err() {
+        return Err(TxError::Other(format!(
+            "Token {} canister is not responding!",
+            token_id
+        )));
+    }
+
     let self_id = ic::id();
     let caller = ic::caller();
-    let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
@@ -31,6 +37,13 @@ async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceip
         match burn {
             Ok(txn_id) => {
                 let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
+                let payload = [
+                    token_id.clone().to_nat(),
+                    eth_addr.clone().to_nat(),
+                    amount.clone(),
+                ]
+                .to_vec();
+
                 if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
                     return Err(TxError::Other(format!(
                         "Sending message to L1 failed with caller {:?}!",

@@ -7,12 +7,27 @@ use crate::common::types::{TxError, TxReceipt};
 #[async_trait]
 pub trait Dip20 {
     async fn burn(&self, amount: Nat) -> TxReceipt;
+    async fn name(&self) -> Result<String, TxError>;
     async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
     async fn transfer_from(&self, from: Principal, to: Principal, amount: Nat) -> TxReceipt;
 }
 
 #[async_trait]
 impl Dip20 for Principal {
+    async fn name(&self) -> Result<String, TxError> {
+        let name: (String,) = match call(*self, "name", ()).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(TxError::Other(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
+
+        Ok(name.0)
+    }
+
     async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt {
         let mint: (TxReceipt,) = match call(*self, "mint", (to, amount)).await {
             Ok(res) => res,

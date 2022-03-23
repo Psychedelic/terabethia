@@ -14,6 +14,13 @@ use crate::common::types::{
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
 pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
+    if (token_id.name().await).is_err() {
+        return Err(TxError::Other(format!(
+            "Token {} canister is not responding!",
+            token_id
+        )));
+    }
+
     let self_id = ic::id();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
