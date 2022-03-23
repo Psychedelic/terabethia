@@ -17,6 +17,8 @@ use crate::{
 #[update(name = "widthdraw")]
 #[candid_method(update, rename = "widthdraw")]
 pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
+    let caller = ic::caller();
+
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
@@ -24,7 +26,6 @@ pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
         )));
     }
 
-    let caller = ic::caller();
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
@@ -33,10 +34,7 @@ pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
         let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
         if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
-            return Err(TxError::Other(format!(
-                "Sending message to L1 failed with caller {:?}!",
-                ic::caller()
-            )));
+            return Err(TxError::Other(format!("Sending message to L1 failed!",)));
         }
 
         let zero = Nat::from(0_u32);
@@ -44,8 +42,8 @@ pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
     }
 
     Err(TxError::Other(format!(
-        "Not balance for caller {:?} in canister {:?}!",
-        ic::caller(),
+        "No balance for caller {:?} in canister {:?}!",
+        caller.to_string(),
         token_id
     )))
 }

@@ -1,4 +1,5 @@
 type Result = variant { Ok : nat; Err : TxError };
+type Result_1 = variant { Ok : vec record { text; nat }; Err : text };
 type TxError = variant {
   InsufficientAllowance;
   InsufficientBalance;
@@ -12,6 +13,7 @@ type TxError = variant {
 };
 service : {
   burn : (principal, principal, nat) -> (Result);
+  get_all_token_balance : () -> (Result_1);
   get_balance : (principal) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (principal, nat, vec nat) -> (Result);

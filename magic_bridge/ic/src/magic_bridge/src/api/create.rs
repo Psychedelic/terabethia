@@ -33,7 +33,6 @@ async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
         let symbol = str::from_utf8(&payload[4].0.to_bytes_be()[..])
             .unwrap()
             .to_string();
-        // verify this payload[5] to be a base 10 or not, should be
         let decimals = u8::from_str_radix(&payload[5].to_string(), 10).unwrap();
 
         let create_param = CreateCanisterParam {

@@ -44,6 +44,19 @@ impl ProxyState {
             })
     }
 
+    pub fn get_all_balances(&self, caller: Principal) -> Result<Vec<(String, Nat)>, String> {
+        let token_balances = self.balances.borrow().get(&caller).cloned();
+
+        if let Some(balances) = token_balances {
+            return Ok(balances
+                .into_iter()
+                .map(|(p, n)| (p.to_string(), n))
+                .collect::<Vec<(_, _)>>());
+        }
+
+        Err(format!("User {} has no token balances!", &caller))
+    }
+
     pub fn add_balance(&self, caller: Principal, token_id: Principal, amount: Nat) {
         self.balances
             .borrow_mut()
@@ -216,6 +229,25 @@ mod tests {
         let balance = balance_of.unwrap();
 
         assert_eq!(balance, amount.clone());
+    }
+
+    #[test]
+    fn test_get_all_balances() {
+        let amount = Nat::from(100_u32);
+        let caller = mock_principals::bob();
+        let token_id_1 = mock_principals::alice();
+        let token_id_2 = mock_principals::john();
+
+        STATE.with(|s| s.add_balance(caller, token_id_1, amount.clone()));
+        STATE.with(|s| s.add_balance(caller, token_id_2, amount.clone()));
+
+        let balances = STATE.with(|s| s.get_all_balances(caller));
+
+        assert_eq!(balances.as_ref().unwrap()[0].0, token_id_1.to_string());
+        assert_eq!(balances.as_ref().unwrap()[1].0, token_id_2.to_string());
+
+        assert_eq!(balances.as_ref().unwrap()[0].1, amount.clone());
+        assert_eq!(balances.as_ref().unwrap()[1].1, amount.clone());
     }
 
     #[test]
