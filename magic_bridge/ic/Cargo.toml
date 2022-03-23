@@ -6,7 +6,8 @@ members = [
 ]
 exclude = [
     "DIP20/rust",
-    "DIP721/nft-v2"
+    "DIP721/nft-v2",
+    "cap"
 ]
 
 [profile.release]

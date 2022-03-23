@@ -1,5 +1,5 @@
 use crate::api::admin::is_authorized;
-use crate::factory::FromNat;
+use crate::factory::{FromNat, CAP_ADDRESS};
 use crate::{
     factory::{CreateCanisterParam, Factory},
     magic::STATE,
@@ -43,10 +43,10 @@ async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
             total_supply: Nat::from(0_u32),
             owner: caller,
             controllers: vec![caller, self_id],
-            cycles: 10_000_000_000_000,
+            cycles: 1_000_000_000_000,
             fee: Nat::from(0_u32),
-            fee_to: ic::id(),
-            cap: Principal::from_text("e22n6-waaaa-aaaah-qcd2q-cai").unwrap(),
+            fee_to: self_id,
+            cap: Principal::from_text(CAP_ADDRESS).unwrap(),
             token_type,
         };
 

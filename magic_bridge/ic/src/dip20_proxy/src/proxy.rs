@@ -5,8 +5,8 @@ use ic_kit::ic;
 
 use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState};
 
-pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
-pub const MAGIC_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
+pub const TERA_ADDRESS: &str = "tfuft-aqaaa-aaaaa-aaaoq-cai";
+pub const MAGIC_ADDRESS_IC: &str = "tqtu6-byaaa-aaaaa-aaana-cai";
 pub const ERC20_ADDRESS_ETH: &str = "0x177E19096C3D290613d41C544ca06aE47C09C963";
 
 thread_local! {

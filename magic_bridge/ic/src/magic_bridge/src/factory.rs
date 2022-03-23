@@ -6,6 +6,7 @@ use ic_kit::{
     Principal, RejectionCode,
 };
 
+pub const CAP_ADDRESS: &str = "wxns6-qiaaa-aaaaa-aaaqa-cai";
 const DIP20_WASM: &[u8] = include_bytes!("../../wasm/dip20/token-opt.wasm");
 const DIP721_WASM: &[u8] = include_bytes!("../../wasm/dip721/nft-v2-opt.wasm");
 
@@ -80,10 +81,10 @@ impl Default for CreateCanisterParam {
             total_supply: Nat::from(0),
             owner: ic::id(),
             controllers: vec![ic::id()],
-            cycles: 10_000_000_000_000,
+            cycles: 1_000_000_000_000,
             fee: Nat::from(0),
             fee_to: ic::id(),
-            cap: Principal::from_text("e22n6-waaaa-aaaah-qcd2q-cai").unwrap(),
+            cap: Principal::from_text(CAP_ADDRESS).unwrap(),
             token_type: TokenType::DIP20,
         }
     }
