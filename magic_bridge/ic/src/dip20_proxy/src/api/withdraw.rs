@@ -14,6 +14,9 @@ use crate::{
     proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS},
 };
 
+/// withdraw left over balance if burn/mint fails
+/// this will attempt to bridge the leftover balance
+/// We should just withdraw it back to your original Token
 #[update(name = "widthdraw")]
 #[candid_method(update, rename = "widthdraw")]
 pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
@@ -22,7 +25,7 @@ pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            token_id
+            token_id.to_string(),
         )));
     }
 
@@ -44,6 +47,6 @@ pub async fn widthdraw(token_id: Principal, eth_addr: Principal) -> TxReceipt {
     Err(TxError::Other(format!(
         "No balance for caller {:?} in canister {:?}!",
         caller.to_string(),
-        token_id
+        token_id.to_string(),
     )))
 }

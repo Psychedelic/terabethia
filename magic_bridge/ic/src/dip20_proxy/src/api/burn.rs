@@ -19,7 +19,7 @@ async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceip
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            token_id
+            token_id.to_string(),
         )));
     }
 
@@ -30,39 +30,38 @@ async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceip
         .transfer_from(caller, self_id, amount.clone())
         .await;
 
-    if transfer_from.is_ok() {
-        STATE.with(|s| s.add_balance(caller, token_id, amount.clone()));
+    match transfer_from {
+        Ok(_) => {
+            STATE.with(|s| s.add_balance(caller, token_id, amount.clone()));
 
-        let burn = token_id.burn(amount.clone()).await;
+            let burn = token_id.burn(amount.clone()).await;
 
-        match burn {
-            Ok(txn_id) => {
-                let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
-                let payload = [
-                    token_id.clone().to_nat(),
-                    eth_addr.clone().to_nat(),
-                    amount.clone(),
-                ]
-                .to_vec();
+            match burn {
+                Ok(burn_txn_id) => {
+                    let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
+                    let payload = [
+                        token_id.clone().to_nat(),
+                        eth_addr.clone().to_nat(),
+                        amount.clone(),
+                    ]
+                    .to_vec();
 
-                if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
-                    return Err(TxError::Other(format!(
-                        "Sending message to L1 failed with caller {:?}!",
-                        ic::caller()
-                    )));
+                    if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
+                        return Err(TxError::Other(format!(
+                            "Sending message to L1 failed with caller {:?}!",
+                            caller.to_string()
+                        )));
+                    }
+
+                    let zero = Nat::from(0);
+                    STATE.with(|s| s.update_balance(caller, token_id, zero));
+                    return Ok(burn_txn_id);
                 }
-
-                let zero = Nat::from(0_u32);
-                STATE.with(|s| s.update_balance(caller, token_id, zero));
-                return Ok(txn_id);
-            }
-            Err(error) => {
-                return Err(error);
-            }
-        };
+                Err(error) => {
+                    return Err(error);
+                }
+            };
+        }
+        Err(error) => Err(error),
     }
-
-    Err(TxError::Other(format!(
-        "Canister PROXY: failed to transferFrom!",
-    )))
 }

@@ -17,7 +17,7 @@ pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRec
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            token_id
+            token_id.to_string()
         )));
     }
 
@@ -53,7 +53,7 @@ pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRec
         {
             return Err(TxError::Other(format!(
                 "Consuming message from L1 failed with message {:?}!",
-                msg_hash
+                msg_hash,
             )));
         }
         STATE.with(|s| s.store_incoming_message(msg_hash.clone()));
@@ -74,7 +74,7 @@ pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxRec
             }
             Err(TxError::Other(format!(
                 "Message {:?} does not exist!",
-                &msg_hash
+                &msg_hash,
             )))
         }
         Err(error) => {
