@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::AddAssign};
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
-use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState};
+use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState, TokendId};
 
 pub const TERA_ADDRESS: &str = "tfuft-aqaaa-aaaaa-aaaoq-cai";
 pub const MAGIC_ADDRESS_IC: &str = "uywlp-pqaaa-aaaaa-aaa4q-cai";
@@ -33,7 +33,7 @@ impl ProxyState {
         self.incoming_messages.borrow_mut().remove(&msg_hash)
     }
 
-    pub fn get_balance(&self, caller: Principal, token_id: Principal) -> Option<Nat> {
+    pub fn get_balance(&self, caller: Principal, token_id: TokendId) -> Option<Nat> {
         self.balances
             .borrow()
             .get(&caller)
@@ -57,7 +57,7 @@ impl ProxyState {
         Err(format!("User {} has no token balances!", &caller))
     }
 
-    pub fn add_balance(&self, caller: Principal, token_id: Principal, amount: Nat) {
+    pub fn add_balance(&self, caller: Principal, token_id: TokendId, amount: Nat) {
         self.balances
             .borrow_mut()
             .entry(caller)
@@ -67,7 +67,7 @@ impl ProxyState {
             .add_assign(amount.clone())
     }
 
-    pub fn update_balance(&self, caller: Principal, token_id: Principal, amount: Nat) {
+    pub fn update_balance(&self, caller: Principal, token_id: TokendId, amount: Nat) {
         self.balances
             .borrow_mut()
             .insert(caller, HashMap::from([(token_id, amount)]));
@@ -295,7 +295,6 @@ mod tests {
             payload,
         });
 
-        println!("{}", msg_hash);
         assert_eq!(msg_hash, msg_hash_expected);
 
         STATE.with(|s| s.store_incoming_message(msg_hash.clone()));

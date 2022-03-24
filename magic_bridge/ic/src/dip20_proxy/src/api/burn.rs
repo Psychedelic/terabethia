@@ -6,13 +6,13 @@ use crate::common::tera::Tera;
 use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::common::types::{TxError, TxReceipt};
+use crate::common::types::{EthereumAddr, TokendId, TxError, TxReceipt};
 
 // should we allow users to just pass in the corresponding eth_addr on ETH
 // or should we use our magic_bridge to check if a key exists
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
-async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceipt {
+async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
     let caller = ic::caller();
     let self_id = ic::id();
 
@@ -53,8 +53,14 @@ async fn burn(token_id: Principal, eth_addr: Principal, amount: Nat) -> TxReceip
                         )));
                     }
 
-                    let zero = Nat::from(0);
-                    STATE.with(|s| s.update_balance(caller, token_id, zero));
+                    // there could be an underflow here
+                    // like negative balance
+                    let current_balance =
+                        STATE.with(|s| s.get_balance(caller, token_id).unwrap_or(Nat::from(0)));
+
+                    STATE.with(|s| {
+                        s.update_balance(caller, token_id, current_balance - amount.clone())
+                    });
                     return Ok(burn_txn_id);
                 }
                 Err(error) => {

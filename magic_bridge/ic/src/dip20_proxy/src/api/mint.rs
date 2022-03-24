@@ -8,12 +8,12 @@ use crate::proxy::{FromNat, ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{
-    IncomingMessageHashParams, Message, MessageStatus, Nonce, TxError, TxReceipt,
+    IncomingMessageHashParams, Message, MessageStatus, Nonce, TokendId, TxError, TxReceipt,
 };
 
 #[update(name = "mint")]
 #[candid_method(update, rename = "mint")]
-pub async fn mint(token_id: Principal, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
+pub async fn mint(token_id: TokendId, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
