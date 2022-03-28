@@ -6,6 +6,7 @@ import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
+import "hardhat-abi-exporter";
 import "solidity-coverage";
 
 dotenv.config();
@@ -35,7 +36,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-  }
+  },
 };
 
 export default config;
