@@ -2,7 +2,6 @@ use ic_kit::{
     candid::{candid_method, Nat},
     ic,
     macros::update,
-    Principal,
 };
 
 use crate::{common::types::TokendId, proxy::STATE};

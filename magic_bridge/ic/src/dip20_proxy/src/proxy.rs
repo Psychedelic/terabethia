@@ -7,7 +7,7 @@ use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxySt
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 pub const MAGIC_ADDRESS_IC: &str = "7z6fu-giaaa-aaaab-qafkq-cai";
-pub const ERC20_ADDRESS_ETH: &str = "0x15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f";
+pub const ERC20_ADDRESS_ETH: &str = "0x15b661f6d3fd9a7ed8ed4c88bccfd1546644443f";
 
 thread_local! {
     pub static STATE: ProxyState = ProxyState::default();
@@ -305,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_store_erc20_incoming_message() {
-        let nonce = Nat::from(23_u64);
+        let nonce = Nat::from(37_u64);
         let receiver =
             Nat::from_str("5575946531581959547228116840874869615988566799087422752926889285441538")
                 .unwrap();
@@ -320,10 +320,15 @@ mod tests {
 
         let originating_erc20_token =
             Nat::from_str("1064074219490881077210656189219336181026035659484").unwrap();
-
-        let name = Nat::from(num_bigint::BigUint::from_bytes_be("FaucetToken".as_bytes()));
-        let symbol = Nat::from(num_bigint::BigUint::from_bytes_be("FAU".as_bytes()));
-        let decimals = Nat::from(18_u64);
+        let name = Nat::from_str(
+            "31834093750153841782852689224122693026672464094252661502799082895056765452288",
+        )
+        .unwrap();
+        let symbol = Nat::from_str(
+            "31777331108478719365477537505109683054320756229570641444674276344806789611520",
+        )
+        .unwrap();
+        let decimals = Nat::from_str("18").unwrap();
 
         let payload = [
             originating_erc20_token,
@@ -335,9 +340,7 @@ mod tests {
         ]
         .to_vec();
 
-        println!("{:#?}", payload);
-
-        let msg_hash_expected = "14b52fae5ad052145feb9a67152800b79f3948207346366df3022e3dcbc375e8";
+        let msg_hash_expected = "eebd5cf3d4e41e9671f34f875a7fdcf7547753a98cc1cb822826f01e91432dca";
         let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
             from,
             to: to.clone(),
@@ -353,6 +356,10 @@ mod tests {
         let erc20_addr_hex = "15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f";
 
         let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
+
+        let erc20_addr_hex = hex::encode(
+            Principal::from_text("6iiev-lyvwz-q7nu7-5tj7n-r3kmr-c6m7u-kumzc-eipy").unwrap(),
+        );
 
         assert_eq!(
             erc20_addr_pid.to_string(),
