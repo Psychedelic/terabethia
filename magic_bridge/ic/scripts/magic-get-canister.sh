@@ -1,9 +1,10 @@
 #!/bin/sh
 # ex: 
-# sh magic-get-canister.sh liykv-xyaaa-aaaaa-aaaaa-b4472-3srvl-mi632-m42vy-qjzht-t77xe-rgm testnet
+# sh magic-get-canister.sh 5keby-zqaaa-aaaaa-aaaaa-botcx-t6kv7-dgekc-tzsrl-42wh3-bc3yd-zny testnet
 
 cd ..
 
+ETHADDR=$1
 STAGE=$2
 NETWORK=ic
 
@@ -12,6 +13,5 @@ if [[ "$STAGE" == "testnet" ]]; then
 fi
 
 # ETHADDR=$1
-ETHADDR=liykv-xyaaa-aaaaa-aaaaa-b4472-3srvl-mi632-m42vy-qjzht-t77xe-rgm
 
 dfx canister --network $NETWORK call magic_bridge get_canister "(principal \"$ETHADDR\")"

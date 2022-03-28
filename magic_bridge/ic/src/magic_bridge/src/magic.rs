@@ -34,6 +34,10 @@ impl MagicState {
         self.canisters.borrow().get(&eth_addr).cloned()
     }
 
+    pub fn get_all_canisters(&self) -> Vec<(EthereumAddr, CanisterId)> {
+        self.canisters.borrow().clone().into_iter().collect::<_>()
+    }
+
     pub fn insert_canister(
         &self,
         eth_addr: EthereumAddr,

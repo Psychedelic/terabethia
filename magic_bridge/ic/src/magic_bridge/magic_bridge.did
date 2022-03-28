@@ -10,5 +10,6 @@ type TokenType = variant { DIP20; DIP721 };
 service : {
   authorize : (principal) -> ();
   create : (TokenType, vec nat) -> (Result);
+  get_all_canisters : () -> (vec record { principal; principal });
   get_canister : (principal) -> (opt principal);
 }

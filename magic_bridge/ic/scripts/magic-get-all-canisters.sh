@@ -1,7 +1,15 @@
 #!/bin/sh
 # ex: 
-# sh magic-get-all-canisters.sh
+# sh magic-get-all-canisters.sh testnet
 
 cd ..
 
-# dfx canister --network fleek call magic_bridge get_canister "()"
+ETHADDR=$1
+STAGE=$2
+NETWORK=ic
+
+if [[ "$STAGE" == "testnet" ]]; then
+   NETWORK=fleek
+fi
+
+dfx canister --network $NETWORK call magic_bridge get_all_canisters

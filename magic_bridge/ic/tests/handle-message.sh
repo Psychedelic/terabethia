@@ -27,10 +27,11 @@ TOKEN_NAME=85085042353177710230725998
 TOKEN_SYMBOL=4604245
 DECIMALS=18
 
-dfx canister --wallet "$(dfx identity --network $NETWORK get-wallet)" --network $NETWORK call tera store_message "(
+# dfx canister --wallet "$(dfx identity --network ic get-wallet)" --network ic call magic_bridge authorize "(principal \"767da-lqaaa-aaaab-qafka-cai\")"
+
+dfx canister --wallet "$(dfx identity --network $NETWORK get-wallet)" --network $NETWORK call dip20_proxy handle_message "(
   principal \"$FROM\", 
-  principal \"$TO\", 
-  $NONCE:nat,
+  $NONCE:nat, 
   (vec {
     $TOKEN:nat;
     $USER:nat;
@@ -40,3 +41,4 @@ dfx canister --wallet "$(dfx identity --network $NETWORK get-wallet)" --network 
     $DECIMALS:nat;
   })
 )"
+

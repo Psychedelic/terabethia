@@ -1,6 +1,6 @@
 #!/bin/bash
 # ex: 
-# sh balance-of.sh 7icuz-piaaa-aaaaa-aabca-cai testnet
+# sh balanceOf.sh 7icuz-piaaa-aaaaa-aabca-cai testnet
 
 cd ..
 
@@ -14,4 +14,4 @@ fi
 TOKENID=$1
 ID=$(dfx identity get-principal)
 
-dfx canister --network fleek call $TOKENID balanceOf "(principal \"$ID\")"
+dfx canister --network $NETWORK call $TOKENID balanceOf "(principal \"$ID\")"

@@ -302,4 +302,61 @@ mod tests {
         let msg_exists = STATE.with(|s| s.get_message(&msg_hash));
         assert_eq!(msg_exists.unwrap(), MessageStatus::Consuming);
     }
+
+    #[test]
+    fn test_store_erc20_incoming_message() {
+        let nonce = Nat::from(23_u64);
+        let receiver =
+            Nat::from_str("5575946531581959547228116840874869615988566799087422752926889285441538")
+                .unwrap();
+
+        let dip20_token_id = Principal::from_text("767da-lqaaa-aaaab-qafka-cai").unwrap();
+        let to = dip20_token_id.to_nat();
+
+        let from_slice = hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap();
+        let from = Nat::from(num_bigint::BigUint::from_bytes_be(&from_slice[..]));
+
+        let amount = Nat::from(1_u64);
+
+        let originating_erc20_token =
+            Nat::from_str("1064074219490881077210656189219336181026035659484").unwrap();
+
+        let name = Nat::from(num_bigint::BigUint::from_bytes_be("FaucetToken".as_bytes()));
+        let symbol = Nat::from(num_bigint::BigUint::from_bytes_be("FAU".as_bytes()));
+        let decimals = Nat::from(18_u64);
+
+        let payload = [
+            originating_erc20_token,
+            receiver,
+            amount,
+            name,
+            symbol,
+            decimals,
+        ]
+        .to_vec();
+
+        println!("{:#?}", payload);
+
+        let msg_hash_expected = "14b52fae5ad052145feb9a67152800b79f3948207346366df3022e3dcbc375e8";
+        let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
+            from,
+            to: to.clone(),
+            nonce,
+            payload,
+        });
+
+        assert_eq!(msg_hash, msg_hash_expected);
+    }
+
+    #[test]
+    fn test_hex_to_pid() {
+        let erc20_addr_hex = "15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f";
+
+        let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
+
+        assert_eq!(
+            erc20_addr_pid.to_string(),
+            "6iiev-lyvwz-q7nu7-5tj7n-r3kmr-c6m7u-kumzc-eipy"
+        );
+    }
 }
