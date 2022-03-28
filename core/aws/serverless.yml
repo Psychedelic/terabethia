@@ -52,6 +52,7 @@ custom:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
+    packager: yarn
   serverless-iam-roles-per-function:
     defaultInherit: true # Each function will inherit the service level roles too.
   prune:

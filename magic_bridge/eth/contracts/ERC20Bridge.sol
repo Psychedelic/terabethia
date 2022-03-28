@@ -10,7 +10,7 @@ contract ERC20Bridge {
     ITerabethiaCore terabethiaCore;
 
     // L2 Canister address
-    uint256 constant CANISTER_ADDRESS = 0x000000000030010a0101;
+    uint256 constant CANISTER_ADDRESS = 0x00000000003001540101;
 
     /**
       Initializes the contract state.
@@ -40,10 +40,19 @@ contract ERC20Bridge {
         uint256 user
     ) external {
         // convert string -> bytes -> uint256
-        uint256 tokenName = uint256(stringToBytes32(IERC20Metadata(token).name()));
-        uint256 tokenSymbol = uint256(stringToBytes32(IERC20Metadata(token).symbol()));
+        uint256 tokenName = uint256(
+            stringToBytes32(IERC20Metadata(token).name())
+        );
+        uint256 tokenSymbol = uint256(
+            stringToBytes32(IERC20Metadata(token).symbol())
+        );
 
-        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
+        SafeERC20.safeTransferFrom(
+            IERC20(token),
+            msg.sender,
+            address(this),
+            amount
+        );
 
         // Construct the deposit message's payload.
         uint256[] memory payload = new uint256[](6);
@@ -58,7 +67,11 @@ contract ERC20Bridge {
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
     }
 
-    function stringToBytes32(string memory source) public pure returns (bytes32 result) {
+    function stringToBytes32(string memory source)
+        public
+        pure
+        returns (bytes32 result)
+    {
         bytes memory tempEmptyStringTest = bytes(source);
         if (tempEmptyStringTest.length == 0) {
             return 0x0;
