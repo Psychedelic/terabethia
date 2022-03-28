@@ -4,7 +4,7 @@
 
 cd ..
 
-CANISTER=$1
+TOKENID=$1
 ID=$(dfx identity get-principal)
 
-dfx canister --network fleek call $CANISTER balanceOf "(principal \"$ID\")"
+dfx canister --network fleek call $TOKENID balanceOf "(principal \"$ID\")"

@@ -5,12 +5,12 @@
 cd ..
 
 CAP_ID=wxns6-qiaaa-aaaaa-aaaqa-cai
-# CANISTER=$1
-CANISTER=7icuz-piaaa-aaaaa-aabca-cai
+# TOKENID=$1
+TOKENID=7icuz-piaaa-aaaaa-aabca-cai
 
 ROOT_BUCKET= dfx canister --network fleek call $CAP_ID get_token_contract_root_bucket "(
   record { 
-    canister=(principal \"$CANISTER\"); 
+    canister=(principal \"$TOKENID\");
     witness=(false:bool)
   }
 )" | awk -F'2_631_180_839 = opt principal|;' '{print $2}'

@@ -1,6 +1,6 @@
 #!/bin/sh
 # ex: get your balance for a specific token
-# sh proxy-get-balance.sh 7icuz-piaaa-aaaaa-aabca-cai
+# sh dip20-get-balance.sh 7icuz-piaaa-aaaaa-aabca-cai
 
 cd ..
 

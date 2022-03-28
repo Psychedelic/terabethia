@@ -21,6 +21,12 @@
     "fleek": {
       "bind": "34.216.56.80:8080",
       "type": "ephemeral"
+    },
+    "staging": {
+      "providers": [
+        "https://ic0.app/"
+      ],
+      "type": "persistent"
     }
   },
   "version": 1
