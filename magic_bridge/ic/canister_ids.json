@@ -1,11 +1,13 @@
 {
   "dip20_proxy": {
-    "fleek": "v32cj-3iaaa-aaaaa-aaa2a-cai"
-  },
-  "magic_bridge": {
-    "fleek": "uywlp-pqaaa-aaaaa-aaa4q-cai"
+    "fleek": "v32cj-3iaaa-aaaaa-aaa2a-cai",
+    "ic": "767da-lqaaa-aaaab-qafka-cai"
   },
   "ic-history-router": {
     "fleek": "wxns6-qiaaa-aaaaa-aaaqa-cai"
+  },
+  "magic_bridge": {
+    "fleek": "uywlp-pqaaa-aaaaa-aaa4q-cai",
+    "ic": "7z6fu-giaaa-aaaab-qafkq-cai"
   }
 }

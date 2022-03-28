@@ -5,9 +5,9 @@ use ic_kit::ic;
 
 use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState, TokendId};
 
-pub const TERA_ADDRESS: &str = "tfuft-aqaaa-aaaaa-aaaoq-cai";
-pub const MAGIC_ADDRESS_IC: &str = "uywlp-pqaaa-aaaaa-aaa4q-cai";
-pub const ERC20_ADDRESS_ETH: &str = "0x177e19096c3d290613d41c544ca06ae47c09c963";
+pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
+pub const MAGIC_ADDRESS_IC: &str = "7z6fu-giaaa-aaaab-qafkq-cai";
+pub const ERC20_ADDRESS_ETH: &str = "0x15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f";
 
 thread_local! {
     pub static STATE: ProxyState = ProxyState::default();

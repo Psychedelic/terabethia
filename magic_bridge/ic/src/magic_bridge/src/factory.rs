@@ -6,9 +6,9 @@ use ic_kit::{
     Principal, RejectionCode,
 };
 
-pub const CAP_ADDRESS: &str = "wxns6-qiaaa-aaaaa-aaaqa-cai";
+pub const CAP_ADDRESS: &str = "lj532-6iaaa-aaaah-qcc7a-cai";
 const DIP20_WASM: &[u8] = include_bytes!("../../wasm/dip20/token-opt.wasm");
-const DIP721_WASM: &[u8] = include_bytes!("../../wasm/dip721/nft-v2-opt.wasm");
+// const DIP721_WASM: &[u8] = include_bytes!("../../wasm/dip721/nft-opt.wasm");
 
 pub trait FromNat {
     fn from_nat(input: Nat) -> Principal;
@@ -176,7 +176,7 @@ impl Factory {
             canister_id,
             wasm_module: match param.token_type {
                 TokenType::DIP20 => DIP20_WASM,
-                TokenType::DIP721 => DIP721_WASM,
+                TokenType::DIP721 => DIP20_WASM,
             },
             arg,
         };

@@ -4,6 +4,13 @@
 
 cd ..
 
+STAGE=$2
+NETWORK=ic
+
+if [[ "$STAGE" == "testnet" ]]; then
+   NETWORK=fleek
+fi
+
 TOKENID=$1
 
-dfx canister --network fleek call dip20_proxy get_balance "(principal \"$TOKENID\")"
+dfx canister --network $NETWORK call dip20_proxy get_balance "(principal \"$TOKENID\")"

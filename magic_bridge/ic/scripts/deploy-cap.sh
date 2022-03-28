@@ -2,7 +2,15 @@
 git submodule update --init --recursive
 
 cd ../cap
-dfx deploy --network fleek ic-history-router
-CAP_ID=$(dfx canister --network fleek id ic-history-router)
+
+STAGE=$2
+NETWORK=ic
+
+if [[ "$STAGE" == "testnet" ]]; then
+   NETWORK=fleek
+fi
+
+dfx deploy --network $NETWORK ic-history-router
+CAP_ID=$(dfx canister --network $NETWORK id ic-history-router)
 
 echo $CAP_ID

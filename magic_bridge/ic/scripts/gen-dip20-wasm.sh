@@ -10,6 +10,8 @@ cd ../DIP20/rust/
 cargo build --target wasm32-unknown-unknown --release --package $1
 
 echo Optimising wasm
-wasm-opt target/wasm32-unknown-unknown/release/$1.wasm --strip-debug -Oz -o target/wasm32-unknown-unknown/release/$1-opt.wasm
+ic-cdk-optimizer \
+    -o "target/wasm32-unknown-unknown/release/$1-opt.wasm" \
+    "target/wasm32-unknown-unknown/release/$1.wasm"
 
 cp target/wasm32-unknown-unknown/release/token-opt.wasm ../../src/wasm/dip20/

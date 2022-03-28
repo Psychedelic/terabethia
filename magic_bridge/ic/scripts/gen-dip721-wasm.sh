@@ -1,15 +1,17 @@
 #!/bin/sh
 # ex: 
-# sh gen-dip721-wasm.sh nft-v2
+# sh gen-dip721-wasm.sh nft
 
 git submodule update --init --recursive
 
 echo Building package $1
 
-cd ../DIP721/nft-v2/
+cd ../DIP721/
 cargo build --target wasm32-unknown-unknown --release --package $1
 
 echo Optimising wasm
-wasm-opt target/wasm32-unknown-unknown/release/$1.wasm --strip-debug -Oz -o target/wasm32-unknown-unknown/release/$1-opt.wasm
+ic-cdk-optimizer \
+    -o "target/wasm32-unknown-unknown/release/$1-opt.wasm" \
+    "target/wasm32-unknown-unknown/release/$1.wasm"
 
-cp target/wasm32-unknown-unknown/release/nft-v2-opt.wasm ../../src/wasm/dip721/
+cp target/wasm32-unknown-unknown/release/nft-opt.wasm ../src/wasm/dip721/

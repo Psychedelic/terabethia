@@ -1,8 +1,15 @@
 #!/bin/bash
 # ex: 
-# sh dip20-allowance.sh 7icuz-piaaa-aaaaa-aabca-cai
+# sh dip20-allowance.sh 7icuz-piaaa-aaaaa-aabca-cai testnet
 
 cd ..
+
+STAGE=$2
+NETWORK=ic
+
+if [[ "$STAGE" == "testnet" ]]; then
+   NETWORK=fleek
+fi
 
 TOKENID=$1
 OWNER=$(dfx identity get-principal)
