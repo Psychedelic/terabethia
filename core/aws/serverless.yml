@@ -376,6 +376,7 @@ resources:
         QueueName: ${self:custom.resourcePrefix}EthereumTxQueue.fifo
         ContentBasedDeduplication: true
         FifoQueue: true
+        DelaySeconds: 30
         VisibilityTimeout: 300 # 5 minutes
         RedrivePolicy:
           maxReceiveCount: 3

@@ -35,6 +35,7 @@ const ethContract = new ethers.Contract(envs.ETHEREUM_CONTRACT, TerabethiaAbi, p
 
 const handleL1Message = async (message: BlockNativePayload) => {
   const { hash } = message;
+
   console.log(`tx hash: ${hash}`);
 
   const hasTx = await db.hasTransaction(hash);
@@ -49,11 +50,22 @@ const handleL1Message = async (message: BlockNativePayload) => {
 
   const receipt = await provider.getTransactionReceipt(hash);
 
+  if (!receipt) {
+    throw new Error('receipt is not available yet');
+  }
+
   let logs = [];
   try {
-    logs = receipt.logs.map((log) => ethContract.interface.parseLog(log)).filter((log) => log.args && log.args.from_address);
+    logs = receipt.logs.map((log) => {
+      try {
+        return ethContract.interface.parseLog(log);
+      } catch (e) {
+        return null;
+      }
+    }).filter((log) => log && log.args && log.args.from_address);
   } catch (e) {
-    console.log('transaction without valid events, exiting');
+    console.log(e);
+    console.log('error during parsing logs, exiting');
     return;
   }
   if (!logs.length) {
@@ -74,7 +86,9 @@ const handleL1Message = async (message: BlockNativePayload) => {
       [fromAddress, toAddress, nonce, payload.length, payload],
     );
 
-    console.log({ fromAddress, toAddress, nonce, payloadLength: payload.length, payload });
+    console.log({
+      fromAddress, toAddress, nonce, payloadLength: payload.length, payload,
+    });
 
     const hasMessageHash = await db.hasMessageHash(messageHash);
 
