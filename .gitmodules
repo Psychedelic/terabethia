@@ -1,3 +1,9 @@
-[submodule "magic_bridge/ic/src/DIP20"]
-	path = magic_bridge/ic/src/DIP20
+[submodule "magic_bridge/ic/DIP20"]
+	path = magic_bridge/ic/DIP20
 	url = git@github.com:Psychedelic/DIP20.git
+[submodule "magic_bridge/ic/DIP721"]
+	path = magic_bridge/ic/DIP721
+	url = https://github.com/Psychedelic/DIP721.git
+[submodule "magic_bridge/ic/cap"]
+	path = magic_bridge/ic/cap
+	url = https://github.com/Psychedelic/cap.git

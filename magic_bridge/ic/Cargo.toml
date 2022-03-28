@@ -1,4 +1,16 @@
 [workspace]
 members = [
+    "src/dip20_proxy",
     "src/magic_bridge",
+    "src/dip721_proxy",
 ]
+exclude = [
+    "DIP20/rust",
+    "DIP721/",
+    "cap"
+]
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1

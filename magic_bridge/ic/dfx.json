@@ -4,6 +4,11 @@
       "candid": "src/magic_bridge/magic_bridge.did",
       "package": "magic_bridge",
       "type": "rust"
+    },
+    "dip20_proxy": {
+      "candid": "src/dip20_proxy/dip20_proxy.did",
+      "package": "dip20_proxy",
+      "type": "rust"
     }
   },
   "defaults": {
@@ -12,10 +17,13 @@
       "packtool": ""
     }
   },
-  "dfx": "0.8.4",
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "fleek": {
+      "bind": "34.216.56.80:8080",
       "type": "ephemeral"
     }
   },

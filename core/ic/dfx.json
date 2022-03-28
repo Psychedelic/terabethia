@@ -13,11 +13,20 @@
       "packtool": ""
     }
   },
-  "dfx": "0.8.4",
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",
       "type": "ephemeral"
+    },
+    "fleek": {
+      "bind": "34.216.56.80:8080",
+      "type": "ephemeral"
+    },
+    "staging": {
+      "providers": [
+        "https://ic0.app/"
+      ],
+      "type": "persistent"
     }
   },
   "version": 1

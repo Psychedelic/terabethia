@@ -1,0 +1,15 @@
+[package]
+name = "dip721_proxy"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-kit = "0.4.4"
+ic-cdk = "0.4.0"
+ic-cdk-macros = "0.3"
+hex = "0.4.3"
+serde = "1.0.116"

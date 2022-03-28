@@ -41,7 +41,6 @@ service : (
   allowance : (principal, principal) -> (nat) query;
   approve : (principal, nat) -> (Result);
   balanceOf : (principal) -> (nat) query;
-  burn : (nat) -> (Result);
   decimals : () -> (nat8) query;
   getAllowanceSize : () -> (nat64) query;
   getHolders : (nat64, nat64) -> (vec record { principal; nat }) query;
@@ -50,7 +49,6 @@ service : (
   getUserApprovals : (principal) -> (vec record { principal; nat }) query;
   historySize : () -> (nat64) query;
   logo : () -> (text) query;
-  mint : (principal, nat) -> (Result);
   name : () -> (text) query;
   owner : () -> (principal) query;
   setFee : (nat) -> ();
@@ -63,7 +61,7 @@ service : (
   transfer : (principal, nat) -> (Result);
   transferFrom : (principal, principal, nat) -> (Result);
 
-  // proxy
+  // Proxy
   burn : (principal, nat) -> (Result);
   mint : (nat, vec nat) -> (Result);
 }

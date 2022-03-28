@@ -3,12 +3,16 @@ name = "magic_bridge"
 version = "0.1.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
-path = "lib.rs"
+path = "src/main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ic-cdk = "0.3"
+ic-kit = "0.4.4"
+ic-cdk = "0.4.0"
+serde = "1.0.133"
 ic-cdk-macros = "0.3"
+serde_cbor = "0.11.2"
+serde_bytes = "0.11.5"
+assert-panic = "1.0.1"
+num-bigint = "0.4.3"

@@ -1,3 +1,15 @@
+type FactoryError = variant {
+  CanisterStatusNotAvailableError;
+  CreateCanisterError;
+  EncodeError;
+  CodeAlreadyInstalled;
+  InstallCodeError;
+};
+type Result = variant { Ok : principal; Err : FactoryError };
+type TokenType = variant { DIP20; DIP721 };
 service : {
-    "greet": (text) -> (text) query;
+  authorize : (principal) -> ();
+  create : (TokenType, vec nat) -> (Result);
+  get_all_canisters : () -> (vec record { principal; principal });
+  get_canister : (principal) -> (opt principal);
 }
