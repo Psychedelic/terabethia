@@ -2,6 +2,7 @@ mod api;
 mod factory;
 mod magic;
 mod types;
+mod dab;
 
 #[cfg(any(target_arch = "wasm32", test))]
 fn main() {}
