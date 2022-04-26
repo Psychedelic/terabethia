@@ -1,4 +1,4 @@
-use std::{str::{FromStr}, cell::RefCell, collections::HashMap};
+use std::{str::{FromStr}};
 use ic_kit::{
   candid::{ CandidType, Deserialize},
   Principal,
@@ -76,7 +76,7 @@ async fn register_dip20(canister_id: Principal, params: &CreateCanisterParam) ->
     let dab_args = DABParams {
         name: params.name.to_string(),
         description: "Wrapped Token from ETH".to_string(),
-        thumbnail: "https://terabethia.ooo/".to_string(),
+        thumbnail: params.logo.to_string(),
         frontend: Some("https://terabethia.ooo/".to_string()),
         principal_id: canister_id,
         details: details
