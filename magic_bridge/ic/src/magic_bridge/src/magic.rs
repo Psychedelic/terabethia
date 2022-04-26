@@ -1,4 +1,6 @@
+use crate::factory::CreateCanisterParam;
 use crate::types::*;
+use crate::dab::DABHistory;
 use ic_kit::candid::{CandidType, Deserialize};
 use ic_kit::interfaces::management::{
     CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, InstallCode,
@@ -21,12 +23,14 @@ thread_local! {
 pub struct MagicState {
     pub canisters: RefCell<HashMap<EthereumAddr, CanisterId>>,
     pub controllers: RefCell<Vec<Principal>>,
+    pub dab_registration_history: RefCell<DABHistory>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableMagicState {
     canisters: HashMap<EthereumAddr, CanisterId>,
     controllers: Vec<Principal>,
+    dab_registration_history: DABHistory,
 }
 
 impl MagicState {
@@ -44,6 +48,26 @@ impl MagicState {
         canister_id: CanisterId,
     ) -> Option<CanisterId> {
         self.canisters.borrow_mut().insert(eth_addr, canister_id)
+    }
+
+    pub fn canister_registered(&self, canister_id: CanisterId) -> bool {
+        self.dab_registration_history
+            .borrow()
+            .canister_registered(&canister_id)
+    }
+
+    pub fn add_registered_canister(&self, canister_id: CanisterId) {
+        self.dab_registration_history.borrow_mut().add_registered_canister(canister_id);
+    }
+
+    pub fn add_failed_canister(
+        &self,
+        canister_id: CanisterId,
+        params: &CreateCanisterParam,
+    ) {
+        self.dab_registration_history
+            .borrow_mut()
+            .add_failed_canister(canister_id, params);
     }
 
     pub async fn _update_settings(
@@ -130,16 +154,19 @@ impl MagicState {
         StableMagicState {
             canisters: self.canisters.take(),
             controllers: self.controllers.take(),
+            dab_registration_history: self.dab_registration_history.take(),
         }
     }
 
     pub fn clear_all(&self) {
         self.canisters.borrow_mut().clear();
         self.controllers.borrow_mut().clear();
+        self.dab_registration_history.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_magic_state: StableMagicState) {
         self.canisters.replace(stable_magic_state.canisters);
         self.controllers.replace(stable_magic_state.controllers);
+        self.dab_registration_history.replace(stable_magic_state.dab_registration_history);
     }
 }

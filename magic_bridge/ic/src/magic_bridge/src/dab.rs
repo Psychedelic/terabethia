@@ -5,10 +5,10 @@ use ic_kit::{
   ic,
 };
 
-use crate::types::*;
+use crate::{types::*, magic::STATE};
 use crate::factory::{CreateCanisterParam};
 
-const DAB_TOKEN_ADDRESS: &str = "zs2mv-bqaaa-aaaaa-aagla-cai";
+const DAB_TOKEN_ADDRESS: &str = "4sfmb-5yaaa-aaaaa-aagwq-cai";
 
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
@@ -58,36 +58,33 @@ impl DABHistory {
     pub fn add_failed_canister(&mut self, canister_id: Principal, params: &CreateCanisterParam) {
         self.failed_canisters.borrow_mut().insert(canister_id, params.clone());
     }
+
+    pub fn canister_registered(&self, canister_id: &Principal) -> bool {
+        self.registered_canisters.borrow().contains(canister_id)
+    }
+
+    pub fn clear(&mut self) {
+        self.registered_canisters.borrow_mut().clear();
+        self.failed_canisters.borrow_mut().clear();
+    }
 }
-  
 
 
 pub async fn register_canister(canister_id: Principal, params: &CreateCanisterParam) -> Result<Principal, OperationError> {
-    let ic_stored_registry = ic::get_mut::<DABHistory>();
-    if ic_stored_registry.registered_canisters.borrow().contains(&canister_id){
-        return Ok(canister_id)
+    if STATE.with(|s| s.canister_registered(canister_id)) {
+        return Ok(canister_id);
     }
 
     match call_dab(canister_id, &params).await {
         Ok(_) => {
-            add_registered_canister(canister_id);
+            STATE.with(|s| s.add_registered_canister(canister_id));
             return Ok(canister_id)
         },
         Err(op_error) => {
-            add_failed_canister(canister_id, params);
+            STATE.with(|s| s.add_failed_canister(canister_id, params));
             return Err(op_error)
         },
     }
-}
-
-fn add_registered_canister(canister_id: Principal) {
-    let ic_stored_registry = ic::get_mut::<DABHistory>();
-    ic_stored_registry.add_registered_canister(canister_id);
-}
-
-fn add_failed_canister(canister_id: Principal, params: &CreateCanisterParam){
-    let ic_stored_registry = ic::get_mut::<DABHistory>();
-    ic_stored_registry.add_failed_canister(canister_id, params);
 }
 
 async fn call_dab(canister_id: Principal, params: &CreateCanisterParam) -> Result<(), OperationError> {
