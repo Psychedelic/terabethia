@@ -8,7 +8,7 @@ use ic_kit::{
 use crate::{types::*, magic::STATE};
 use crate::factory::{CreateCanisterParam};
 
-const DAB_TOKEN_ADDRESS: &str = "4sfmb-5yaaa-aaaaa-aagwq-cai";
+const DAB_TOKEN_ADDRESS: &str = "627te-pyaaa-aaaaa-aag2q-cai";
 
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
@@ -44,40 +44,9 @@ pub enum OperationError {
 
 pub type DABResponse = Result<(), OperationError>;
 
-#[derive(CandidType, Deserialize, Default, Clone)]
-pub struct DABHistory {
-    pub registered_canisters: RefCell<Vec<Principal>>,
-    pub failed_canisters: RefCell<HashMap<Principal, CreateCanisterParam>>
-}
-
-impl DABHistory {
-    pub fn add_registered_canister(&mut self, canister_id: Principal) {
-        self.registered_canisters.borrow_mut().push(canister_id);
-    }
-
-    pub fn add_failed_canister(&mut self, canister_id: Principal, params: &CreateCanisterParam) {
-        self.failed_canisters.borrow_mut().insert(canister_id, params.clone());
-    }
-
-    pub fn canister_registered(&self, canister_id: &Principal) -> bool {
-        self.registered_canisters.borrow().contains(canister_id)
-    }
-
-    pub fn clear(&mut self) {
-        self.registered_canisters.borrow_mut().clear();
-        self.failed_canisters.borrow_mut().clear();
-    }
-}
-
-
 pub async fn register_canister(canister_id: Principal, params: &CreateCanisterParam) -> Result<Principal, OperationError> {
-    if STATE.with(|s| s.canister_registered(canister_id)) {
-        return Ok(canister_id);
-    }
-
     match call_dab(canister_id, &params).await {
         Ok(_) => {
-            STATE.with(|s| s.add_registered_canister(canister_id));
             return Ok(canister_id)
         },
         Err(op_error) => {
