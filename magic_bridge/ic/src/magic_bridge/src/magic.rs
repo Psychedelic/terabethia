@@ -59,6 +59,20 @@ impl MagicState {
             .insert(canister_id, params.clone());
     }
     
+    pub fn get_failed_canisters(&self) -> Vec<(Principal, CreateCanisterParam)> {
+        self.failed_registration_canisters.borrow_mut().clone().into_iter().collect::<_>()
+    }
+
+    pub fn replace_failed_canisters(
+        &self,
+        failed_canisters: Vec<(Principal, CreateCanisterParam)>
+    ) {
+        self.failed_registration_canisters.replace(HashMap::new());
+        for (canister_id, params) in failed_canisters {
+            self.add_failed_canister(canister_id, &params);
+        }
+    }
+
     pub async fn _update_settings(
         args: UpdateSettingsArgument,
     ) -> Result<(), (RejectionCode, String)> {

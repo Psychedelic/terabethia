@@ -8,7 +8,7 @@ use ic_kit::{
 use crate::{types::*, magic::STATE};
 use crate::factory::{CreateCanisterParam};
 
-const DAB_TOKEN_ADDRESS: &str = "627te-pyaaa-aaaaa-aag2q-cai";
+const DAB_TOKEN_ADDRESS: &str = "vdiho-ziaaa-aaaaa-aahfq-cai";
 
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
@@ -44,6 +44,23 @@ pub enum OperationError {
 
 pub type DABResponse = Result<(), OperationError>;
 
+/*
+    Try to register all canisters given in the failed_canisters parameter.
+    Returns a vector of canisters that failed to register.    
+*/
+pub async fn retry_failed_canisters(
+    mut failed_canisters: Vec<(Principal, CreateCanisterParam)>
+    ) -> Vec<(Principal, CreateCanisterParam)>  {
+        let mut failed_retry_canisters = Vec::new();
+        for (canister_id, params) in failed_canisters.drain(..) {
+            if let Err(_e) = call_dab(canister_id, &params).await {
+                failed_retry_canisters.push((canister_id, params));
+            }
+        }
+        failed_retry_canisters
+    }
+
+
 pub async fn register_canister(canister_id: Principal, params: &CreateCanisterParam) -> Result<Principal, OperationError> {
     match call_dab(canister_id, &params).await {
         Ok(_) => {
@@ -75,8 +92,8 @@ async fn register_dip20(canister_id: Principal, params: &CreateCanisterParam) ->
 
     let dab_args = DABParams {
         name: params.name.to_string(),
-        description: "Wrapped Token from ETH".to_string(),
-        thumbnail: params.logo.to_string(),
+        description: "Wrapped Token from Ethereum network".to_string(),
+        thumbnail: "https://terabethia.ooo/".to_string(),
         frontend: Some("https://terabethia.ooo/".to_string()),
         principal_id: canister_id,
         details: details
