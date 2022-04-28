@@ -17,6 +17,6 @@ async fn flush_failed_registrations() -> () {
 }
 
 #[update(name = "get_failed_registrations", guard = "is_authorized")]
-fn get_failed_registrations() -> Vec<(Principal, CreateCanisterParam)> {
+fn get_failed_registrations() -> Vec<(Principal, (CreateCanisterParam, u8))> {
   STATE.with(|s| s.get_failed_canisters())
 }

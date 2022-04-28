@@ -8,8 +8,8 @@ use ic_kit::{
 use crate::{types::*, magic::STATE};
 use crate::factory::{CreateCanisterParam};
 
-const DAB_TOKEN_ADDRESS: &str = "vdiho-ziaaa-aaaaa-aahfq-cai";
-
+const DAB_TOKEN_ADDRESS: &str = "xmt67-gqaaa-aaaaa-aahja-cai";
+const MAX_DAB_RETRIES: u8 = 10;
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
 pub enum DetailValue {
@@ -46,15 +46,20 @@ pub type DABResponse = Result<(), OperationError>;
 
 /*
     Try to register all canisters given in the failed_canisters parameter.
-    Returns a vector of canisters that failed to register.    
+    Returns a vector of canisters that failed to register.
+    If the registration fails, it increases the retry_count for the canister.
 */
 pub async fn retry_failed_canisters(
-    mut failed_canisters: Vec<(Principal, CreateCanisterParam)>
-    ) -> Vec<(Principal, CreateCanisterParam)>  {
+    mut failed_canisters: Vec<(Principal, (CreateCanisterParam, u8))>
+    ) -> Vec<(Principal, (CreateCanisterParam, u8))>  {
         let mut failed_retry_canisters = Vec::new();
-        for (canister_id, params) in failed_canisters.drain(..) {
+        for (canister_id,(params, retry_count)) in failed_canisters.drain(..) {
+            if retry_count >= MAX_DAB_RETRIES {
+                failed_retry_canisters.push((canister_id, (params, retry_count)));
+                continue;
+            }
             if let Err(_e) = call_dab(canister_id, &params).await {
-                failed_retry_canisters.push((canister_id, params));
+                failed_retry_canisters.push((canister_id, (params, retry_count+1)));
             }
         }
         failed_retry_canisters
@@ -67,7 +72,7 @@ pub async fn register_canister(canister_id: Principal, params: &CreateCanisterPa
             return Ok(canister_id)
         },
         Err(op_error) => {
-            STATE.with(|s| s.add_failed_canister(canister_id, params));
+            STATE.with(|s| s.add_failed_canister(canister_id, params, 0));
             return Err(op_error)
         },
     }
@@ -93,7 +98,7 @@ async fn register_dip20(canister_id: Principal, params: &CreateCanisterParam) ->
     let dab_args = DABParams {
         name: params.name.to_string(),
         description: "Wrapped Token from Ethereum network".to_string(),
-        thumbnail: "https://terabethia.ooo/".to_string(),
+        thumbnail: "terabethia.ooo/".to_string(),
         frontend: Some("https://terabethia.ooo/".to_string()),
         principal_id: canister_id,
         details: details
