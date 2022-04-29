@@ -22,14 +22,15 @@ thread_local! {
 pub struct MagicState {
     pub canisters: RefCell<HashMap<EthereumAddr, CanisterId>>,
     pub controllers: RefCell<Vec<Principal>>,
-    pub failed_registration_canisters: RefCell<HashMap<Principal, (CreateCanisterParam, u8)>>,
+    pub failed_registration_canisters:
+        RefCell<HashMap<Principal, (CreateCanisterParam, RetryCount)>>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableMagicState {
     canisters: HashMap<EthereumAddr, CanisterId>,
     controllers: Vec<Principal>,
-    failed_registration_canisters: HashMap<Principal, (CreateCanisterParam, u8)>,
+    failed_registration_canisters: HashMap<Principal, (CreateCanisterParam, RetryCount)>,
 }
 
 impl MagicState {
@@ -53,20 +54,24 @@ impl MagicState {
         &self,
         canister_id: Principal,
         params: &CreateCanisterParam,
-        retry_count: u8,
+        retry_count: RetryCount,
     ) {
         self.failed_registration_canisters
             .borrow_mut()
             .insert(canister_id, (params.clone(), retry_count));
     }
-    
-    pub fn get_failed_canisters(&self) -> Vec<(Principal, (CreateCanisterParam, u8))> {
-        self.failed_registration_canisters.borrow_mut().clone().into_iter().collect::<_>()
+
+    pub fn get_failed_canisters(&self) -> Vec<(Principal, (CreateCanisterParam, RetryCount))> {
+        self.failed_registration_canisters
+            .borrow_mut()
+            .clone()
+            .into_iter()
+            .collect::<_>()
     }
 
     pub fn replace_failed_canisters(
         &self,
-        failed_canisters: Vec<(Principal, (CreateCanisterParam, u8))>
+        failed_canisters: Vec<(Principal, (CreateCanisterParam, RetryCount))>,
     ) {
         self.failed_registration_canisters.replace(HashMap::new());
         for (canister_id, params) in failed_canisters {
