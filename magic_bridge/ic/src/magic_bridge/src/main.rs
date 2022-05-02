@@ -1,14 +1,15 @@
 mod api;
+mod dab;
 mod factory;
 mod magic;
 mod types;
-mod dab;
 
 #[cfg(any(target_arch = "wasm32", test))]
 fn main() {}
 
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
+    use crate::factory::CreateCanisterParam;
     use ic_kit::candid;
     use ic_kit::candid::Nat;
     use ic_kit::Principal;

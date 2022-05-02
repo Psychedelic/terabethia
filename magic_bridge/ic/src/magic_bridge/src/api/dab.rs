@@ -1,13 +1,12 @@
-use ic_kit::macros::update;
-use ic_kit::Principal;
-
 use crate::factory::CreateCanisterParam;
-use crate::types::RetryCount;
-use crate::{dab::retry_failed_canisters, magic::STATE};
+use ic_kit::{candid::candid_method, macros::update, Principal};
 
-use crate::api::admin::is_authorized;
+use crate::{
+    api::admin::is_authorized, dab::retry_failed_canisters, magic::STATE, types::RetryCount,
+};
 
 #[update(name = "flush_failed_registrations", guard = "is_authorized")]
+#[candid_method(update, rename = "flush_failed_registrations")]
 async fn flush_failed_registrations() -> () {
     let failed_canisters = STATE.with(|s| s.get_failed_canisters());
     let retry_failed = retry_failed_canisters(failed_canisters).await;
@@ -15,6 +14,7 @@ async fn flush_failed_registrations() -> () {
 }
 
 #[update(name = "get_failed_registrations", guard = "is_authorized")]
+#[candid_method(update, rename = "get_failed_registrations")]
 fn get_failed_registrations() -> Vec<(Principal, (CreateCanisterParam, RetryCount))> {
     STATE.with(|s| s.get_failed_canisters())
 }

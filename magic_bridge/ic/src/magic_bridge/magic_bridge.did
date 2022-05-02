@@ -12,6 +12,6 @@ service : {
   create : (TokenType, vec nat) -> (Result);
   get_all_canisters : () -> (vec record { principal; principal });
   get_canister : (principal) -> (opt principal);
-  get_failed_canisters : () -> (vec record { principal; principal });
+  get_failed_registrations : () -> (vec record { principal; principal });
   flush_failed_registrations : () -> ();
 }
