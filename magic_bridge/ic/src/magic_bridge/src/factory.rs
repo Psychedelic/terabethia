@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::{types::*, dab::{register_canister}};
 use ic_kit::{
     candid::{encode_args, CandidType, Deserialize, Nat},
     ic,
@@ -55,7 +55,7 @@ impl FromNat for Principal {
 
 // }
 
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Clone)]
 pub struct CreateCanisterParam {
     pub logo: String,
     pub name: String,
@@ -105,6 +105,8 @@ impl Factory {
             param.owner,
             "only the owner of this contract can call the create method"
         );
+
+        let dab_params = param.clone();
 
         // create canister
         param.insert_controller(ic::id());
@@ -191,6 +193,11 @@ impl Factory {
         {
             return Err(FactoryError::InstallCodeError);
         }
+
+        // we dont care about this result because retry logic is being handled by dab module
+        ic_cdk::spawn(async move {
+            let _ = register_canister(canister_id, &dab_params).await;
+        });
 
         Ok(canister_id)
     }

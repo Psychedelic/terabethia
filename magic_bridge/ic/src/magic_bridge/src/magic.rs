@@ -1,3 +1,4 @@
+use crate::factory::CreateCanisterParam;
 use crate::types::*;
 use ic_kit::candid::{CandidType, Deserialize};
 use ic_kit::interfaces::management::{
@@ -21,12 +22,14 @@ thread_local! {
 pub struct MagicState {
     pub canisters: RefCell<HashMap<EthereumAddr, CanisterId>>,
     pub controllers: RefCell<Vec<Principal>>,
+    pub failed_registration_canisters: RefCell<HashMap<Principal, CreateCanisterParam>>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableMagicState {
     canisters: HashMap<EthereumAddr, CanisterId>,
     controllers: Vec<Principal>,
+    failed_registration_canisters: HashMap<Principal, CreateCanisterParam>,
 }
 
 impl MagicState {
@@ -46,6 +49,16 @@ impl MagicState {
         self.canisters.borrow_mut().insert(eth_addr, canister_id)
     }
 
+    pub fn add_failed_canister(
+        &self,
+        canister_id: Principal,
+        params: &CreateCanisterParam,
+    ) {
+        self.failed_registration_canisters
+            .borrow_mut()
+            .insert(canister_id, params.clone());
+    }
+    
     pub async fn _update_settings(
         args: UpdateSettingsArgument,
     ) -> Result<(), (RejectionCode, String)> {
@@ -130,16 +143,20 @@ impl MagicState {
         StableMagicState {
             canisters: self.canisters.take(),
             controllers: self.controllers.take(),
+            failed_registration_canisters: self.failed_registration_canisters.take(),
         }
     }
 
     pub fn clear_all(&self) {
         self.canisters.borrow_mut().clear();
         self.controllers.borrow_mut().clear();
+        self.failed_registration_canisters.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_magic_state: StableMagicState) {
         self.canisters.replace(stable_magic_state.canisters);
         self.controllers.replace(stable_magic_state.controllers);
+        self.failed_registration_canisters
+            .replace(stable_magic_state.failed_registration_canisters);
     }
 }
