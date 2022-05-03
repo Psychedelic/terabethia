@@ -7,7 +7,7 @@ use std::str::FromStr;
 use crate::factory::CreateCanisterParam;
 use crate::{magic::STATE, types::*};
 
-const DAB_TOKEN_ADDRESS: &str = "ra3o4-ryaaa-aaaaa-aah6q-cai";
+const DAB_TOKEN_ADDRESS: &str = "eclat-5qaaa-aaaaa-aaica-cai";
 const MAX_DAB_RETRIES: u8 = 10;
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
@@ -53,7 +53,6 @@ pub async fn retry_failed_canisters(
 ) -> Vec<(Principal, (CreateCanisterParam, RetryCount))> {
     let mut failed_retry_canisters = Vec::new();
     for (canister_id, (params, retry_count)) in failed_canisters {
-        // for (canister_id, (params, retry_count)) in failed_canisters.drain(..) {
         if retry_count >= MAX_DAB_RETRIES {
             failed_retry_canisters.push((canister_id, (params, retry_count)));
             continue;
