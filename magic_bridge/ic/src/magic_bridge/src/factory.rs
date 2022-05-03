@@ -1,4 +1,4 @@
-use crate::{types::*, dab::{register_canister}};
+use crate::{dab::register_canister, types::*};
 use ic_kit::{
     candid::{encode_args, CandidType, Deserialize, Nat},
     ic,

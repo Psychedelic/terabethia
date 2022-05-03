@@ -4,6 +4,8 @@ pub type EthereumAddr = Principal;
 
 pub type CanisterId = Principal;
 
+pub type RetryCount = u8;
+
 pub type MagicResponse = Result<Principal, FactoryError>;
 
 #[derive(CandidType, Deserialize, Clone, Copy)]

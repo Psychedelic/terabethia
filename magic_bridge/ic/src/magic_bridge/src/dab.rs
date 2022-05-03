@@ -1,15 +1,14 @@
-use std::{str::{FromStr}};
 use ic_kit::{
-  candid::{ CandidType, Deserialize},
-  Principal,
-  ic,
+    candid::{CandidType, Deserialize},
+    ic, Principal,
 };
+use std::str::FromStr;
 
-use crate::{types::*, magic::STATE};
-use crate::factory::{CreateCanisterParam};
+use crate::factory::CreateCanisterParam;
+use crate::{magic::STATE, types::*};
 
-const DAB_TOKEN_ADDRESS: &str = "627te-pyaaa-aaaaa-aag2q-cai";
-
+const DAB_TOKEN_ADDRESS: &str = "eclat-5qaaa-aaaaa-aaica-cai";
+const MAX_DAB_RETRIES: u8 = 10;
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
 pub enum DetailValue {
@@ -44,49 +43,91 @@ pub enum OperationError {
 
 pub type DABResponse = Result<(), OperationError>;
 
-pub async fn register_canister(canister_id: Principal, params: &CreateCanisterParam) -> Result<Principal, OperationError> {
+/*
+    Try to register all canisters given in the failed_canisters parameter.
+    Returns a vector of canisters that failed to register.
+    If the registration fails, it increases the retry_count for the canister.
+*/
+pub async fn retry_failed_canisters(
+    mut failed_canisters: Vec<(Principal, (CreateCanisterParam, RetryCount))>,
+) -> Vec<(Principal, (CreateCanisterParam, RetryCount))> {
+    let mut failed_retry_canisters = Vec::new();
+    for (canister_id, (params, retry_count)) in failed_canisters {
+        if retry_count >= MAX_DAB_RETRIES {
+            failed_retry_canisters.push((canister_id, (params, retry_count)));
+            continue;
+        }
+        if let Err(_e) = call_dab(canister_id, &params).await {
+            failed_retry_canisters.push((canister_id, (params, retry_count + 1)));
+        }
+    }
+    failed_retry_canisters
+}
+
+pub async fn register_canister(
+    canister_id: Principal,
+    params: &CreateCanisterParam,
+) -> Result<Principal, OperationError> {
     match call_dab(canister_id, &params).await {
-        Ok(_) => {
-            return Ok(canister_id)
-        },
+        Ok(_) => return Ok(canister_id),
         Err(op_error) => {
-            STATE.with(|s| s.add_failed_canister(canister_id, params));
-            return Err(op_error)
-        },
+            STATE.with(|s| s.add_failed_canister(canister_id, params, 0));
+            return Err(op_error);
+        }
     }
 }
 
-async fn call_dab(canister_id: Principal, params: &CreateCanisterParam) -> Result<(), OperationError> {
+async fn call_dab(
+    canister_id: Principal,
+    params: &CreateCanisterParam,
+) -> Result<(), OperationError> {
     let result: Result<(), OperationError> = match params.token_type {
         TokenType::DIP20 => register_dip20(canister_id, params).await,
         TokenType::DIP721 => register_dip721(canister_id, params).await,
     };
-  
+
     result
 }
 
-async fn register_dip20(canister_id: Principal, params: &CreateCanisterParam) -> Result <(), OperationError> {
+async fn register_dip20(
+    canister_id: Principal,
+    params: &CreateCanisterParam,
+) -> Result<(), OperationError> {
     let dab_tokens_address = ic_kit::Principal::from_str(&DAB_TOKEN_ADDRESS).unwrap();
 
-    let details = vec![("symbol".to_string(), DetailValue::Text(params.symbol.to_string())), 
-                                                ("standard".to_string(), DetailValue::Text(String::from("DIP20"))),
-                                                ("total_supply".to_string(), DetailValue::U64(u64::from_str(&params.total_supply.to_string()).unwrap())),
-                                                ("verified".to_string(), DetailValue::True)];
+    let details = vec![
+        (
+            "symbol".to_string(),
+            DetailValue::Text(params.symbol.to_string()),
+        ),
+        (
+            "standard".to_string(),
+            DetailValue::Text(String::from("DIP20")),
+        ),
+        (
+            "total_supply".to_string(),
+            DetailValue::U64(u64::from_str(&params.total_supply.to_string()).unwrap()),
+        ),
+        ("verified".to_string(), DetailValue::True),
+    ];
 
     let dab_args = DABParams {
         name: params.name.to_string(),
-        description: "Wrapped Token from ETH".to_string(),
-        thumbnail: params.logo.to_string(),
+        description: "Wrapped Token from Ethereum network".to_string(),
+        thumbnail: "https://terabethia.ooo/".to_string(),
         frontend: Some("https://terabethia.ooo/".to_string()),
         principal_id: canister_id,
-        details: details
+        details: details,
     };
-  
-    let canister_call: (DABResponse,) = 
-        match ic::call(dab_tokens_address, "add", (dab_args,)).await {
-            Ok(res) => res,
-            Err((code, err)) => {
-                return Err(OperationError::Unknown(format!("RejectionCode: {:?}\n{}", code, err)))
+
+    let canister_call: (DABResponse,) = match ic::call(dab_tokens_address, "add", (dab_args,)).await
+    {
+        Ok(res) => res,
+        Err((code, err)) => {
+            return Err(OperationError::Unknown(format!(
+                "RejectionCode: {:?}\n{}",
+                code, err
+            )))
         }
     };
 
@@ -96,7 +137,10 @@ async fn register_dip20(canister_id: Principal, params: &CreateCanisterParam) ->
     }
 }
 
-async fn register_dip721(_canister_id: Principal, _params: &CreateCanisterParam) -> Result<(),OperationError> {
-  // TODO
-  return Ok(())
+async fn register_dip721(
+    _canister_id: Principal,
+    _params: &CreateCanisterParam,
+) -> Result<(), OperationError> {
+    // TODO
+    return Ok(());
 }
