@@ -3,7 +3,10 @@ use std::{collections::HashMap, ops::AddAssign};
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
-use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState, TokendId};
+use crate::common::types::{
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, MsgHashKey, ProxyState,
+    StableProxyState, TokendId,
+};
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 pub const MAGIC_ADDRESS_IC: &str = "7z6fu-giaaa-aaaab-qafkq-cai";
@@ -73,6 +76,39 @@ impl ProxyState {
             .insert(caller, HashMap::from([(token_id, amount)]));
     }
 
+    pub fn add_claimable_message(&self, message: ClaimableMessage) {
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map.entry(message.owner.clone()).or_insert_with(Vec::new);
+
+        messages.push(message.clone());
+        return;
+    }
+
+    pub fn remove_claimable_message(
+        &self,
+        eth_address: EthereumAddr,
+        msg_hash: MsgHashKey,
+    ) -> Result<(), String> {
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map
+            .get_mut(&eth_address)
+            .ok_or_else(|| "Message not found")?;
+
+        messages.retain(|m| m.msg_hash != msg_hash);
+
+        return Ok(());
+    }
+
+    pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
+        let unclaimed_messages = self
+            .messages_unclaimed
+            .borrow()
+            .get(&eth_address)
+            .unwrap_or(&vec![])
+            .clone();
+        return unclaimed_messages;
+    }
+
     pub fn _authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
@@ -94,6 +130,7 @@ impl ProxyState {
             balances: self.balances.take(),
             controllers: self.controllers.take(),
             incoming_messages: self.incoming_messages.take(),
+            messages_unclaimed: self.messages_unclaimed.take(),
         }
     }
 
@@ -101,6 +138,7 @@ impl ProxyState {
         self.balances.borrow_mut().clear();
         self.controllers.borrow_mut().clear();
         self.incoming_messages.borrow_mut().clear();
+        self.messages_unclaimed.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_message_state: StableProxyState) {
@@ -108,6 +146,8 @@ impl ProxyState {
         self.controllers.replace(stable_message_state.controllers);
         self.incoming_messages
             .replace(stable_message_state.incoming_messages);
+        self.messages_unclaimed
+            .replace(stable_message_state.messages_unclaimed);
     }
 }
 
@@ -357,7 +397,7 @@ mod tests {
 
         let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-        let erc20_addr_hex = hex::encode(
+        let _erc20_addr_hex = hex::encode(
             Principal::from_text("6iiev-lyvwz-q7nu7-5tj7n-r3kmr-c6m7u-kumzc-eipy").unwrap(),
         );
 

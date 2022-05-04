@@ -1,0 +1,23 @@
+[package]
+name = "claimable_assets"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+path = "src/main.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+candid = "0.7.4"
+ic-cdk = "0.4.0"
+sha2 = "0.10.1"
+ic-cdk-macros = "0.3"
+ic-kit = "0.4.3"
+sha3 = "0.9.1"
+hex = "0.4.3"
+serde = "1.0.130"
+serde_bytes = "0.11.5"
+num-bigint = "0.4.3"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+async-std = { version="1.10.0", features = ["attributes"] }

@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "claimable_assets": {
+      "build": "bash build.sh claimable_assets",
+      "candid": "src/claimable_assets/claimable_assets.did",
+      "wasm": "target/wasm32-unknown-unknown/release/claimable_assets-opt.wasm",
+      "type": "custom"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "fleek": {
+      "bind": "34.216.56.80:8080",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}

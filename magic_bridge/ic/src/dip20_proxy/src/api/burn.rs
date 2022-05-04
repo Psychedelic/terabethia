@@ -3,10 +3,13 @@ use ic_kit::{ic, macros::update};
 
 use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
-use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
+use crate::common::types::{
+    ClaimableMessage, EthereumAddr, Message, OutgoingMessage, OutgoingMessageHashParams, TokendId,
+    TxError, TxReceipt,
+};
+use crate::common::utils::Keccak256HashFn;
+use crate::proxy::{FromNat, ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
-
-use crate::common::types::{EthereumAddr, TokendId, TxError, TxReceipt};
 
 // should we allow users to just pass in the corresponding eth_addr on ETH
 // or should we use our magic_bridge to check if a key exists
@@ -46,28 +49,48 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                     ]
                     .to_vec();
 
-                    if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
-                        return Err(TxError::Other(format!(
-                            "Sending message to L1 failed with caller {:?}!",
-                            caller.to_string()
-                        )));
+                    let send_message: Result<OutgoingMessage, TxError> =
+                        tera_id.send_message(erc20_addr_pid, payload.clone()).await;
+
+                    match send_message {
+                        Ok(outgoing_message) => {
+                            // there could be an underflow here
+                            // like negative balance
+                            let current_balance = STATE
+                                .with(|s| s.get_balance(caller, token_id).unwrap_or(Nat::from(0)));
+
+                            STATE.with(|s| {
+                                s.update_balance(caller, token_id, current_balance - amount.clone())
+                            });
+
+                            STATE.with(|s| {
+                                s.add_claimable_message(ClaimableMessage {
+                                    owner: eth_addr.clone(),
+                                    msg_hash: outgoing_message.msg_key.clone(),
+                                    token: token_id.clone(),
+                                    amount: amount.clone(),
+                                })
+                            });
+
+                            // All correct
+                            return Ok(burn_txn_id);
+                        }
+                        // send_message error
+                        Err(_) => {
+                            return Err(TxError::Other(format!(
+                                "Sending message to L1 failed with caller {:?}!",
+                                caller.to_string()
+                            )));
+                        }
                     }
-
-                    // there could be an underflow here
-                    // like negative balance
-                    let current_balance =
-                        STATE.with(|s| s.get_balance(caller, token_id).unwrap_or(Nat::from(0)));
-
-                    STATE.with(|s| {
-                        s.update_balance(caller, token_id, current_balance - amount.clone())
-                    });
-                    return Ok(burn_txn_id);
                 }
+                // burn error
                 Err(error) => {
                     return Err(error);
                 }
             };
         }
+        // transfer error
         Err(error) => Err(error),
     }
 }

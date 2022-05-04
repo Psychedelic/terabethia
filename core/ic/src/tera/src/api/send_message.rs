@@ -20,8 +20,9 @@ fn send(to: Principal, payload: Vec<Nat>) -> SendMessageResponse {
         to: to.to_nat(),
         payload: payload.clone(),
     });
+    let msg_hash_cloned = msg_hash.clone();
 
-    STATE.with(|s| SendMessageResponse(s.store_outgoing_message(msg_hash)))
+    STATE.with(|s| SendMessageResponse(s.store_outgoing_message(msg_hash_cloned)))
 }
 
 #[cfg(test)]
