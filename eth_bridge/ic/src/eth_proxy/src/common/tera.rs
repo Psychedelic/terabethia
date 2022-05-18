@@ -16,7 +16,7 @@ pub trait Tera {
         &self,
         erc20_addr_pid: Principal,
         payload: Vec<Nat>,
-    ) -> Result<bool, TxError>;
+    ) -> Result<OutgoingMessage, TxError>;
 }
 
 #[async_trait]
@@ -53,7 +53,7 @@ impl Tera for Principal {
         &self,
         erc20_addr_pid: Principal,
         payload: Vec<Nat>,
-    ) -> Result<bool, TxError> {
+    ) -> Result<OutgoingMessage, TxError> {
         let send: (Result<OutgoingMessage, String>,) =
             match call(*self, "send_message", (&erc20_addr_pid, &payload)).await {
                 Ok(res) => res,
@@ -66,7 +66,7 @@ impl Tera for Principal {
             };
 
         match send {
-            (Ok(_),) => Ok(true),
+            (Ok(outgoing_message),) => Ok(outgoing_message),
             (Err(error),) => Err(TxError::Other(format!("Send Message: {:?}", error))),
         }
     }
