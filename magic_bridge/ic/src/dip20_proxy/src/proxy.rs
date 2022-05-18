@@ -109,7 +109,7 @@ impl ProxyState {
         return unclaimed_messages;
     }
 
-    pub fn _authorize(&self, other: Principal) {
+    pub fn authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
         if caller_autorized {
@@ -117,7 +117,7 @@ impl ProxyState {
         }
     }
 
-    pub fn _is_authorized(&self) -> Result<(), String> {
+    pub fn is_authorized(&self) -> Result<(), String> {
         self.controllers
             .borrow()
             .contains(&ic::caller())
