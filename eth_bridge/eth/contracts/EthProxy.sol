@@ -9,6 +9,8 @@ contract EthProxy {
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001090101;
 
+    event LogAssetWithdrawn(address indexed from_address, uint256 amount);
+
     /**
       Initializes the contract state.
     */
@@ -37,6 +39,9 @@ contract EthProxy {
             success,
             "Address: unable to send value, recipient may have reverted"
         );
+
+        // We emit this event so we can let the canister know that this message has been consumed.
+        emit LogAssetWithdrawn(msg.sender, amount);
     }
 
     function deposit(uint256 user) external payable {
