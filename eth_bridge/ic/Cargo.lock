@@ -182,6 +182,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "677d306121baf53310a3fd342d88dc0824f6bbeace68347593658525565abee8"
 
 [[package]]
+name = "async-trait"
+version = "0.1.53"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed6aa3524a2dfcf9fe180c51eae2b58738348d819517ceadf95789c51fff7600"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -215,17 +226,6 @@ name = "beef"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bed554bd50246729a1ec158d08aa3235d1b69d94ad120ebe187e28894787e736"
-
-[[package]]
-name = "bigdecimal"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aaf33151a6429fe9211d1b276eafdf70cdff28b071e76c0b0e1503221ea3744"
-dependencies = [
- "num-bigint",
- "num-integer",
- "num-traits",
-]
 
 [[package]]
 name = "bincode"
@@ -286,8 +286,15 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4152116fd6e9dadb291ae18fc1ec3575ed6d84c29642d97890f4b4a3417297e4"
 dependencies = [
+ "block-padding",
  "generic-array",
 ]
+
+[[package]]
+name = "block-padding"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
 name = "blocking"
@@ -366,7 +373,7 @@ version = "0.1.0"
 source = "git+https://github.com/Psychedelic/cap.git?branch=main#69bf1fcf37af804968c348847cc93d94fee83fc2"
 dependencies = [
  "async-std",
- "ic-cdk",
+ "ic-cdk 0.3.3",
  "ic-certified-map",
  "ic-kit",
  "serde",
@@ -383,7 +390,7 @@ dependencies = [
  "async-stream",
  "cap-sdk-core",
  "futures",
- "ic-cdk",
+ "ic-cdk 0.3.3",
  "ic-kit",
  "lazy_static",
  "serde",
@@ -396,7 +403,7 @@ version = "0.1.0-alpha1"
 source = "git+https://github.com/Psychedelic/cap.git?branch=main#69bf1fcf37af804968c348847cc93d94fee83fc2"
 dependencies = [
  "cap-common",
- "ic-cdk",
+ "ic-cdk 0.3.3",
  "ic-kit",
  "serde",
  "thiserror",
@@ -410,7 +417,7 @@ dependencies = [
  "bincode",
  "candid",
  "cap-sdk",
- "ic-cdk",
+ "ic-cdk 0.3.3",
  "num-bigint",
  "serde",
  "thiserror",
@@ -546,14 +553,16 @@ dependencies = [
 name = "eth_proxy"
 version = "0.1.0"
 dependencies = [
- "bigdecimal",
+ "async-trait",
  "candid",
  "hex",
- "ic-cdk",
- "ic-cdk-macros",
+ "ic-cdk 0.4.0",
+ "ic-cdk-macros 0.4.0",
  "ic-kit",
  "num-bigint",
  "serde",
+ "serde_bytes",
+ "sha3",
 ]
 
 [[package]]
@@ -759,13 +768,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-cdk"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e511d1a019e620d5a3dc43bead7d3c46912bf4f4bfb1d602059046c7a22bb1e"
+dependencies = [
+ "candid",
+ "cfg-if",
+ "serde",
+]
+
+[[package]]
 name = "ic-cdk-macros"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08bac2578a4779c3ae6d24c766ec7127872d73f29a9e7d70b6607a2fdedd0dde"
 dependencies = [
  "candid",
- "ic-cdk",
+ "ic-cdk 0.3.3",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_tokenstream",
+ "syn",
+]
+
+[[package]]
+name = "ic-cdk-macros"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a59a186745fd7d96ba2e057f3b3e3038578ae1e82dcb548bd96f48e9e4a39129"
+dependencies = [
+ "candid",
+ "ic-cdk 0.4.0",
  "proc-macro2",
  "quote",
  "serde",
@@ -786,14 +821,15 @@ dependencies = [
 
 [[package]]
 name = "ic-kit"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0d4a05326865a582add1d6bcdec2b5d2af0415a12f6ef2431f3e93e52c347a"
+checksum = "4de974cacff3d70d96d648e4737a4563ff95cad1db2874978c1e6986bf798348"
 dependencies = [
  "async-std",
+ "candid",
  "futures",
- "ic-cdk",
- "ic-cdk-macros",
+ "ic-cdk 0.4.0",
+ "ic-cdk-macros 0.4.0",
  "serde",
  "serde_bytes",
 ]
@@ -849,6 +885,12 @@ checksum = "a38fc24e30fd564ce974c02bf1d337caddff65be6cc4735a1f7eab22a7440f04"
 dependencies = [
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "keccak"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 
 [[package]]
 name = "kv-log-macro"
@@ -1280,6 +1322,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha3"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f81199417d4e5de3f04b1e871023acea7389672c4135918f05aa9cbf2f2fa809"
+dependencies = [
+ "block-buffer",
+ "digest",
+ "keccak",
+ "opaque-debug",
+]
+
+[[package]]
 name = "siphasher"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1389,11 +1443,9 @@ dependencies = [
  "candid",
  "cap-sdk",
  "cap-standards",
- "hex",
- "ic-cdk",
- "ic-cdk-macros",
+ "ic-cdk 0.3.3",
+ "ic-cdk-macros 0.3.3",
  "ic-kit",
- "num-bigint",
  "serde",
 ]
 

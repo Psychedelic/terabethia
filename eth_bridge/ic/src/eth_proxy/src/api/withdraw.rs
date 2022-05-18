@@ -1,17 +1,16 @@
+use crate::common::weth::Weth;
+use crate::{
+    common::{
+        tera::Tera,
+        types::{EthereumAddr, TokendId, TxError, TxReceipt},
+    },
+    proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH},
+};
 use ic_kit::{
     candid::{candid_method, Nat},
     ic,
     macros::update,
     Principal,
-};
-
-use crate::{
-    common::{
-        dip20::Dip20,
-        tera::Tera,
-        types::{EthereumAddr, TokendId, TxError, TxReceipt},
-    },
-    proxy::{ToNat, WETH_ADDRESS_ETH, STATE, TERA_ADDRESS},
 };
 
 /// withdraw left over balance if burn/mint fails
@@ -36,7 +35,7 @@ pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) 
     if let Some(balance) = get_balance {
         let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
-        if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
+        if tera_id.send_message(eth_addr_pid, payload).await.is_err() {
             return Err(TxError::Other(format!("Sending message to L1 failed!")));
         }
 

@@ -1,11 +1,11 @@
 use crate::api::mint::mint;
 use ic_kit::candid::candid_method;
-use ic_kit::{ic, macros::update};
+use ic_kit::macros::update;
 
-use ic_cdk::export::candid::{Nat, Principal};
+use ic_cdk::export::candid::Nat;
 
-use crate::common::types::{EthereumAddr, MagicResponse, Nonce, TokenType, TxError, TxReceipt};
-use crate::proxy::{WETH_ADDRESS_ETH, MAGIC_ADDRESS_IC};
+use crate::common::types::{EthereumAddr, Nonce, TxError, TxReceipt};
+use crate::proxy::WETH_ADDRESS_ETH;
 
 #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
@@ -23,5 +23,5 @@ async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxR
         )));
     }
 
-    mint(nonce, payload).await
+    mint(eth_addr, nonce, payload).await
 }

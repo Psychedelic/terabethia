@@ -5,7 +5,7 @@ use ic_cdk::export::candid::{Nat, Principal};
 use crate::common::types::{TxError, TxReceipt};
 
 #[async_trait]
-pub trait Dip20 {
+pub trait Weth {
     async fn burn(&self, amount: Nat) -> TxReceipt;
     async fn name(&self) -> Result<String, TxError>;
     async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
@@ -13,7 +13,7 @@ pub trait Dip20 {
 }
 
 #[async_trait]
-impl Dip20 for Principal {
+impl Weth for Principal {
     async fn name(&self) -> Result<String, TxError> {
         let name: (String,) = match call(*self, "name", ()).await {
             Ok(res) => res,

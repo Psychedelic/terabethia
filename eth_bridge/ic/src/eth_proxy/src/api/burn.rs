@@ -1,9 +1,9 @@
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
-use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
-use crate::proxy::{ToNat, WETH_ADDRESS_ETH, STATE, TERA_ADDRESS};
+use crate::common::weth::Weth;
+use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{EthereumAddr, TokendId, TxError, TxReceipt};
@@ -44,7 +44,7 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                     ]
                     .to_vec();
 
-                    if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
+                    if tera_id.send_message(eth_addr_pid, payload).await.is_err() {
                         return Err(TxError::Other(format!(
                             "Sending message to L1 failed with caller {:?}!",
                             caller.to_string()
