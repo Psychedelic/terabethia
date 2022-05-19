@@ -4,8 +4,8 @@ use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, MsgHashKey, ProxyState,
-    StableProxyState, TokendId,
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, ProxyState, StableProxyState,
+    TokendId,
 };
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -87,16 +87,21 @@ impl ProxyState {
     pub fn remove_claimable_message(
         &self,
         eth_address: EthereumAddr,
-        msg_hash: MsgHashKey,
-    ) -> Result<(), String> {
+        token_id: TokendId,
+        amount: Nat,
+    ) -> Result<bool, String> {
         let mut map = self.messages_unclaimed.borrow_mut();
         let messages = map
             .get_mut(&eth_address)
             .ok_or_else(|| "Message not found")?;
 
-        messages.retain(|m| m.msg_hash != msg_hash);
+        let item_index = messages
+            .iter()
+            .position(|m| m.amount == amount && m.token == token_id)
+            .ok_or_else(|| "Message not found")?;
 
-        return Ok(());
+        messages.remove(item_index);
+        return Ok(true);
     }
 
     pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {

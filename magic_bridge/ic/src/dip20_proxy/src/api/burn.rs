@@ -4,11 +4,9 @@ use ic_kit::{ic, macros::update};
 use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, Message, OutgoingMessage, OutgoingMessageHashParams, TokendId,
-    TxError, TxReceipt,
+    ClaimableMessage, EthereumAddr, OutgoingMessage, TokendId, TxError, TxReceipt,
 };
-use crate::common::utils::Keccak256HashFn;
-use crate::proxy::{FromNat, ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
+use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
 // should we allow users to just pass in the corresponding eth_addr on ETH
@@ -66,7 +64,8 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                             STATE.with(|s| {
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
-                                    msg_hash: outgoing_message.msg_key.clone(),
+                                    msg_hash: outgoing_message.msg_hash.clone(),
+                                    msg_key: outgoing_message.msg_key.clone(),
                                     token: token_id.clone(),
                                     amount: amount.clone(),
                                 })
