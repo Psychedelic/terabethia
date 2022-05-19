@@ -1,0 +1,10 @@
+.serverless
+node_modules
+
+.DS_Store
+.webpack
+.dynamodb
+
+dist/
+
+test.*
