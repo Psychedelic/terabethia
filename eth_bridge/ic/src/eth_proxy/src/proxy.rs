@@ -97,14 +97,23 @@ impl ProxyState {
     pub fn remove_claimable_message(
         &self,
         eth_address: EthereumAddr,
-        msg_hash: MsgHashKey,
+        amount: Nat,
     ) -> Result<(), String> {
+        let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
+        let eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
+
         let mut map = self.messages_unclaimed.borrow_mut();
         let messages = map
             .get_mut(&eth_address)
             .ok_or_else(|| "Eth address not found")?;
 
-        messages.retain(|m| m.msg_hash != msg_hash);
+        // Eth address could have multiple messages with the same amount, so we only remove one
+        let item_index = messages
+            .iter()
+            .position(|m| m.amount == amount && m.token == eth_addr_pid)
+            .ok_or_else(|| "Message not found")?;
+
+        messages.remove(item_index);
 
         return Ok(());
     }

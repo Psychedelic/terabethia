@@ -64,7 +64,8 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                             STATE.with(|s| {
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
-                                    msg_hash: outgoing_message.msg_key.clone(),
+                                    msg_hash: outgoing_message.msg_hash.clone(),
+                                    msg_key: outgoing_message.msg_key.clone(),
                                     token: eth_addr_pid.clone(),
                                     amount: amount.clone(),
                                 })

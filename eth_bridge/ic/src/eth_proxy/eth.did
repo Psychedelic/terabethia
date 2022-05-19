@@ -11,11 +11,20 @@ type TxError = variant {
   BlockUsed;
   AmountTooSmall;
 };
+type ClaimableAssets = record {
+  owner : principal,
+  msg_hash : text,
+  msg_key: vec nat8,
+  token: principal,
+  amount: nat,
+};
 service : {
   burn : (principal, principal, nat) -> (Result);
+  claimable_get_all : (principal) -> (vec : ClaimableAssets);
   get_all_token_balance : () -> (Result_1);
   get_balance : (principal) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (principal, nat, vec nat) -> (Result);
+  remove_claimable : (principal, principal, nat) -> (Result_2);
   widthdraw : (principal, principal) -> (Result);
 }

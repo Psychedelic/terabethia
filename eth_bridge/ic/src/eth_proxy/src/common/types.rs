@@ -22,7 +22,8 @@ pub struct Message;
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct ClaimableMessage {
     pub owner: EthereumAddr,
-    pub msg_hash: MsgHashKey,
+    pub msg_key: MsgHashKey,
+    pub msg_hash: MessageHash,
     pub token: TokendId,
     pub amount: Nat,
 }
