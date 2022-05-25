@@ -7,7 +7,7 @@ use ic_kit::{
 
 use crate::{
     common::{
-        dip20::Dip20,
+        dip721::Dip721,
         tera::Tera,
         types::{EthereumAddr, TokendId, TxError, TxReceipt},
     },

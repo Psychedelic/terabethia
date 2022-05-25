@@ -1,7 +1,7 @@
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
-use crate::common::dip20::Dip20;
+use crate::common::dip721::Dip721;
 use crate::common::tera::Tera;
 use crate::proxy::{ToNat, ERC721_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};

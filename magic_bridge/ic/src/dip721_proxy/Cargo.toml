@@ -1,5 +1,5 @@
 [package]
-name = "dip20_proxy"
+name = "dip721_proxy"
 version = "0.1.0"
 edition = "2021"
 
