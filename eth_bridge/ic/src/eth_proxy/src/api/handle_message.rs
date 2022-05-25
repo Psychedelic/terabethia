@@ -5,7 +5,7 @@ use ic_kit::{ic, macros::update};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{EthereumAddr, MagicResponse, Nonce, TokenType, TxError, TxReceipt};
-use crate::proxy::{WETH_ADDRESS_ETH, MAGIC_ADDRESS_IC};
+use crate::proxy::{MAGIC_ADDRESS_IC, WETH_ADDRESS_ETH};
 
 #[update(name = "handle_message")]
 #[candid_method(update, rename = "handle_message")]
