@@ -1,0 +1,223 @@
+service: ledger
+
+provider:
+  name: aws
+  profile: ledger
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  apiGateway:
+    minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
+  environment:
+    DEBUG: "*"
+    AWS_STAGE: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
+custom:
+  stagePrefix:
+    dev: LedgerTestnet
+    prd: LedgerMainnet
+    local: LedgerLocal
+
+  resourcePrefix: ${self:custom.stagePrefix.${self:provider.stage}}
+
+  # stack termination protection
+  serverlessTerminationProtection:
+    stages:
+      - prd
+      - dev
+  domain:
+    dev: ledger-dev.psychedelic.ooo
+    prd: ledger.psychedelic.ooo
+
+  # ToDo {botch} confirm domains
+  # customDomain:
+  #   domainName: ${self:custom.domain.${opt:stage, 'dev'}}
+  #   stage: ${self:provider.stage}
+  #   basePath: ''
+  #   autoDomain: true
+  #   certificateName: '*.psychedelic.ooo'
+  #   createRoute53Record: false
+  serverless-offline-sns:
+  port: 4002
+  debug: false
+  sns-endpoint: http://127.0.0.1:4002
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+    packager: yarn
+  serverless-iam-roles-per-function:
+    defaultInherit: true # Each function will inherit the service level roles too.
+  prune:
+    automatic: true
+    number: 3
+  serverless-offline:
+    httpPort: 3000
+    stageVariables:
+      ethereum_provider_url: ${env:ETHEREUM_PROVIDER_URL}
+      canister_id: ${env:CANISTER_ID}
+      queue_url: ${env:QUEUE_URL}
+      ethereum_contract: ${env:ETHEREUM_CONTRACT}
+      kms_key_id: ${env:KMS_KEY_ID}
+      kms_key_key: ${env:KMS_PUBLIC_KEY}
+      stage: ${env:STAGE}
+      aws_stage: ${env:AWS_STAGE}
+
+plugins:
+  - serverless-webpack
+  - serverless-stack-termination-protection
+  - serverless-iam-roles-per-function
+  - serverless-prune-plugin
+  - serverless-offline-sns
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+package:
+  individually: true
+
+functions:
+  #
+  # L1 -> L2 messages, capture transactions from Ethereum
+  #
+  ReceiveMessage:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/ethereum/blockNative.main
+    environment:
+      QUEUE_URL: !Ref EthereumTxQueue
+    events:
+      - http:
+          method: POST
+          path: /hook
+          request:
+            schema:
+              application/json: ${file(src/functions/ethereum/schema_json.json)}
+    # allow sending messages to EthereumTxQueue
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "sqs:SendMessage"
+        Resource:
+          - !GetAtt
+            - EthereumTxQueue
+            - Arn
+  # ! do not rename !
+  RemoveClaimable:
+    timeout: 120
+    memorySize: 128
+    handler: src/functions/ethereum/remove.main
+    reservedConcurrency: 1
+    environment:
+      # Ethereum Provider API URL (only for querying L1 state)
+      ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl~true}
+      # AWS KMS Key ID, IC Operator
+      KMS_KEY_ID: !Ref InternetComputerOperator
+      # AWS KMS Public Key (base64 encoded), IC Operator
+      KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC~true}
+      # Terabethia L1 Contract ID
+      # EthProxy Canister ID
+      CANISTER_ID: ${ssm:${self:custom.resourcePrefix}CanisterId}
+      QUEUE_URL: !Ref EthereumTxQueue
+    events:
+      - sqs:
+          arn: !GetAtt
+            - EthereumTxQueue
+            - Arn
+          batchSize: 10
+    iamRoleStatements:
+      # allow removing processed messages from queue
+      - Effect: "Allow"
+        Action:
+          - "sqs:DeleteMessage"
+        Resource:
+          - !GetAtt
+            - EthereumTxQueue
+            - Arn
+      - Effect: "Allow"
+        Action:
+          - "kms:Sign"
+        Resource:
+          - !GetAtt
+            - InternetComputerOperator
+            - Arn
+  # Expose principal id of KMS key pair
+  KMSPrincipal:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/security/principal.main
+    environment:
+      KMS_KEY_ID: !Ref InternetComputerOperator
+    events:
+      - http:
+          method: GET
+          path: /principal
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "kms:GetPublicKey"
+        Resource:
+          - !GetAtt
+            - InternetComputerOperator
+            - Arn
+resources:
+  Resources:
+    #
+    # SQS
+    #
+    EthereumTxQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}EthereumTxQueue.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        DelaySeconds: 30
+        VisibilityTimeout: 300 # 5 minutes
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt
+            - EthereumTxDLQ
+            - Arn
+    EthereumTxDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}EthereumTxDLQ.fifo
+        MessageRetentionPeriod: 1209600 # 14 days
+    #
+    # KMS
+    #
+    InternetComputerOperator:
+      Type: AWS::KMS::Key
+      Properties:
+        Description: Internet Computer Operator
+        KeyPolicy:
+          Id: default
+          Statement:
+            # we will delegate IAM policies instead of admin / users / roles
+            # "The new key policy will not allow you to update the key policy in the future"
+            - Effect: Allow
+              Principal:
+                AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+              NotAction:
+                - "kms:Sign"
+              Resource: "*"
+
+            # signatures can be only made by StarknetPollMessages or StoreMessage lambda
+            - Effect: Allow
+              Principal:
+                AWS:
+                  # - !Sub "arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StarknetPollMessages-${self:provider.region}-lambdaRole"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/ledger-${self:provider.stage}-RemoveClaimable-${self:provider.region}-lambdaRole"
+              Action:
+                - "kms:Sign"
+              Resource: "*"
+
+        # secp256k elliptic curve
+        KeySpec: ECC_SECG_P256K1
+        # key is used only for sign/verify operations
+        KeyUsage: SIGN_VERIFY
+        # default settings
+        # MultiRegion: false
+        # PendingWindowInDays: 30
+        # Enabled: true
+        # EnableKeyRotation: false

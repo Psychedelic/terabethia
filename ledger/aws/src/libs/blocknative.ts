@@ -1,6 +1,7 @@
 import { FromSchema } from 'json-schema-to-ts';
 
 export interface BlockNativePayload {
+  contractCall: any;
   to?: string;
   from?: string;
   hash: string;
