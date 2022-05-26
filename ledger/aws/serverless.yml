@@ -5,7 +5,7 @@ provider:
   profile: ledger
   runtime: nodejs14.x
   stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'us-west-2'}
   apiGateway:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
@@ -84,7 +84,7 @@ functions:
     memorySize: 128
     handler: src/functions/ethereum/blockNative.main
     environment:
-      QUEUE_URL: !Ref EthereumTxQueue
+      QUEUE_URL: !Ref EthereumTxWithdrawQueue
     events:
       - http:
           method: POST
@@ -92,14 +92,14 @@ functions:
           request:
             schema:
               application/json: ${file(src/functions/ethereum/schema_json.json)}
-    # allow sending messages to EthereumTxQueue
+    # allow sending messages to EthereumTxWithdrawQueue
     iamRoleStatements:
       - Effect: "Allow"
         Action:
           - "sqs:SendMessage"
         Resource:
           - !GetAtt
-            - EthereumTxQueue
+            - EthereumTxWithdrawQueue
             - Arn
   # ! do not rename !
   RemoveClaimable:
@@ -109,19 +109,20 @@ functions:
     reservedConcurrency: 1
     environment:
       # Ethereum Provider API URL (only for querying L1 state)
-      ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl~true}
+      ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl}
+      # ETHEREUM_PROVIDER_URL: ${ssm:${self:custom.resourcePrefix}EthereumProviderUrl~true}
       # AWS KMS Key ID, IC Operator
-      KMS_KEY_ID: !Ref InternetComputerOperator
+      # KMS_KEY_ID: !Ref InternetComputerOperator
       # AWS KMS Public Key (base64 encoded), IC Operator
-      KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC~true}
+      KMS_PUBLIC_KEY: ${ssm:${self:custom.resourcePrefix}KMSPublicKeyIC}
       # Terabethia L1 Contract ID
       # EthProxy Canister ID
-      CANISTER_ID: ${ssm:${self:custom.resourcePrefix}CanisterId}
-      QUEUE_URL: !Ref EthereumTxQueue
+      ETH_PROXY_CANISTER_ID: ${ssm:${self:custom.resourcePrefix}EthProxyCanisterId}
+      QUEUE_URL: !Ref EthereumTxWithdrawQueue
     events:
       - sqs:
           arn: !GetAtt
-            - EthereumTxQueue
+            - EthereumTxWithdrawQueue
             - Arn
           batchSize: 10
     iamRoleStatements:
@@ -131,43 +132,17 @@ functions:
           - "sqs:DeleteMessage"
         Resource:
           - !GetAtt
-            - EthereumTxQueue
-            - Arn
-      - Effect: "Allow"
-        Action:
-          - "kms:Sign"
-        Resource:
-          - !GetAtt
-            - InternetComputerOperator
-            - Arn
-  # Expose principal id of KMS key pair
-  KMSPrincipal:
-    timeout: 10
-    memorySize: 128
-    handler: src/functions/security/principal.main
-    environment:
-      KMS_KEY_ID: !Ref InternetComputerOperator
-    events:
-      - http:
-          method: GET
-          path: /principal
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - "kms:GetPublicKey"
-        Resource:
-          - !GetAtt
-            - InternetComputerOperator
+            - EthereumTxWithdrawQueue
             - Arn
 resources:
   Resources:
     #
     # SQS
     #
-    EthereumTxQueue:
+    EthereumTxWithdrawQueue:
       Type: "AWS::SQS::Queue"
       Properties:
-        QueueName: ${self:custom.resourcePrefix}EthereumTxQueue.fifo
+        QueueName: ${self:custom.resourcePrefix}EthereumTxWithdrawQueue.fifo
         ContentBasedDeduplication: true
         FifoQueue: true
         DelaySeconds: 30
@@ -175,49 +150,11 @@ resources:
         RedrivePolicy:
           maxReceiveCount: 3
           deadLetterTargetArn: !GetAtt
-            - EthereumTxDLQ
+            - EthereumTxWithdrawDLQ
             - Arn
-    EthereumTxDLQ:
+    EthereumTxWithdrawDLQ:
       Type: AWS::SQS::Queue
       Properties:
         FifoQueue: true
-        QueueName: ${self:custom.resourcePrefix}EthereumTxDLQ.fifo
+        QueueName: ${self:custom.resourcePrefix}EthereumTxWithdrawDLQ.fifo
         MessageRetentionPeriod: 1209600 # 14 days
-    #
-    # KMS
-    #
-    InternetComputerOperator:
-      Type: AWS::KMS::Key
-      Properties:
-        Description: Internet Computer Operator
-        KeyPolicy:
-          Id: default
-          Statement:
-            # we will delegate IAM policies instead of admin / users / roles
-            # "The new key policy will not allow you to update the key policy in the future"
-            - Effect: Allow
-              Principal:
-                AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-              NotAction:
-                - "kms:Sign"
-              Resource: "*"
-
-            # signatures can be only made by StarknetPollMessages or StoreMessage lambda
-            - Effect: Allow
-              Principal:
-                AWS:
-                  # - !Sub "arn:aws:iam::${AWS::AccountId}:role/terabethia-${self:provider.stage}-StarknetPollMessages-${self:provider.region}-lambdaRole"
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/ledger-${self:provider.stage}-RemoveClaimable-${self:provider.region}-lambdaRole"
-              Action:
-                - "kms:Sign"
-              Resource: "*"
-
-        # secp256k elliptic curve
-        KeySpec: ECC_SECG_P256K1
-        # key is used only for sign/verify operations
-        KeyUsage: SIGN_VERIFY
-        # default settings
-        # MultiRegion: false
-        # PendingWindowInDays: 30
-        # Enabled: true
-        # EnableKeyRotation: false
