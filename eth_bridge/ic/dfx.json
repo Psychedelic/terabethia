@@ -2,7 +2,7 @@
   "canisters": {
     "eth_proxy": {
       "build": "bash build.sh eth_proxy",
-      "candid": "src/eth_proxy/proxy.did",
+      "candid": "src/eth_proxy/eth_proxy.did",
       "wasm": "target/wasm32-unknown-unknown/release/eth_proxy-opt.wasm",
       "type": "custom"
     },

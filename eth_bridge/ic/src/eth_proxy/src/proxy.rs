@@ -3,7 +3,10 @@ use std::{collections::HashMap, ops::AddAssign};
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
-use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState, TokendId};
+use crate::common::types::{
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, MsgHashKey, ProxyState,
+    StableProxyState, TokendId,
+};
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 pub const WETH_ADDRESS_IC: &str = "tgodh-faaaa-aaaab-qaefa-cai";
@@ -73,7 +76,49 @@ impl ProxyState {
             .insert(caller, HashMap::from([(token_id, amount)]));
     }
 
-    pub fn _authorize(&self, other: Principal) {
+    pub fn add_claimable_message(&self, message: ClaimableMessage) {
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map.entry(message.owner.clone()).or_insert_with(Vec::new);
+
+        messages.push(message.clone());
+        return;
+    }
+
+    pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
+        let unclaimed_messages = self
+            .messages_unclaimed
+            .borrow()
+            .get(&eth_address)
+            .unwrap_or(&vec![])
+            .clone();
+        return unclaimed_messages;
+    }
+
+    pub fn remove_claimable_message(
+        &self,
+        eth_address: EthereumAddr,
+        amount: Nat,
+    ) -> Result<(), String> {
+        let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
+        let eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
+
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map
+            .get_mut(&eth_address)
+            .ok_or_else(|| "Eth address not found")?;
+
+        // Eth address could have multiple messages with the same amount, so we only remove one
+        let item_index = messages
+            .iter()
+            .position(|m| m.amount == amount && m.token == eth_addr_pid)
+            .ok_or_else(|| "Message not found")?;
+
+        messages.remove(item_index);
+
+        return Ok(());
+    }
+
+    pub fn authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
         if caller_autorized {
@@ -81,7 +126,7 @@ impl ProxyState {
         }
     }
 
-    pub fn _is_authorized(&self) -> Result<(), String> {
+    pub fn is_authorized(&self) -> Result<(), String> {
         self.controllers
             .borrow()
             .contains(&ic::caller())
@@ -94,6 +139,7 @@ impl ProxyState {
             balances: self.balances.take(),
             controllers: self.controllers.take(),
             incoming_messages: self.incoming_messages.take(),
+            messages_unclaimed: self.messages_unclaimed.take(),
         }
     }
 
@@ -101,6 +147,7 @@ impl ProxyState {
         self.balances.borrow_mut().clear();
         self.controllers.borrow_mut().clear();
         self.incoming_messages.borrow_mut().clear();
+        self.messages_unclaimed.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_message_state: StableProxyState) {
@@ -108,6 +155,8 @@ impl ProxyState {
         self.controllers.replace(stable_message_state.controllers);
         self.incoming_messages
             .replace(stable_message_state.incoming_messages);
+        self.messages_unclaimed
+            .replace(stable_message_state.messages_unclaimed);
     }
 }
 
