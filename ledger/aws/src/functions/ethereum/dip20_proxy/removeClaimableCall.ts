@@ -1,7 +1,7 @@
 import 'source-map-support/register';
 
 import { ethers } from 'ethers';
-import { EthProxy } from '@/libs/dfinity';
+import { DIP20Proxy } from '@/libs/dfinity';
 import { Principal } from '@dfinity/principal';
 import { BlockNativePayload } from '@/libs/blocknative';
 import { requireEnv, sqsHandler } from '@/libs/utils';
@@ -10,7 +10,7 @@ import { Secp256k1KeyIdentity } from '@dfinity/identity';
 
 const envs = requireEnv([
   'ETHEREUM_PROVIDER_URL',
-  'ETH_PROXY_CANISTER_ID',
+  'DIP20_PROXY_CANISTER_ID',
   'QUEUE_URL',
   'IC_IDENTITY'
 ]);
@@ -40,17 +40,19 @@ export const handleWithdraw = async (message: BlockNativePayload) => {
 
   // ic call
   const identity = Secp256k1KeyIdentity.fromJSON(envs.IC_IDENTITY)
-  const eth_proxy = new EthProxy(envs.ETH_PROXY_CANISTER_ID, identity);
+  const dip20_proxy = new DIP20Proxy(envs.DIP20_PROXY_CANISTER_ID, identity);
 
   // fromAddress is hex string prefixed with 0x
   const fromAddresPid = Principal.fromHex(transactionMetadata.ethAddress.slice(2));
   const amountAsNat = BigInt(transactionMetadata.payload.amount);
+  const tokenAddressPid = Principal.fromHex(transactionMetadata.payload.token.slice(2))
   console.log('fromAddress', fromAddresPid);
+  console.log('tokenAddress', tokenAddressPid);
   console.log("amountNat", amountAsNat);
 
 
   // send message to the proxy
-  await eth_proxy.removeClaimable(fromAddresPid, amountAsNat);
+  await dip20_proxy.removeClaimable(fromAddresPid, tokenAddressPid, amountAsNat);
 };
 
 export const main = sqsHandler<BlockNativePayload>(handleWithdraw, envs.QUEUE_URL, undefined, 1);
