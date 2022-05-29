@@ -1,0 +1,115 @@
+service: claimables
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-west-2'}
+  apiGateway:
+    minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
+  environment:
+    DEBUG: "*"
+    AWS_STAGE: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "sqs:SendMessage"
+          Resource:
+            - !GetAtt
+              - EthereumTxWithdrawQueue
+              - Arn
+
+custom:
+  stagePrefix:
+    dev: ClaimablesTestnet
+    prd: ClaimablesMainnet
+    local: ClaimablesLocal
+
+  resourcePrefix: ${self:custom.stagePrefix.${self:provider.stage}}
+  # stack termination protection
+
+  serverlessTerminationProtection:
+    stages:
+      - prd
+      - dev
+
+  domain:
+    dev: ledger-dev.psychedelic.ooo
+    prd: ledger.psychedelic.ooo
+
+  serverless-offline-sns:
+    port: 4002
+    debug: false
+    sns-endpoint: http://127.0.0.1:4002
+
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+    packager: yarn
+
+  prune:
+    automatic: true
+    number: 3
+
+plugins:
+  - serverless-webpack
+  - serverless-stack-termination-protection
+  - serverless-prune-plugin
+  - serverless-offline-sns
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+package:
+  individually: true
+
+functions:
+  #
+  # L1 -> L2 messages, capture transactions from Ethereum
+  #
+  ReceiveMessage:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/ethereum/eth_proxy/blockNativeHook.main
+    environment:
+      QUEUE_URL: !Ref EthereumTxWithdrawQueue
+      ETHEREUM_PROVIDER_URL: ${env:ETHEREUM_PROVIDER_URL}
+      CANISTER_ID: ${env:CANISTER_ID}
+      ETHEREUM_CONTRACT: ${env:ETHEREUM_CONTRACT}
+      ETH_PROXY_CANISTER_ID: ${env:ETH_PROXY_CANISTER_ID}
+      IC_IDENTITY: ${env:IC_IDENTITY}
+    events:
+      - http:
+          method: POST
+          path: /hook
+          request:
+            schema:
+              application/json: ${file(src/functions/ethereum/schema_json.json)}
+    # allow sending messages to EthereumTxWithdrawQueue
+
+resources:
+  Resources:
+    #
+    # SQS
+    #
+    EthereumTxWithdrawQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}EthereumTxWithdrawQueue-dev-west-2.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        DelaySeconds: 30
+        VisibilityTimeout: 300 # 5 minutes
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt
+            - EthereumTxWithdrawDLQ
+            - Arn
+    EthereumTxWithdrawDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}EthereumTxWithdrawDLQ-dev-west-2.fifo
+        MessageRetentionPeriod: 1209600 # 14 days
