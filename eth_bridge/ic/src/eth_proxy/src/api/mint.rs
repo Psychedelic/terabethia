@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
@@ -8,7 +10,7 @@ use crate::proxy::{FromNat, ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_A
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{
-    IncomingMessageHashParams, Message, MessageStatus, Nonce, TokendId, TxError, TxReceipt,
+    IncomingMessageHashParams, Message, MessageStatus, Nonce, TxError, TxReceipt,
 };
 
 #[update(name = "mint")]

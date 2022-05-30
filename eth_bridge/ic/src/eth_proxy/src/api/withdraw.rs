@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use ic_kit::{
     candid::{candid_method, Nat},
     ic,
@@ -9,7 +11,7 @@ use crate::{
     common::{
         dip20::Dip20,
         tera::Tera,
-        types::{EthereumAddr, TokendId, TxError, TxReceipt},
+        types::{EthereumAddr, TxError, TxReceipt},
     },
     proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC},
 };

@@ -14,8 +14,6 @@ pub type EthereumAddr = Principal;
 
 pub type TxReceipt = Result<Nat, TxError>;
 
-pub type MagicResponse = Result<Principal, FactoryError>;
-
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
 
