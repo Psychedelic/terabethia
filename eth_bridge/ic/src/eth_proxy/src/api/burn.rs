@@ -44,27 +44,24 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                         Ok(outgoing_message) => {
                             // there could be an underflow here
                             // like negative balance
-                            let current_balance = STATE.with(|s| {
-                                s.get_balance(caller, weth_ic_addr_pid)
-                                    .unwrap_or(Nat::from(0))
-                            });
-
                             STATE.with(|s| {
+                                let current_balance = s
+                                    .get_balance(caller, weth_ic_addr_pid)
+                                    .unwrap_or(Nat::from(0));
+
                                 s.update_balance(
                                     caller,
                                     weth_ic_addr_pid,
                                     current_balance - amount.clone(),
-                                )
-                            });
+                                );
 
-                            STATE.with(|s| {
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
                                     msg_hash: outgoing_message.msg_hash.clone(),
                                     msg_key: outgoing_message.msg_key.clone(),
                                     token: weth_ic_addr_pid.clone(),
                                     amount: amount.clone(),
-                                })
+                                });
                             });
                             // All correct
                             return Ok(burn_txn_id);

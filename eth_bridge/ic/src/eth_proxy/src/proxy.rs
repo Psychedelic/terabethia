@@ -4,8 +4,8 @@ use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, MsgHashKey, ProxyState,
-    StableProxyState, TokendId,
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, ProxyState, StableProxyState,
+    TokendId,
 };
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";

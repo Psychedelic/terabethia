@@ -556,7 +556,7 @@ dependencies = [
  "async-trait",
  "candid",
  "hex",
- "ic-cdk 0.4.0",
+ "ic-cdk 0.5.1",
  "ic-cdk-macros 0.4.0",
  "ic-kit",
  "num-bigint",
@@ -772,6 +772,17 @@ name = "ic-cdk"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e511d1a019e620d5a3dc43bead7d3c46912bf4f4bfb1d602059046c7a22bb1e"
+dependencies = [
+ "candid",
+ "cfg-if",
+ "serde",
+]
+
+[[package]]
+name = "ic-cdk"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "953c6f940bbf1f79460849fa61cd3ac04768f8f0deb743d185860892f65cbff2"
 dependencies = [
  "candid",
  "cfg-if",
@@ -1443,7 +1454,7 @@ dependencies = [
  "candid",
  "cap-sdk",
  "cap-standards",
- "ic-cdk 0.3.3",
+ "ic-cdk 0.5.1",
  "ic-cdk-macros 0.3.3",
  "ic-kit",
  "serde",
