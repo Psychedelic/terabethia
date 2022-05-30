@@ -21,6 +21,13 @@ provider:
             - !GetAtt
               - EthereumTxWithdrawQueue
               - Arn
+        - Effect: "Allow"
+          Action:
+            - "sqs:SendMessage"
+          Resource:
+            - !GetAtt
+              - ERC20TxWithdrawQueue
+              - Arn
 
 custom:
   stagePrefix:
