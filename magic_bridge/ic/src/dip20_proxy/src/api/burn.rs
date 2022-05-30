@@ -52,25 +52,26 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
 
                     match send_message {
                         Ok(outgoing_message) => {
-                            // there could be an underflow here
-                            // like negative balance
-                            let current_balance = STATE
-                                .with(|s| s.get_balance(caller, token_id).unwrap_or(Nat::from(0)));
-
                             STATE.with(|s| {
-                                s.update_balance(caller, token_id, current_balance - amount.clone())
-                            });
+                                // there could be an underflow here
+                                // like negative balance
+                                let current_balance =
+                                    s.get_balance(caller, token_id).unwrap_or(Nat::from(0));
 
-                            STATE.with(|s| {
+                                s.update_balance(
+                                    caller,
+                                    token_id,
+                                    current_balance - amount.clone(),
+                                );
+
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
                                     msg_hash: outgoing_message.msg_hash.clone(),
                                     msg_key: outgoing_message.msg_key.clone(),
                                     token: token_id.clone(),
                                     amount: amount.clone(),
-                                })
+                                });
                             });
-
                             // All correct
                             return Ok(burn_txn_id);
                         }
