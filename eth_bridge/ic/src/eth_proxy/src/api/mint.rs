@@ -3,9 +3,9 @@ use std::str::FromStr;
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
-use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
 use crate::common::utils::Keccak256HashFn;
+use crate::common::weth::Weth;
 use crate::proxy::{FromNat, ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
 use ic_cdk::export::candid::{Nat, Principal};
 

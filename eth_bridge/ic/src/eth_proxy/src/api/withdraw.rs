@@ -9,9 +9,9 @@ use ic_kit::{
 
 use crate::{
     common::{
-        dip20::Dip20,
         tera::Tera,
         types::{EthereumAddr, TxError, TxReceipt},
+        weth::Weth,
     },
     proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC},
 };
