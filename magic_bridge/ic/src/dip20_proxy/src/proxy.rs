@@ -3,7 +3,10 @@ use std::{collections::HashMap, ops::AddAssign};
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
-use crate::common::types::{MessageHash, MessageStatus, ProxyState, StableProxyState, TokendId};
+use crate::common::types::{
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, ProxyState, StableProxyState,
+    TokendId,
+};
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 pub const MAGIC_ADDRESS_IC: &str = "7z6fu-giaaa-aaaab-qafkq-cai";
@@ -73,7 +76,45 @@ impl ProxyState {
             .insert(caller, HashMap::from([(token_id, amount)]));
     }
 
-    pub fn _authorize(&self, other: Principal) {
+    pub fn add_claimable_message(&self, message: ClaimableMessage) {
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map.entry(message.owner.clone()).or_insert_with(Vec::new);
+
+        messages.push(message.clone());
+        return;
+    }
+
+    pub fn remove_claimable_message(
+        &self,
+        eth_address: EthereumAddr,
+        token_id: TokendId,
+        amount: Nat,
+    ) -> Result<bool, String> {
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map
+            .get_mut(&eth_address)
+            .ok_or_else(|| "Message not found")?;
+
+        let item_index = messages
+            .iter()
+            .position(|m| m.amount == amount && m.token == token_id)
+            .ok_or_else(|| "Message not found")?;
+
+        messages.remove(item_index);
+        return Ok(true);
+    }
+
+    pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
+        let unclaimed_messages = self
+            .messages_unclaimed
+            .borrow()
+            .get(&eth_address)
+            .unwrap_or(&vec![])
+            .clone();
+        return unclaimed_messages;
+    }
+
+    pub fn authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
         if caller_autorized {
@@ -81,7 +122,7 @@ impl ProxyState {
         }
     }
 
-    pub fn _is_authorized(&self) -> Result<(), String> {
+    pub fn is_authorized(&self) -> Result<(), String> {
         self.controllers
             .borrow()
             .contains(&ic::caller())
@@ -94,6 +135,7 @@ impl ProxyState {
             balances: self.balances.take(),
             controllers: self.controllers.take(),
             incoming_messages: self.incoming_messages.take(),
+            messages_unclaimed: self.messages_unclaimed.take(),
         }
     }
 
@@ -101,6 +143,7 @@ impl ProxyState {
         self.balances.borrow_mut().clear();
         self.controllers.borrow_mut().clear();
         self.incoming_messages.borrow_mut().clear();
+        self.messages_unclaimed.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_message_state: StableProxyState) {
@@ -108,6 +151,8 @@ impl ProxyState {
         self.controllers.replace(stable_message_state.controllers);
         self.incoming_messages
             .replace(stable_message_state.incoming_messages);
+        self.messages_unclaimed
+            .replace(stable_message_state.messages_unclaimed);
     }
 }
 
@@ -357,7 +402,7 @@ mod tests {
 
         let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-        let erc20_addr_hex = hex::encode(
+        let _erc20_addr_hex = hex::encode(
             Principal::from_text("6iiev-lyvwz-q7nu7-5tj7n-r3kmr-c6m7u-kumzc-eipy").unwrap(),
         );
 
@@ -365,5 +410,123 @@ mod tests {
             erc20_addr_pid.to_string(),
             "6iiev-lyvwz-q7nu7-5tj7n-r3kmr-c6m7u-kumzc-eipy"
         );
+    }
+
+    #[test]
+    fn test_claimable_messages() {
+        let eth_addr_1 = Principal::from_slice(
+            &hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap(),
+        );
+        let msg_key_1: [u8; 32] = [0; 32];
+
+        let msg_hash_1 = String::from("123123123");
+        let msg_key_2: [u8; 32] = [1; 32];
+        let token_id_1 = Principal::from_slice(
+            &hex::decode("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").unwrap(),
+        );
+        let amount_1 = Nat::from(1_u64);
+
+        // first msg
+        let message_1 = ClaimableMessage {
+            owner: eth_addr_1.clone(),
+            msg_hash: msg_hash_1.clone(),
+            msg_key: msg_key_1.clone(),
+            token: token_id_1.clone(),
+            amount: amount_1.clone(),
+        };
+
+        // second msg -> identical to first msg but with different msg_key
+        let message_2 = ClaimableMessage {
+            owner: eth_addr_1.clone(),
+            msg_hash: msg_hash_1.clone(),
+            msg_key: msg_key_2.clone(),
+            token: token_id_1.clone(),
+            amount: amount_1.clone(),
+        };
+
+        // add first msg
+        STATE.with(|s| s.add_claimable_message(message_1));
+        // add second msg
+        STATE.with(|s| s.add_claimable_message(message_2));
+
+        // check if both messages are in the claimable messages list for eth_addr_1
+        let claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
+        assert_eq!(claimable_messages.len(), 2);
+
+        // remove one msg (both have same amount and token)
+        let result_remove_1 = STATE.with(|s| {
+            s.remove_claimable_message(eth_addr_1.clone(), token_id_1.clone(), amount_1.clone());
+        });
+        assert_eq!(result_remove_1, ());
+
+        // check if only one message is in the claimable messages list for eth_addr_1
+        let claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
+        assert_eq!(claimable_messages.len(), 1);
+
+        // remove second msg (both have same amount and token)
+        let result_remove_2 = STATE.with(|s| {
+            s.remove_claimable_message(eth_addr_1.clone(), token_id_1.clone(), amount_1.clone());
+        });
+        assert_eq!(result_remove_2, ());
+
+        // check if no messages are in the claimable messages list for eth_addr_1
+        let claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
+        assert_eq!(claimable_messages.len(), 0);
+    }
+
+    #[test]
+    fn test_claimable_messages_with_different_amounts() {
+        let eth_addr_1 = Principal::from_slice(
+            &hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap(),
+        );
+        let msg_key_1: [u8; 32] = [0; 32];
+        let msg_hash_1 = String::from("123123123");
+        let token_id_1 = Principal::from_slice(
+            &hex::decode("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").unwrap(),
+        );
+        let amount_1 = Nat::from(1_u64);
+
+        let msg_key_2: [u8; 32] = [1; 32];
+        let amount_2 = Nat::from(2_u64);
+
+        // first msg
+        let message_1 = ClaimableMessage {
+            owner: eth_addr_1.clone(),
+            msg_hash: msg_hash_1.clone(),
+            msg_key: msg_key_1.clone(),
+            token: token_id_1.clone(),
+            amount: amount_1.clone(),
+        };
+
+        // second msg -> same token, different amount
+        let message_2 = ClaimableMessage {
+            owner: eth_addr_1.clone(),
+            msg_hash: msg_hash_1.clone(),
+            msg_key: msg_key_2.clone(),
+            token: token_id_1.clone(),
+            amount: amount_2.clone(),
+        };
+
+        // add first msg
+        STATE.with(|s| s.add_claimable_message(message_1));
+        // add second msg
+        STATE.with(|s| s.add_claimable_message(message_2));
+
+        // check if both messages are in the claimable messages list for eth_addr_1
+        let claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
+        assert_eq!(claimable_messages.len(), 2);
+
+        // remove one msg -> the one with amount_2 (both are the same token, but different amount)
+        let result_remove_1 = STATE.with(|s| {
+            s.remove_claimable_message(eth_addr_1.clone(), token_id_1.clone(), amount_2.clone());
+        });
+        assert_eq!(result_remove_1, ());
+
+        // check if only one message is in the claimable messages list for eth_addr_1
+        let claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
+        assert_eq!(claimable_messages.len(), 1);
+
+        // the message that is left is the one with amount_1
+        assert_eq!(claimable_messages[0].amount, amount_1);
     }
 }

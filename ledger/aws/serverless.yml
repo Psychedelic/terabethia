@@ -21,6 +21,13 @@ provider:
             - !GetAtt
               - EthereumTxWithdrawQueue
               - Arn
+        - Effect: "Allow"
+          Action:
+            - "sqs:SendMessage"
+          Resource:
+            - !GetAtt
+              - ERC20TxWithdrawQueue
+              - Arn
 
 custom:
   stagePrefix:
@@ -69,25 +76,69 @@ functions:
   #
   # L1 -> L2 messages, capture transactions from Ethereum
   #
-  ReceiveMessage:
+  ReceiveMessageEth:
     timeout: 10
     memorySize: 128
     handler: src/functions/ethereum/eth_proxy/blockNativeHook.main
     environment:
       QUEUE_URL: !Ref EthereumTxWithdrawQueue
-      ETHEREUM_PROVIDER_URL: ${env:ETHEREUM_PROVIDER_URL}
-      CANISTER_ID: ${env:CANISTER_ID}
-      ETHEREUM_CONTRACT: ${env:ETHEREUM_CONTRACT}
-      ETH_PROXY_CANISTER_ID: ${env:ETH_PROXY_CANISTER_ID}
-      IC_IDENTITY: ${env:IC_IDENTITY}
     events:
       - http:
           method: POST
-          path: /hook
+          path: /hook/eth
           request:
             schema:
               application/json: ${file(src/functions/ethereum/schema_json.json)}
-    # allow sending messages to EthereumTxWithdrawQueue
+
+  DeleteClaimableEthProxy:
+    timeout: 120
+    memorySize: 128
+    handler: src/functions/ethereum/eth_proxy/removeClaimableCall.main
+    reservedConcurrency: 1
+    environment:
+      # Ethereum Provider API URL (only for querying L1 state)
+      ETHEREUM_PROVIDER_URL: ${env:ETHEREUM_PROVIDER_URL}
+      IC_IDENTITY: ${env:IC_IDENTITY}
+      ETH_PROXY_CANISTER_ID: ${env:ETH_PROXY_CANISTER_ID}
+      QUEUE_URL: !Ref EthereumTxWithdrawQueue
+    events:
+      - sqs:
+          arn: !GetAtt
+            - EthereumTxWithdrawQueue
+            - Arn
+          batchSize: 10
+
+  ReceiveMessageERC20Poxy:
+    timeout: 10
+    memorySize: 128
+    handler: src/functions/ethereum/dip20_proxy/blockNativeHook.main
+    environment:
+      QUEUE_URL: !Ref ERC20TxWithdrawQueue
+    events:
+      - http:
+          method: POST
+          path: /hook/ERC20
+          request:
+            schema:
+              application/json: ${file(src/functions/ethereum/schema_json.json)}
+
+  DeleteClaimableDIP20Proxy:
+    timeout: 120
+    memorySize: 128
+    handler: src/functions/ethereum/dip20_proxy/removeClaimableCall.main
+    reservedConcurrency: 1
+    environment:
+      # Ethereum Provider API URL (only for querying L1 state)
+      ETHEREUM_PROVIDER_URL: ${env:ETHEREUM_PROVIDER_URL}
+      IC_IDENTITY: ${env:IC_IDENTITY}
+      DIP20_PROXY_CANISTER_ID: ${env:DIP20_PROXY_CANISTER_ID}
+      QUEUE_URL: !Ref ERC20TxWithdrawQueue
+    events:
+      - sqs:
+          arn: !GetAtt
+            - ERC20TxWithdrawQueue
+            - Arn
+          batchSize: 10
 
 resources:
   Resources:
@@ -112,4 +163,24 @@ resources:
       Properties:
         FifoQueue: true
         QueueName: ${self:custom.resourcePrefix}EthereumTxWithdrawDLQ-dev-west-2.fifo
+        MessageRetentionPeriod: 1209600 # 14 days
+
+    ERC20TxWithdrawQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:custom.resourcePrefix}ERC20TxWithdrawQueue-dev-west-2.fifo
+        ContentBasedDeduplication: true
+        FifoQueue: true
+        DelaySeconds: 30
+        VisibilityTimeout: 300 # 5 minutes
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt
+            - ERC20TxWithdrawDLQ
+            - Arn
+    ERC20TxWithdrawDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        FifoQueue: true
+        QueueName: ${self:custom.resourcePrefix}ERC20TxWithdrawDLQ-dev-west-2.fifo
         MessageRetentionPeriod: 1209600 # 14 days

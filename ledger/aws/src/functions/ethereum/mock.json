@@ -41,7 +41,8 @@
   "contractCall": {
     "methodName": "withdraw",
     "params": {
-      "amount": "1000000"
+      "amount": "1000000",
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     },
     "contractAddress": "0x2E130E57021Bb4dfb95Eb4Dd0dD8CFCeB936148a",
     "contractType": "customAbi"
