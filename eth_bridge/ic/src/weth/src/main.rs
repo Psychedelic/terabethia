@@ -1,8 +1,8 @@
 /**
 * Module     : main.rs
-* Copyright  : 2021 DFinance Team
-* License    : Apache 2.0 with LLVM Exception
-* Maintainer : DFinance Team <hello@dfinance.ai>
+* Copyright  : 2022 Fleek
+* License    : GPL 3.0
+* Maintainer : Psychedelic <support@fleek.co>
 * Stability  : Experimental
 */
 use candid::{candid_method, CandidType, Deserialize, Int, Nat};
@@ -16,7 +16,6 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::Into;
 use std::iter::FromIterator;
-use std::str::FromStr;
 use std::string::String;
 
 #[derive(CandidType, Default, Deserialize, Clone)]
@@ -145,55 +144,9 @@ fn init(
     );
 }
 
-fn _transfer(from: Principal, to: Principal, value: Nat) {
-    BALANCES.with(|b| {
-        let mut balances = b.borrow_mut();
-        let from_balance = balance_of(from);
-        let from_balance_new: Nat = from_balance - value.clone();
-        if from_balance_new != 0 {
-            balances.insert(from, from_balance_new);
-        } else {
-            balances.remove(&from);
-        }
-        let to_balance = balance_of(to);
-        let to_balance_new = to_balance + value;
-        if to_balance_new != 0 {
-            balances.insert(to, to_balance_new);
-        }
-    });
-}
+/* UPDATE FNS */
 
-fn _charge_fee(user: Principal, fee: Nat) {
-    STATS.with(|s| {
-        let stats = s.borrow();
-        if stats.fee > Nat::from(0) {
-            _transfer(user, stats.fee_to, fee);
-        }
-    });
-}
-
-fn _get_fee() -> Nat {
-    STATS.with(|s| {
-        let stats = s.borrow();
-        stats.fee.clone()
-    })
-}
-
-fn _get_owner() -> Principal {
-    STATS.with(|s| {
-        let stats = s.borrow();
-        stats.owner
-    })
-}
-
-fn _history_inc() {
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        stats.history_size += 1;
-    })
-}
-
-#[update(name = "transfer")]
+#[update]
 #[candid_method(update)]
 async fn transfer(to: Principal, value: Nat) -> TxReceipt {
     let from = ic::caller();
@@ -262,14 +215,14 @@ async fn transfer_from(from: Principal, to: Principal, value: Nat) -> TxReceipt 
         from,
         to,
         value,
-        fee.clone(),
+        fee,
         ic::time(),
         TransactionStatus::Succeeded,
     )
     .await
 }
 
-#[update(name = "approve")]
+#[update]
 #[candid_method(update)]
 async fn approve(spender: Principal, value: Nat) -> TxReceipt {
     let owner = ic::caller();
@@ -300,7 +253,6 @@ async fn approve(spender: Principal, value: Nat) -> TxReceipt {
                 if v.clone() != 0 {
                     let mut inner = HashMap::new();
                     inner.insert(spender, v.clone());
-                    let allowances = ic::get_mut::<Allowances>();
                     allowances.insert(owner, inner);
                 }
             }
@@ -314,67 +266,44 @@ async fn approve(spender: Principal, value: Nat) -> TxReceipt {
         owner,
         spender,
         v,
-        fee.clone(),
+        fee,
         ic::time(),
         TransactionStatus::Succeeded,
     )
     .await
 }
 
-#[update(name = "setName")]
-#[candid_method(update, rename = "setName")]
-fn set_name(name: String) {
+#[update]
+#[candid_method(update)]
+async fn burn(amount: Nat) -> TxReceipt {
     let caller = ic::caller();
+    let caller_balance = balance_of(caller);
+    if caller_balance.clone() < amount.clone() {
+        return Err(TxError::InsufficientBalance);
+    }
+    BALANCES.with(|b| {
+        let mut balances = b.borrow_mut();
+        balances.insert(caller, caller_balance - amount.clone());
+    });
     STATS.with(|s| {
         let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.name = name;
+        stats.total_supply -= amount.clone();
     });
+    _history_inc();
+    add_record(
+        caller,
+        Operation::Burn,
+        caller,
+        caller,
+        amount,
+        Nat::from(0),
+        ic::time(),
+        TransactionStatus::Succeeded,
+    )
+    .await
 }
 
-#[update(name = "setLogo")]
-#[candid_method(update, rename = "setLogo")]
-fn set_logo(logo: String) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.logo = logo;
-    });
-}
-
-#[update(name = "setFee")]
-#[candid_method(update, rename = "setFee")]
-fn set_fee(fee: Nat) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.fee = fee;
-    });
-}
-
-#[update(name = "setFeeTo")]
-#[candid_method(update, rename = "setFeeTo")]
-fn set_fee_to(fee_to: Principal) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.fee_to = fee_to;
-    });
-}
-
-#[update(name = "setOwner")]
-#[candid_method(update, rename = "setOwner")]
-fn set_owner(owner: Principal) {
-    let caller = ic::caller();
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        assert_eq!(caller, stats.owner);
-        stats.owner = owner;
-    });
-}
+/* QUERY FNS */
 
 #[query(name = "balanceOf")]
 #[candid_method(query, rename = "balanceOf")]
@@ -388,7 +317,7 @@ fn balance_of(id: Principal) -> Nat {
     })
 }
 
-#[query(name = "allowance")]
+#[query]
 #[candid_method(query)]
 fn allowance(owner: Principal, spender: Principal) -> Nat {
     ALLOWS.with(|a| {
@@ -403,16 +332,16 @@ fn allowance(owner: Principal, spender: Principal) -> Nat {
     })
 }
 
-#[query(name = "logo")]
-#[candid_method(query, rename = "logo")]
-fn get_logo() -> String {
+#[query]
+#[candid_method(query)]
+fn logo() -> String {
     STATS.with(|s| {
         let stats = s.borrow();
         stats.logo.clone()
     })
 }
 
-#[query(name = "name")]
+#[query]
 #[candid_method(query)]
 fn name() -> String {
     STATS.with(|s| {
@@ -421,7 +350,7 @@ fn name() -> String {
     })
 }
 
-#[query(name = "symbol")]
+#[query]
 #[candid_method(query)]
 fn symbol() -> String {
     STATS.with(|s| {
@@ -430,7 +359,7 @@ fn symbol() -> String {
     })
 }
 
-#[query(name = "decimals")]
+#[query]
 #[candid_method(query)]
 fn decimals() -> u8 {
     STATS.with(|s| {
@@ -448,7 +377,7 @@ fn total_supply() -> Nat {
     })
 }
 
-#[query(name = "owner")]
+#[query]
 #[candid_method(query)]
 fn owner() -> Principal {
     STATS.with(|s| {
@@ -461,15 +390,15 @@ fn owner() -> Principal {
 #[candid_method(query, rename = "getMetadata")]
 fn get_metadata() -> Metadata {
     STATS.with(|stats| {
-        let s = stats.borrow();
+        let s = stats.borrow().clone();
         Metadata {
-            logo: s.logo.clone(),
-            name: s.name.clone(),
-            symbol: s.symbol.clone(),
+            logo: s.logo,
+            name: s.name,
+            symbol: s.symbol,
             decimals: s.decimals,
-            totalSupply: s.total_supply.clone(),
+            totalSupply: s.total_supply,
             owner: s.owner,
-            fee: s.fee.clone(),
+            fee: s.fee,
         }
     })
 }
@@ -486,50 +415,47 @@ fn history_size() -> usize {
 #[query(name = "getTokenInfo")]
 #[candid_method(query, rename = "getTokenInfo")]
 fn get_token_info() -> TokenInfo {
-    let mut len = 0;
-    BALANCES.with(|b| {
-        let balances = b.borrow();
-        len = balances.len();
-    });
-
     STATS.with(|s| {
         let stats = s.borrow();
-        TokenInfo {
-            metadata: get_metadata(),
-            feeTo: stats.fee_to,
-            historySize: stats.history_size,
-            deployTime: stats.deploy_time,
-            holderNumber: len,
-            cycles: ic::balance(),
-        }
+        BALANCES.with(|b| {
+            let balances = b.borrow();
+            TokenInfo {
+                metadata: get_metadata(),
+                feeTo: stats.fee_to,
+                historySize: stats.history_size,
+                deployTime: stats.deploy_time,
+                holderNumber: balances.len(),
+                cycles: ic::balance(),
+            }
+        })
     })
 }
 
 #[query(name = "getHolders")]
 #[candid_method(query, rename = "getHolders")]
 fn get_holders(start: usize, limit: usize) -> Vec<(Principal, Nat)> {
-    let mut balance = Vec::new();
     BALANCES.with(|b| {
         let balances = b.borrow();
+        let mut balance = Vec::new();
         for (k, v) in balances.iter() {
             balance.push((k.clone(), v.clone()));
         }
-    });
-    balance.sort_by(|a, b| b.1.cmp(&a.1));
-    let limit: usize = if start + limit > balance.len() {
-        balance.len() - start
-    } else {
-        limit
-    };
-    balance[start..start + limit].to_vec()
+        balance.sort_by(|a, b| b.1.cmp(&a.1));
+        let limit: usize = if start + limit > balance.len() {
+            balance.len() - start
+        } else {
+            limit
+        };
+        balance[start..start + limit].to_vec()
+    })
 }
 
 #[query(name = "getAllowanceSize")]
 #[candid_method(query, rename = "getAllowanceSize")]
 fn get_allowance_size() -> usize {
-    let mut size = 0;
     ALLOWS.with(|a| {
         let allowances = a.borrow();
+        let mut size = 0;
         for (_, v) in allowances.iter() {
             size += v.len();
         }
@@ -546,6 +472,157 @@ fn get_user_approvals(who: Principal) -> Vec<(Principal, Nat)> {
             Some(allow) => Vec::from_iter(allow.clone().into_iter()),
             None => Vec::new(),
         }
+    })
+}
+
+/* CONTROLLER FNS */
+
+#[update(guard = "_is_auth")]
+#[candid_method(update, rename = "mint")]
+async fn mint(to: Principal, amount: Nat) -> TxReceipt {
+    let caller = ic::caller();
+    let to_balance = balance_of(to);
+
+    BALANCES.with(|b| {
+        let mut balances = b.borrow_mut();
+        balances.insert(to, to_balance + amount.clone());
+    });
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.total_supply += amount.clone();
+    });
+    _history_inc();
+    add_record(
+        caller,
+        Operation::Mint,
+        caller,
+        to,
+        amount,
+        Nat::from(0),
+        ic::time(),
+        TransactionStatus::Succeeded,
+    )
+    .await
+}
+
+#[update(name = "setName", guard = "_is_auth")]
+#[candid_method(update, rename = "setName")]
+fn set_name(name: String) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.name = name;
+    });
+}
+
+#[update(name = "setLogo", guard = "_is_auth")]
+#[candid_method(update, rename = "setLogo")]
+fn set_logo(logo: String) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.logo = logo;
+    });
+}
+
+#[update(name = "setFee", guard = "_is_auth")]
+#[candid_method(update, rename = "setFee")]
+fn set_fee(fee: Nat) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.fee = fee;
+    });
+}
+
+#[update(name = "setFeeTo", guard = "_is_auth")]
+#[candid_method(update, rename = "setFeeTo")]
+fn set_fee_to(fee_to: Principal) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.fee_to = fee_to;
+    });
+}
+
+#[update(name = "setOwner", guard = "_is_auth")]
+#[candid_method(update, rename = "setOwner")]
+fn set_owner(owner: Principal) {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.owner = owner;
+    });
+}
+
+/* INTERNAL FNS */
+
+// TODO: use controllers for ownership
+// this will require the canister to be a controller of itself (like dip721)
+fn _is_auth() -> Result<(), String> {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        if ic::caller() == stats.owner {
+            Ok(())
+        } else {
+            Err("Error: Unauthorized principal ID".to_string())
+        }
+    })
+}
+
+fn _balance_ins(from: Principal, value: Nat) {
+    BALANCES.with(|b| {
+        let mut balances = b.borrow_mut();
+        balances.insert(from, value);
+    });
+}
+
+fn _balance_rem(from: Principal) {
+    BALANCES.with(|b| {
+        let mut balances = b.borrow_mut();
+        balances.remove(&from);
+    });
+}
+
+fn _transfer(from: Principal, to: Principal, value: Nat) {
+    let from_balance = balance_of(from);
+    let from_balance_new = from_balance - value.clone();
+
+    // TODO: check this logic ↴
+    if from_balance_new != 0 {
+        _balance_ins(from, from_balance_new);
+    } else {
+        _balance_rem(from)
+    }
+    let to_balance = balance_of(to);
+    let to_balance_new = to_balance + value;
+    if to_balance_new != 0 {
+        _balance_ins(to, to_balance_new);
+    }
+}
+
+fn _charge_fee(user: Principal, fee: Nat) {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        if stats.fee > Nat::from(0) {
+            _transfer(user, stats.fee_to, fee);
+        }
+    });
+}
+
+fn _get_fee() -> Nat {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        stats.fee.clone()
+    })
+}
+
+fn _get_owner() -> Principal {
+    STATS.with(|s| {
+        let stats = s.borrow();
+        stats.owner
+    })
+}
+
+fn _history_inc() {
+    STATS.with(|s| {
+        let mut stats = s.borrow_mut();
+        stats.history_size += 1;
     })
 }
 
@@ -645,254 +722,4 @@ async fn insert_into_cap_priv(ie: IndefiniteEvent) -> TxReceipt {
     }
 
     insert_res
-}
-
-// Proxy
-
-const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
-const WETH_ADDRESS_ETH: &str = "0x2e130e57021bb4dfb95eb4dd0dd8cfceb936148a";
-
-pub type Nonce = Nat;
-
-#[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq, Hash)]
-pub struct OutgoingMessage {
-    pub(crate) msg_key: [u8; 32],
-    pub(crate) msg_hash: String,
-}
-
-#[derive(Deserialize, CandidType)]
-pub struct ConsumeMessageParam {
-    pub eth_addr: Principal,
-    pub payload: Vec<Nat>,
-}
-
-#[derive(Deserialize, CandidType)]
-pub struct SendMessageParam {
-    pub eth_addr: Principal,
-    pub payload: Vec<Nat>,
-}
-
-pub trait ToNat {
-    fn to_nat(&self) -> Nat;
-}
-
-impl ToNat for Principal {
-    fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
-    }
-}
-
-pub trait FromNat {
-    fn from_nat(input: Nat) -> Principal;
-}
-
-impl FromNat for Principal {
-    #[inline(always)]
-    fn from_nat(input: Nat) -> Principal {
-        let be_bytes = input.0.to_bytes_be();
-        let be_bytes_len = be_bytes.len();
-        let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
-            29 - be_bytes_len
-        } else if be_bytes_len < 10 {
-            10 - be_bytes_len
-        } else {
-            0
-        };
-        let mut p_slice = vec![0u8; padding_bytes];
-        p_slice.extend_from_slice(&be_bytes);
-        Principal::from_slice(&p_slice)
-    }
-}
-
-#[update(name = "mint")]
-#[candid_method(update, rename = "mint")]
-async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
-    let caller = ic::caller();
-    if caller != _get_owner() {
-        return Err(TxError::Unauthorized);
-    }
-    let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
-    let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
-
-    let consume: Result<(bool, String), _> = ic::call(
-        Principal::from_str(TERA_ADDRESS).unwrap(),
-        "consume_message",
-        (&weth_eth_addr_pid, nonce, &payload),
-    )
-    .await;
-
-    if consume.is_ok() {
-        let amount = Nat::from(payload[1].0.clone());
-        let to = Principal::from_nat(payload[0].clone());
-        let to_balance = balance_of(to);
-
-        BALANCES.with(|b| {
-            let mut balances = b.borrow_mut();
-            balances.insert(to, to_balance + amount.clone());
-        });
-        STATS.with(|s| {
-            let mut stats = s.borrow_mut();
-            stats.total_supply += amount.clone();
-        });
-        _history_inc();
-
-        return add_record(
-            caller,
-            Operation::Mint,
-            caller,
-            to,
-            amount,
-            Nat::from(0),
-            ic::time(),
-            TransactionStatus::Succeeded,
-        )
-        .await;
-    }
-
-    Err(TxError::Other(format!(
-        "Consuming message from L1 failed with caller {:?}!",
-        caller
-    )))
-}
-
-#[update(name = "burn")]
-#[candid_method(update, rename = "burn")]
-async fn burn(eth_addr: Principal, amount: Nat) -> TxReceipt {
-    let caller = ic::caller();
-    let caller_balance = balance_of(caller);
-    if caller_balance.clone() < amount.clone() {
-        return Err(TxError::InsufficientBalance);
-    }
-    BALANCES.with(|b| {
-        let mut balances = b.borrow_mut();
-        balances.insert(caller, caller_balance - amount.clone());
-    });
-    STATS.with(|s| {
-        let mut stats = s.borrow_mut();
-        stats.total_supply -= amount.clone();
-    });
-    _history_inc();
-
-    let payload = [eth_addr.clone().to_nat(), amount.clone()];
-    let weth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
-    let weth_eth_addr_pid = Principal::from_slice(&hex::decode(weth_addr_hex).unwrap());
-
-    let send_message: Result<(OutgoingMessage, String), _> = ic::call(
-        Principal::from_str(TERA_ADDRESS).unwrap(),
-        "send_message",
-        (&weth_eth_addr_pid, &payload),
-    )
-    .await;
-
-    match send_message {
-        Ok(result) => {
-            let outgoing_message = result.0;
-
-            let msg_hash_as_nat = Nat::from(num_bigint::BigUint::from_bytes_be(
-                &outgoing_message.msg_key,
-            ));
-
-            let add = add_record(
-                caller,
-                Operation::Burn,
-                caller,
-                caller,
-                amount.clone(),
-                Nat::from(0),
-                ic::time(),
-                TransactionStatus::Succeeded,
-            )
-            .await;
-
-            if add.is_ok() {
-                return Ok(msg_hash_as_nat);
-            }
-
-            Err(TxError::LedgerTrap)
-        }
-        Err(_) => {
-            BALANCES.with(|b| {
-                let mut balances = b.borrow_mut();
-                balances.insert(caller, balance_of(caller) + amount.clone());
-            });
-
-            STATS.with(|s| {
-                let mut stats = s.borrow_mut();
-                stats.total_supply += amount.clone();
-            });
-
-            Err(TxError::Other(format!(
-                "Sending message to L1 failed with caller {:?} and {}!",
-                caller, amount
-            )))
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use ic_cdk::export::candid::{decode_args, encode_args, Nat};
-    use ic_kit::candid::Principal;
-    use std::{ops::Mul, str::FromStr};
-
-    use crate::FromNat;
-
-    #[test]
-    fn nat_to_pid() {
-        let receiver =
-            Nat::from_str("18824246983838276872301504726052517757254996994179285355049850184706")
-                .unwrap();
-
-        let pid = Principal::from_nat(receiver);
-        let expected_pid = "kyxzn-5aawk-7tlkc-pvrag-fioax-rhyre-nev4e-4lyc6-ifk4v-zrvlm-sae";
-
-        assert_eq!(expected_pid, pid.to_text());
-    }
-
-    #[test]
-    fn test_decode_eth_payload() {
-        let payload = [
-            // amount
-            Nat::from_str("100000000000000000").unwrap(),
-            // eth_addr
-            Nat::from_str("1390849295786071768276380950238675083608645509734").unwrap(),
-        ]
-        .to_vec();
-
-        let args_raw = encode_args((
-            Nat::from(payload[0].0.clone()),
-            hex::encode(&payload[1].0.to_bytes_be()),
-        ))
-        .unwrap();
-
-        let (amount, eth_addr): (Nat, String) = decode_args(&args_raw).unwrap();
-
-        let expected_amount = "016345785d8a0000";
-        assert_eq!(hex::encode(amount.0.to_bytes_be()), expected_amount);
-
-        let expected_eth_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
-        assert_eq!(eth_addr, expected_eth_addr);
-    }
-
-    #[test]
-    fn test_pid_to_ether_hex() {
-        let from_principal = Principal::from_slice(
-            &hex::decode("f39fd6e51aad88f6f4ce6ab8827279cfffb92266").unwrap(),
-        );
-
-        let expected_ether_addr = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
-        println!("{}", from_principal.to_string());
-        assert_eq!(hex::encode(from_principal), expected_ether_addr);
-    }
-
-    #[test]
-    fn test_msg_key_nat_to_hex() {
-        let msg_key_nat = Nat::from_str("86_855_831_666_600_905_947_423_310_688_086_934_908_714_905_915_540_673_094_718_154_189_320_832_230_868").unwrap();
-        let msg_key = hex::encode(msg_key_nat.0.to_bytes_be());
-
-        let expected_msg_key =
-            String::from("c006a89a6884a2c0c24fbf1ed3df36600e96a4f540f1879fceb27d506a9525d4");
-
-        assert_eq!(expected_msg_key, msg_key);
-    }
 }
