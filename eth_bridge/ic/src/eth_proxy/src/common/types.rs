@@ -12,10 +12,21 @@ pub type MessageHash = String;
 
 pub type EthereumAddr = Principal;
 
+pub type MsgHashKey = [u8; 32];
+
 pub type TxReceipt = Result<Nat, TxError>;
 
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub struct ClaimableMessage {
+    pub owner: EthereumAddr,
+    pub msg_key: MsgHashKey,
+    pub msg_hash: MessageHash,
+    pub token: TokendId,
+    pub amount: Nat,
+}
 
 #[derive(CandidType, Deserialize, Debug)]
 pub enum FactoryError {
@@ -61,6 +72,8 @@ pub struct ProxyState {
     pub balances: RefCell<HashMap<Principal, HashMap<TokendId, Nat>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
+    // store outgoing massages waiting to be claimed
+    pub messages_unclaimed: RefCell<HashMap<EthereumAddr, Vec<ClaimableMessage>>>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
@@ -71,6 +84,8 @@ pub struct StableProxyState {
     pub balances: HashMap<Principal, HashMap<Principal, Nat>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
+    // store outgoing massages waiting to be claimed
+    pub messages_unclaimed: HashMap<EthereumAddr, Vec<ClaimableMessage>>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Copy)]

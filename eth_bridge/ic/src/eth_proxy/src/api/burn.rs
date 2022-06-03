@@ -8,7 +8,7 @@ use crate::common::weth::Weth;
 use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_IC};
 use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::common::types::{EthereumAddr, TxError, TxReceipt};
+use crate::common::types::{ClaimableMessage, EthereumAddr, TxError, TxReceipt};
 
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
@@ -39,34 +39,49 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
                     let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
 
-                    if tera_id
-                        .send_message(weth_ic_addr_pid, payload)
-                        .await
-                        .is_err()
-                    {
-                        return Err(TxError::Other(format!(
-                            "Sending message to L1 failed with caller {:?}!",
-                            caller.to_string()
-                        )));
+                    let send_message = tera_id.send_message(weth_ic_addr_pid, payload).await;
+                    match send_message {
+                        Ok(outgoing_message) => {
+                            // there could be an underflow here
+                            // like negative balance
+                            STATE.with(|s| {
+                                let current_balance = s
+                                    .get_balance(caller, weth_ic_addr_pid)
+                                    .unwrap_or(Nat::from(0));
+
+                                s.update_balance(
+                                    caller,
+                                    weth_ic_addr_pid,
+                                    current_balance - amount.clone(),
+                                );
+
+                                s.add_claimable_message(ClaimableMessage {
+                                    owner: eth_addr.clone(),
+                                    msg_hash: outgoing_message.msg_hash.clone(),
+                                    msg_key: outgoing_message.msg_key.clone(),
+                                    token: weth_ic_addr_pid.clone(),
+                                    amount: amount.clone(),
+                                });
+                            });
+                            // All correct
+                            return Ok(burn_txn_id);
+                        }
+                        // send_message to Tera error
+                        Err(_) => {
+                            return Err(TxError::Other(format!(
+                                "Sending message to L1 failed with caller {:?}!",
+                                caller.to_string()
+                            )));
+                        }
                     }
-
-                    // there could be an underflow here
-                    // like negative balance
-                    let current_balance = STATE.with(|s| {
-                        s.get_balance(caller, weth_ic_addr_pid)
-                            .unwrap_or(Nat::from(0))
-                    });
-
-                    STATE.with(|s| {
-                        s.update_balance(caller, weth_ic_addr_pid, current_balance - amount.clone())
-                    });
-                    return Ok(burn_txn_id);
                 }
+                // burn error
                 Err(error) => {
                     return Err(error);
                 }
             };
         }
+        // transfer_from error
         Err(error) => Err(error),
     }
 }
