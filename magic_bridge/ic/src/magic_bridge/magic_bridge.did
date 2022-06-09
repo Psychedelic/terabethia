@@ -1,3 +1,17 @@
+type CreateCanisterParam = record {
+  cap : principal;
+  fee : nat;
+  decimals : nat8;
+  controllers : vec principal;
+  fee_to : principal;
+  owner : principal;
+  logo : text;
+  name : text;
+  cycles : nat64;
+  token_type : TokenType;
+  total_supply : nat;
+  symbol : text;
+};
 type FactoryError = variant {
   CanisterStatusNotAvailableError;
   CreateCanisterError;
@@ -10,8 +24,10 @@ type TokenType = variant { DIP20; DIP721 };
 service : {
   authorize : (principal) -> ();
   create : (TokenType, vec nat) -> (Result);
-  get_all_canisters : () -> (vec record { principal; principal });
-  get_canister : (principal) -> (opt principal);
-  get_failed_registrations : () -> (vec record { principal; principal });
   flush_failed_registrations : () -> ();
+  get_all : () -> (vec record { principal; principal }) query;
+  get_canister : (principal) -> (opt principal) query;
+  get_failed_registrations : () -> (
+      vec record { principal; record { CreateCanisterParam; nat8 } },
+    ) query;
 }

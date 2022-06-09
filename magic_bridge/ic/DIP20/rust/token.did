@@ -63,3 +63,5 @@ service : (
   transfer : (principal, nat) -> (Result);
   transferFrom : (principal, principal, nat) -> (Result);
 }
+
+dfx canister --network ic call 6trho-eyaaa-aaaab-qafnq-cai totalSupply '()'
