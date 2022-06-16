@@ -5,7 +5,6 @@ cd ..
 
 STAGE=$2
 NETWORK=ic
-
 if [[ "$STAGE" == "testnet" ]]; then
    NETWORK=fleek
 fi
@@ -39,19 +38,9 @@ WASM=src/wasm/dip20/token-opt.wasm
 
 mkdir -p $DEST && cp -R $WASM "$_"
 
-dfx canister --network $NETWORK install_code magic_bridge "(
+dfx canister --network $NETWORK call magic_bridge upgrade_code  "(
    principal \"$1\",
-   ( vec {
-      \"test logo\", 
-      \"Botch\", 
-      \"BOT\", 
-      18:nat8, 
-      0:nat,
-      principal \"$MAGIC\", 
-      0,
-      principal \"$MAGIC\", 
-      principal \"$CAP_ID\", 
-   })
+   variant { \"DIP20\" }
 )"
 
 # dfx canister --network $NETWORK \

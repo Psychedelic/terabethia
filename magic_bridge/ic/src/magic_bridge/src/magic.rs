@@ -2,13 +2,11 @@ use crate::factory::CreateCanisterParam;
 use crate::types::*;
 use ic_kit::candid::{CandidType, Deserialize};
 use ic_kit::interfaces::management::{
-    CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, InstallCode,
-    StartCanister, StopCanister, UninstallCode, UpdateSettings, WithCanisterId,
+    CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, StartCanister,
+    StopCanister, UninstallCode, UpdateSettings, WithCanisterId,
 };
-use ic_kit::interfaces::Method;
-use ic_kit::{ic, interfaces::management};
-use ic_kit::{Principal, RejectionCode};
-use management::{InstallCodeArgument, UpdateSettingsArgument};
+use ic_kit::{ic, interfaces::management, interfaces::Method, Principal, RejectionCode};
+use management::UpdateSettingsArgument;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -95,8 +93,11 @@ impl MagicState {
         UpdateSettings::perform(Principal::management_canister(), (args,)).await
     }
 
-    pub async fn install_code(args: InstallCodeArgument) -> Result<(), (RejectionCode, String)> {
-        InstallCode::perform(Principal::management_canister(), (args,)).await
+    pub async fn install_code(
+        args: InstallCodeArgumentBorrowed<'_>,
+    ) -> Result<(), (RejectionCode, String)> {
+        // InstallCode::perform(Principal::management_canister(), (args,)).await
+        ic::call(Principal::management_canister(), "install_code", (args,)).await
     }
 
     pub async fn _uninstall_code(canister_id: CanisterId) -> Result<(), (RejectionCode, String)> {

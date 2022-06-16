@@ -23,7 +23,7 @@ type InstallCodeError = variant {
   CanisterStatusNotAvailableError;
   EncodeError;
   CanisterDoesNotExistError;
-  InstallCodeError;
+  InstallCodeError : text;
 };
 type Result = variant { Ok : principal; Err : FactoryError };
 type Result_1 = variant { Ok : principal; Err : InstallCodeError };
@@ -37,5 +37,5 @@ service : {
   get_failed_registrations : () -> (
       vec record { principal; record { CreateCanisterParam; nat8 } },
     ) query;
-  install_code : (principal, CreateCanisterParam) -> (Result_1);
+  upgrade_code : (principal, TokenType) -> (Result_1);
 }
