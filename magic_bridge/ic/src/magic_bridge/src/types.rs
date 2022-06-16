@@ -22,6 +22,14 @@ pub enum FactoryError {
     CodeAlreadyInstalled,
     InstallCodeError,
 }
+#[derive(CandidType, Deserialize, Debug)]
+
+pub enum InstallCodeError {
+    CanisterDoesNotExistError,
+    CanisterStatusNotAvailableError,
+    EncodeError,
+    InstallCodeError,
+}
 
 #[derive(Deserialize, CandidType, Debug, PartialEq)]
 pub enum TxError {

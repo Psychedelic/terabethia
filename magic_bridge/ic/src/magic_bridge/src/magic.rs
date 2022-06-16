@@ -34,6 +34,16 @@ pub struct StableMagicState {
 }
 
 impl MagicState {
+    pub fn canister_exists(&self, canister_id: Principal) -> Result<Principal, String> {
+        // find canister_id by iterating over canisters.values
+        for value_canister_id in self.canisters.borrow().values() {
+            if *value_canister_id == canister_id {
+                return Ok(canister_id);
+            }
+        }
+        Err(String::from("Canister does not exist"))
+    }
+
     pub fn get_canister(&self, eth_addr: EthereumAddr) -> Option<CanisterId> {
         self.canisters.borrow().get(&eth_addr).cloned()
     }
@@ -85,7 +95,7 @@ impl MagicState {
         UpdateSettings::perform(Principal::management_canister(), (args,)).await
     }
 
-    pub async fn _install_code(args: InstallCodeArgument) -> Result<(), (RejectionCode, String)> {
+    pub async fn install_code(args: InstallCodeArgument) -> Result<(), (RejectionCode, String)> {
         InstallCode::perform(Principal::management_canister(), (args,)).await
     }
 
