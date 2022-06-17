@@ -64,8 +64,8 @@ pub async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 
     STATE.with(|s| s.update_incoming_message_status(msg_hash.clone(), MessageStatus::Consuming));
 
-    let amount = Nat::from(payload[2].0.clone());
-    let to = Principal::from_nat(payload[1].clone());
+    let amount = Nat::from(payload[1].0.clone());
+    let to = Principal::from_nat(payload[0].clone());
 
     match weth_ic_addr_pid.mint(to, amount).await {
         Ok(txn_id) => {
