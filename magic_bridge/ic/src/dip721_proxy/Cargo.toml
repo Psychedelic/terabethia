@@ -4,12 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-path = "src/lib.rs"
+path = "src/main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
 ic-kit = "0.4.4"
 ic-cdk = "0.4.0"
-ic-cdk-macros = "0.3"
+candid = "0.7.4"
+ic-cdk-macros = "0.4"
 hex = "0.4.3"
-serde = "1.0.116"
+sha3 = "0.9.1"
+async-trait = "0.1.51"
+serde = "1.0.130"
+serde_bytes = "0.11.5"
+num-bigint = "0.4.3"
