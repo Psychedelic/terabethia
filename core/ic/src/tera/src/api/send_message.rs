@@ -18,7 +18,7 @@ fn send(to: Principal, payload: Vec<Nat>) -> SendMessageResponse {
     let msg_hash = Message.calculate_hash(OutgoingMessageHashParams {
         from: caller.to_nat(),
         to: to.to_nat(),
-        payload: payload.clone(),
+        payload,
     });
 
     STATE.with(|s| SendMessageResponse(s.store_outgoing_message(msg_hash)))

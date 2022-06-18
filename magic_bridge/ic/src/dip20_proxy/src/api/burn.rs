@@ -20,7 +20,7 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            token_id.to_string(),
+            token_id,
         )));
     }
 
@@ -55,8 +55,9 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                             STATE.with(|s| {
                                 // there could be an underflow here
                                 // like negative balance
-                                let current_balance =
-                                    s.get_balance(caller, token_id).unwrap_or(Nat::from(0));
+                                let current_balance = s
+                                    .get_balance(caller, token_id)
+                                    .unwrap_or_else(|| Nat::from(0));
 
                                 s.update_balance(
                                     caller,
@@ -65,15 +66,15 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                                 );
 
                                 s.add_claimable_message(ClaimableMessage {
-                                    owner: eth_addr.clone(),
+                                    owner: eth_addr,
                                     msg_hash: outgoing_message.msg_hash.clone(),
-                                    msg_key: outgoing_message.msg_key.clone(),
-                                    token: token_id.clone(),
+                                    msg_key: outgoing_message.msg_key,
+                                    token: token_id,
                                     amount: amount.clone(),
                                 });
                             });
                             // All correct
-                            return Ok(burn_txn_id);
+                            Ok(burn_txn_id)
                         }
                         // send_message error
                         Err(_) => {
@@ -85,10 +86,8 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                     }
                 }
                 // burn error
-                Err(error) => {
-                    return Err(error);
-                }
-            };
+                Err(error) => Err(error),
+            }
         }
         // transfer error
         Err(error) => Err(error),

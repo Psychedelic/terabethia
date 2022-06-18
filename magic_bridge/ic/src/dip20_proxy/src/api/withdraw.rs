@@ -25,7 +25,7 @@ pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) 
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            token_id.to_string(),
+            token_id,
         )));
     }
 
@@ -37,7 +37,7 @@ pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) 
         let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
         if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
-            return Err(TxError::Other(format!("Sending message to L1 failed!")));
+            return Err(TxError::Other("Sending message to L1 failed!".to_string()));
         }
 
         let zero = Nat::from(0_u32);

@@ -23,7 +23,7 @@ pub async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     if (weth_ic_addr_pid.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            weth_ic_addr_pid.to_string()
+            weth_ic_addr_pid,
         )));
     }
 

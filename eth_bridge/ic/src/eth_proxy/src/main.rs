@@ -8,7 +8,6 @@ fn main() {}
 #[cfg(not(any(target_arch = "wasm32", test)))]
 fn main() {
     use common::types::*;
-    use ic_kit::candid;
     use ic_kit::candid::Nat;
     use ic_kit::Principal;
 

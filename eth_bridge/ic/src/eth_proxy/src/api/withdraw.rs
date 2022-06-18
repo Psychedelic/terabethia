@@ -28,7 +28,7 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     if (weth_ic_addr_pid.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            weth_ic_addr_pid.to_string(),
+            weth_ic_addr_pid,
         )));
     }
 
@@ -44,7 +44,7 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
             .await
             .is_err()
         {
-            return Err(TxError::Other(format!("Sending message to L1 failed!")));
+            return Err(TxError::Other("Sending message to L1 failed!".to_string()));
         }
 
         let zero = Nat::from(0_u32);

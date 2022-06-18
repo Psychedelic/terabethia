@@ -49,7 +49,7 @@ pub type DABResponse = Result<(), OperationError>;
     If the registration fails, it increases the retry_count for the canister.
 */
 pub async fn retry_failed_canisters(
-    mut failed_canisters: Vec<(Principal, (CreateCanisterParam, RetryCount))>,
+    failed_canisters: Vec<(Principal, (CreateCanisterParam, RetryCount))>,
 ) -> Vec<(Principal, (CreateCanisterParam, RetryCount))> {
     let mut failed_retry_canisters = Vec::new();
     for (canister_id, (params, retry_count)) in failed_canisters {
@@ -68,11 +68,11 @@ pub async fn register_canister(
     canister_id: Principal,
     params: &CreateCanisterParam,
 ) -> Result<Principal, OperationError> {
-    match call_dab(canister_id, &params).await {
-        Ok(_) => return Ok(canister_id),
+    match call_dab(canister_id, params).await {
+        Ok(_) => Ok(canister_id),
         Err(op_error) => {
             STATE.with(|s| s.add_failed_canister(canister_id, params, 0));
-            return Err(op_error);
+            Err(op_error)
         }
     }
 }
@@ -93,7 +93,7 @@ async fn register_dip20(
     canister_id: Principal,
     params: &CreateCanisterParam,
 ) -> Result<(), OperationError> {
-    let dab_tokens_address = ic_kit::Principal::from_str(&DAB_TOKEN_ADDRESS).unwrap();
+    let dab_tokens_address = ic_kit::Principal::from_str(DAB_TOKEN_ADDRESS).unwrap();
 
     let details = vec![
         (
@@ -117,7 +117,7 @@ async fn register_dip20(
         thumbnail: "https://terabethia.ooo/".to_string(),
         frontend: Some("https://terabethia.ooo/".to_string()),
         principal_id: canister_id,
-        details: details,
+        details,
     };
 
     let canister_call: (DABResponse,) = match ic::call(dab_tokens_address, "add", (dab_args,)).await
@@ -132,8 +132,8 @@ async fn register_dip20(
     };
 
     match canister_call {
-        (Ok(_),) => return Ok(()),
-        (Err(error),) => return Err(error),
+        (Ok(_),) => Ok(()),
+        (Err(error),) => Err(error),
     }
 }
 
@@ -142,5 +142,5 @@ async fn register_dip721(
     _params: &CreateCanisterParam,
 ) -> Result<(), OperationError> {
     // TODO
-    return Ok(());
+    Ok(())
 }

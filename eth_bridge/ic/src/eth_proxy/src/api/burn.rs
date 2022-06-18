@@ -20,7 +20,7 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
     if (weth_ic_addr_pid.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            weth_ic_addr_pid.to_string(),
+            weth_ic_addr_pid,
         )));
     }
 
@@ -47,7 +47,7 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                             STATE.with(|s| {
                                 let current_balance = s
                                     .get_balance(caller, weth_ic_addr_pid)
-                                    .unwrap_or(Nat::from(0));
+                                    .unwrap_or_else(|| Nat::from(0));
 
                                 s.update_balance(
                                     caller,
@@ -56,15 +56,15 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                                 );
 
                                 s.add_claimable_message(ClaimableMessage {
-                                    owner: eth_addr.clone(),
+                                    owner: eth_addr,
                                     msg_hash: outgoing_message.msg_hash.clone(),
-                                    msg_key: outgoing_message.msg_key.clone(),
-                                    token: weth_ic_addr_pid.clone(),
+                                    msg_key: outgoing_message.msg_key,
+                                    token: weth_ic_addr_pid,
                                     amount: amount.clone(),
                                 });
                             });
                             // All correct
-                            return Ok(burn_txn_id);
+                            Ok(burn_txn_id)
                         }
                         // send_message to Tera error
                         Err(_) => {
@@ -77,9 +77,9 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                 }
                 // burn error
                 Err(error) => {
-                    return Err(error);
+                    Err(error)
                 }
-            };
+            }
         }
         // transfer_from error
         Err(error) => Err(error),

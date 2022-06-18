@@ -71,7 +71,7 @@ impl From<OutgoingMessagePair> for OutgoingMessage {
         let mut msg_key = [0u8; 32];
         let msg_key_slice = &hex::decode(message.msg_key).unwrap()[..];
 
-        msg_key.copy_from_slice(&msg_key_slice);
+        msg_key.copy_from_slice(msg_key_slice);
 
         OutgoingMessage {
             msg_key: msg_key.to_vec(),
@@ -96,7 +96,7 @@ pub trait ToNat {
 impl ToNat for Principal {
     #[inline(always)]
     fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+        Nat::from(num_bigint::BigUint::from_bytes_be(self.as_slice()))
     }
 }
 
@@ -213,7 +213,7 @@ impl TerabetiaState {
             .borrow()
             .contains(&caller())
             .then(|| ())
-            .ok_or("Caller is not authorized".to_string())
+            .ok_or_else(|| "Caller is not authorized".to_string())
     }
 
     /// Add new pid to list of authorized

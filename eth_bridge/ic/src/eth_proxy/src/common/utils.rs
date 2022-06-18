@@ -44,7 +44,7 @@ impl Keccak256HashFn<IncomingMessageHashParams> for Message {
                 let slice = &x.0.to_bytes_be()[..];
                 // calculate zero values padding
                 let l = 32 - slice.len();
-                [&f[..l], &slice].concat()
+                [&f[..l], slice].concat()
             })
             .collect();
 
@@ -55,7 +55,7 @@ impl Keccak256HashFn<IncomingMessageHashParams> for Message {
 
         let result = hasher.finalize();
 
-        hex::encode(result.to_vec())
+        hex::encode(result)
     }
 }
 
@@ -73,7 +73,7 @@ impl Keccak256HashFn<OutgoingMessageHashParams> for Message {
                 let slice = &x.0.to_bytes_be()[..];
                 // calculate zero values padding
                 let l = 32 - slice.len();
-                [&f[..l], &slice].concat()
+                [&f[..l], slice].concat()
             })
             .collect();
 
@@ -84,6 +84,6 @@ impl Keccak256HashFn<OutgoingMessageHashParams> for Message {
 
         let result = hasher.finalize();
 
-        hex::encode(result.to_vec())
+        hex::encode(result)
     }
 }

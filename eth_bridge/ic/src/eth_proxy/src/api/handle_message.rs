@@ -12,10 +12,10 @@ use crate::proxy::WETH_ADDRESS_ETH;
 async fn handler(eth_addr: EthereumAddr, nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let eth_addr_hex = hex::encode(eth_addr);
 
-    if !(eth_addr_hex
-        == WETH_ADDRESS_ETH
+    if eth_addr_hex
+        != WETH_ADDRESS_ETH
             .trim_start_matches("0x")
-            .to_ascii_lowercase())
+            .to_ascii_lowercase()
     {
         return Err(TxError::Other(format!(
             "Eth Contract Address is inccorrect: {}",
