@@ -4,11 +4,10 @@ use ic_kit::{
 
 use crate::{
     api::admin::is_authorized,
+    factory::DIP20_WASM,
     magic::{MagicState, STATE},
     types::{InstallCodeArgumentBorrowed, InstallCodeError, TokenType},
 };
-
-const DIP20_WASM: &[u8] = include_bytes!("../../../wasm/dip20/token-opt.wasm");
 
 #[update(name = "upgrade_code", guard = "is_authorized")]
 #[candid_method(update, rename = "upgrade_code")]
