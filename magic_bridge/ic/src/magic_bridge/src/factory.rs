@@ -1,4 +1,4 @@
-use crate::{dab::register_canister, types::*};
+use crate::{cap, dab::register_canister, types::*};
 use ic_kit::{
     candid::{encode_args, CandidType, Deserialize, Nat},
     ic,
@@ -193,6 +193,8 @@ impl Factory {
         {
             return Err(FactoryError::InstallCodeError);
         }
+
+        let _ = cap::register_root_canister(canister_id).await;
 
         // we dont care about this result because retry logic is being handled by dab module
         ic_cdk::spawn(async move {
