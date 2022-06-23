@@ -25,15 +25,15 @@ if [[ "$STAGE" == "testnet" ]]; then
 fi
 
 #deploy all
-sudo dfx deploy --wallet "$(dfx identity --network ic get-wallet)" --network $NETWORK
+sudo dfx deploy --network $NETWORK
 
 # add dip20_proxy as controller of magic_proxy
 add_magic_controller() {   
-   dfx canister --wallet "$(dfx identity --network ic get-wallet)" --network $1 call magic_bridge authorize "(principal \"$2\")"
+   dfx canister --network $1 call magic_bridge authorize "(principal \"$2\")"
 }
 
 deploy_all() {
-   add_magic_controller "$NETWORK" "$MAGIC"
+   add_magic_controller "$NETWORK" "$DIP20"
 }
 
 deploy_all
