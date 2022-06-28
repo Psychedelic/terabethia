@@ -27,7 +27,7 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> ConsumeMessageRe
         from: from.to_nat(),
         to: caller.to_nat(),
         nonce: nonce.clone(),
-        payload: payload.clone(),
+        payload,
     });
 
     let res = STATE.with(|s| {
@@ -41,7 +41,7 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> ConsumeMessageRe
         let message_counter = message.unwrap();
 
         // if there is exactly 1 message, we'll remove it from hashmap
-        if message_counter.clone() == 1 {
+        if *message_counter == 1 {
             map.remove(&msg_hash);
         } else {
             *message_counter -= 1;

@@ -67,7 +67,7 @@ impl ProxyState {
             .or_default()
             .entry(token_id)
             .or_default()
-            .add_assign(amount.clone())
+            .add_assign(amount)
     }
 
     pub fn update_balance(&self, caller: Principal, token_id: TokendId, amount: Nat) {
@@ -78,10 +78,9 @@ impl ProxyState {
 
     pub fn add_claimable_message(&self, message: ClaimableMessage) {
         let mut map = self.messages_unclaimed.borrow_mut();
-        let messages = map.entry(message.owner.clone()).or_insert_with(Vec::new);
+        let messages = map.entry(message.owner).or_insert_with(Vec::new);
 
-        messages.push(message.clone());
-        return;
+        messages.push(message);
     }
 
     pub fn remove_claimable_message(
@@ -101,7 +100,7 @@ impl ProxyState {
             .ok_or_else(|| "Message not found")?;
 
         messages.remove(item_index);
-        return Ok(true);
+        Ok(true)
     }
 
     pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
@@ -111,7 +110,7 @@ impl ProxyState {
             .get(&eth_address)
             .unwrap_or(&vec![])
             .clone();
-        return unclaimed_messages;
+        unclaimed_messages
     }
 
     pub fn authorize(&self, other: Principal) {
@@ -127,7 +126,7 @@ impl ProxyState {
             .borrow()
             .contains(&ic::caller())
             .then(|| ())
-            .ok_or("Caller is not authorized".to_string())
+            .ok_or_else(|| "Caller is not authorized".to_string())
     }
 
     pub fn take_all(&self) -> StableProxyState {
@@ -162,7 +161,7 @@ pub trait ToNat {
 
 impl ToNat for Principal {
     fn to_nat(&self) -> Nat {
-        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+        Nat::from(num_bigint::BigUint::from_bytes_be(self.as_slice()))
     }
 }
 

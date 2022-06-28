@@ -21,5 +21,5 @@ fn remove_claimable(
     token_id: TokendId,
     amount: Nat,
 ) -> Result<bool, String> {
-    STATE.with(|s| s.remove_claimable_message(eth_address, token_id.clone(), amount.clone()))
+    STATE.with(|s| s.remove_claimable_message(eth_address, token_id, amount.clone()))
 }

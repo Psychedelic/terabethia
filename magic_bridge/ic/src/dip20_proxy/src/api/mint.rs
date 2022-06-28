@@ -17,7 +17,7 @@ pub async fn mint(token_id: TokendId, nonce: Nonce, payload: Vec<Nat>) -> TxRece
     if (token_id.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
-            token_id.to_string()
+            token_id
         )));
     }
 
