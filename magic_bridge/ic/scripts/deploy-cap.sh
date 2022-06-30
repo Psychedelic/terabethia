@@ -10,7 +10,7 @@ if [[ "$STAGE" == "testnet" ]]; then
    NETWORK=fleek
 fi
 
-dfx deploy --network $NETWORK ic-history-router
-CAP_ID=$(dfx canister --network $NETWORK id ic-history-router)
+dfx deploy --network $NETWORK cap-router
+CAP_ID=$(dfx canister --network $NETWORK id cap-router)
 
 echo $CAP_ID
