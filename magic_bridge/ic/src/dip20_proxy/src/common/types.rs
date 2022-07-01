@@ -12,8 +12,6 @@ pub type MessageHash = String;
 
 pub type EthereumAddr = Principal;
 
-pub type MsgHashKey = [u8; 32];
-
 pub type TxReceipt = Result<Nat, TxError>;
 
 pub type MagicResponse = Result<Principal, FactoryError>;
@@ -61,7 +59,7 @@ pub struct OutgoingMessage {
 pub struct ClaimableMessage {
     pub owner: EthereumAddr,
     pub msg_hash: String,
-    pub msg_key: MsgHashKey,
+    pub token_name: String,
     pub token: TokendId,
     pub amount: Nat,
 }

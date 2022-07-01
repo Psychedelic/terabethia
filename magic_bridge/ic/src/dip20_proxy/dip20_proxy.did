@@ -2,8 +2,8 @@ type ClaimableMessage = record {
   token : principal;
   msg_hash : text;
   owner : principal;
-  msg_key : vec nat8;
   amount : nat;
+  token_name : text;
 };
 type Result = variant { Ok : nat; Err : TxError };
 type Result_1 = variant { Ok : vec record { text; nat }; Err : text };

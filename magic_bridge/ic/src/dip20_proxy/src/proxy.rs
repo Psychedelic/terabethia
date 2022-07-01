@@ -417,10 +417,9 @@ mod tests {
         let eth_addr_1 = Principal::from_slice(
             &hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap(),
         );
-        let msg_key_1: [u8; 32] = [0; 32];
+        let token_name = String::from("USDC");
 
         let msg_hash_1 = String::from("123123123");
-        let msg_key_2: [u8; 32] = [1; 32];
         let token_id_1 = Principal::from_slice(
             &hex::decode("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").unwrap(),
         );
@@ -430,7 +429,7 @@ mod tests {
         let message_1 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            msg_key: msg_key_1.clone(),
+            token_name: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_1.clone(),
         };
@@ -439,7 +438,7 @@ mod tests {
         let message_2 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            msg_key: msg_key_2.clone(),
+            token_name: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_1.clone(),
         };
@@ -479,21 +478,19 @@ mod tests {
         let eth_addr_1 = Principal::from_slice(
             &hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap(),
         );
-        let msg_key_1: [u8; 32] = [0; 32];
+        let token_name = String::from("DAI");
         let msg_hash_1 = String::from("123123123");
         let token_id_1 = Principal::from_slice(
             &hex::decode("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").unwrap(),
         );
         let amount_1 = Nat::from(1_u64);
-
-        let msg_key_2: [u8; 32] = [1; 32];
         let amount_2 = Nat::from(2_u64);
 
         // first msg
         let message_1 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            msg_key: msg_key_1.clone(),
+            token_name: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_1.clone(),
         };
@@ -502,7 +499,7 @@ mod tests {
         let message_2 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            msg_key: msg_key_2.clone(),
+            token_name: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_2.clone(),
         };
