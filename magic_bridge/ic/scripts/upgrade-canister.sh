@@ -1,6 +1,6 @@
 #!/bin/sh
 # ex: 
-# sh upgrade-canister.sh 7icuz-piaaa-aaaaa-aabca-cai testnet
+# sh upgrade-canister.sh <TOKEN-PID> <NETWORK> 
 cd ..
 
 STAGE=$2
@@ -24,7 +24,7 @@ fi
 PROXY=$(dfx canister --network $NETWORK id dip20_proxy)
 MAGIC=$(dfx canister --network $NETWORK id magic_bridge)
 OWNER=$(dfx identity get-principal)
-CAP_ID=wxns6-qiaaa-aaaaa-aaaqa-cai
+CAP_ID=lj532-6iaaa-aaaah-qcc7a-cai
 
 # DEST=$2
 # WASM=$3

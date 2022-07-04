@@ -29,7 +29,7 @@ sudo dfx deploy --network $NETWORK
 
 # add dip20_proxy as controller of magic_proxy
 add_magic_controller() {   
-   dfx canister --network $1 call magic_bridge authorize "(principal \"$2\")"
+   dfx canister --wallet "$(dfx identity --network $NETWORK get-wallet)" --network $1 call magic_bridge authorize "(principal \"$2\")"
 }
 
 deploy_all() {

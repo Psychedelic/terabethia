@@ -43,7 +43,7 @@ async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
             total_supply: Nat::from(0_u32),
             owner: caller,
             controllers: vec![caller, self_id],
-            cycles: 1_000_000_000_000,
+            cycles: 2_500_000_000_000,
             fee: Nat::from(0_u32),
             fee_to: self_id,
             cap: Principal::from_text(CAP_ADDRESS).unwrap(),
