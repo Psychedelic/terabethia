@@ -17,12 +17,14 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
     let caller = ic::caller();
     let self_id = ic::id();
 
-    if (token_id.name().await).is_err() {
+    let token_name = token_id.name().await;
+    if token_name.is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
             token_id.to_string(),
         )));
     }
+    let token_name_str = token_name.unwrap();
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
@@ -67,7 +69,7 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
                                     msg_hash: outgoing_message.msg_hash.clone(),
-                                    msg_key: outgoing_message.msg_key.clone(),
+                                    token_name: token_name_str,
                                     token: token_id.clone(),
                                     amount: amount.clone(),
                                 });

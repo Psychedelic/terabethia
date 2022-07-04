@@ -7,10 +7,8 @@ import {
   SignIdentity,
 } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import DIP20_PROXY_FACTORY from './dip20_proxy/dip20_proxy.did'
-import DIP20ProxyService, {
-  RemoveClaimableResponse,
-} from './dip20_proxy/dip20_proxy';
+import MAGIC_BRIDGE_FACTORY from './magic_bridge/magic_bridge.did'
+import MagicBridgeService from './magic_bridge/magic_bridge';
 
 export interface ActorParams {
   host: string;
@@ -20,7 +18,7 @@ export interface ActorParams {
 const createActor = ({
   host,
   canisterId,
-}: ActorParams, identity: SignIdentity): ActorSubclass<DIP20ProxyService> => {
+}: ActorParams, identity: SignIdentity): ActorSubclass<MagicBridgeService> => {
   const agent = new HttpAgent({
     host,
     fetch,
@@ -38,13 +36,13 @@ const createActor = ({
     }
   }
 
-  return Actor.createActor<DIP20ProxyService>(DIP20_PROXY_FACTORY, {
+  return Actor.createActor<MagicBridgeService>(MAGIC_BRIDGE_FACTORY, {
     agent,
     canisterId,
   });
 };
-export class DIP20Proxy {
-  private actor: ActorSubclass<DIP20ProxyService>;
+export class MagicBridge {
+  private actor: ActorSubclass<MagicBridgeService>;
 
   constructor(canisterId: string, identity: SignIdentity, host = 'https://ic0.app/') {
     this.actor = createActor({
@@ -53,11 +51,9 @@ export class DIP20Proxy {
     }, identity);
   }
 
-  removeClaimable(
-    eth_address: Principal,
-    token_id: Principal,
-    amount: bigint,
-  ): Promise<RemoveClaimableResponse> {
-    return this.actor.remove_claimable(eth_address, token_id, amount);
+  getPrincipal(
+    eth_address_pid: Principal,
+  ): Promise<[] | [Principal]> {
+    return this.actor.get_canister(eth_address_pid);
   }
 }
