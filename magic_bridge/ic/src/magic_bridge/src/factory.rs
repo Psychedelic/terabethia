@@ -20,7 +20,7 @@ impl FromNat for Principal {
         let be_bytes = input.0.to_bytes_be();
         let be_bytes_len = be_bytes.len();
         let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
-            29 - be_bytes_len
+            0
         } else if be_bytes_len < 10 {
             10 - be_bytes_len
         } else {
@@ -200,5 +200,24 @@ impl Factory {
         });
 
         Ok(canister_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_principal_from_nat() {
+        let eth_address_as_nat =
+            Nat::from_str("1118288024408649503359660893691376548931478070077").unwrap();
+
+        let principal = Principal::from_nat(eth_address_as_nat.clone());
+
+        assert_eq!(
+            principal.to_string(),
+            String::from("tiip2-ood4h-cpenr-chacl-abhlj-7scey-usvbm-2gpi")
+        );
     }
 }
