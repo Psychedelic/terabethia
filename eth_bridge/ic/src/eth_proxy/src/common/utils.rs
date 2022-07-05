@@ -87,3 +87,26 @@ impl Keccak256HashFn<OutgoingMessageHashParams> for Message {
         hex::encode(result.to_vec())
     }
 }
+
+pub trait GweiToWei {
+    fn as_gwei_to_wei(&self) -> Nat;
+}
+
+impl GweiToWei for Nat {
+    fn as_gwei_to_wei(&self) -> Nat {
+        let gwei = self.clone();
+        let gwei_to_wei = gwei.clone() * Nat::from(1_000_000_000);
+        gwei_to_wei
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gweis_to_wei() {
+        let amount = Nat::from(1);
+        assert_eq!(amount.as_gwei_to_wei(), Nat::from(1_000_000_000));
+    }
+}

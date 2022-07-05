@@ -4,7 +4,7 @@ use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
 use crate::common::tera::Tera;
-use crate::common::utils::Keccak256HashFn;
+use crate::common::utils::{GweiToWei, Keccak256HashFn};
 use crate::common::weth::Weth;
 use crate::proxy::{FromNat, ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
 use ic_cdk::export::candid::{Nat, Principal};
@@ -64,8 +64,11 @@ pub async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 
     STATE.with(|s| s.update_incoming_message_status(msg_hash.clone(), MessageStatus::Consuming));
 
-    let amount = Nat::from(payload[1].0.clone());
     let to = Principal::from_nat(payload[0].clone());
+    // ETH_PROXY contract on Ethereum performs a division of the amount by / 1 gwei (1e9) in order to remove 0s.
+    // We add those 0s back to the amount to get the correct amount of ETH to be sent(minted) to the WETH contract.
+    let amount_gweis = Nat::from(payload[1].0.clone());
+    let amount = amount_gweis.as_gwei_to_wei();
 
     match weth_ic_addr_pid.mint(to, amount).await {
         Ok(txn_id) => {
