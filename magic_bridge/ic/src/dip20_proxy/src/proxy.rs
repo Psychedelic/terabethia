@@ -429,7 +429,7 @@ mod tests {
         let message_1 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            token_name: token_name.clone(),
+            token_symbol: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_1.clone(),
         };
@@ -438,7 +438,7 @@ mod tests {
         let message_2 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            token_name: token_name.clone(),
+            token_symbol: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_1.clone(),
         };
@@ -490,7 +490,7 @@ mod tests {
         let message_1 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            token_name: token_name.clone(),
+            token_symbol: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_1.clone(),
         };
@@ -499,7 +499,7 @@ mod tests {
         let message_2 = ClaimableMessage {
             owner: eth_addr_1.clone(),
             msg_hash: msg_hash_1.clone(),
-            token_name: token_name.clone(),
+            token_symbol: token_name.clone(),
             token: token_id_1.clone(),
             amount: amount_2.clone(),
         };
