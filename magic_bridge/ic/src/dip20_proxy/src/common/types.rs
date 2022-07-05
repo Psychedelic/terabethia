@@ -59,7 +59,7 @@ pub struct OutgoingMessage {
 pub struct ClaimableMessage {
     pub owner: EthereumAddr,
     pub msg_hash: String,
-    pub token_name: String,
+    pub token_symbol: String,
     pub token: TokendId,
     pub amount: Nat,
 }

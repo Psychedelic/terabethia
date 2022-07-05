@@ -9,6 +9,7 @@ pub trait Dip20 {
     async fn burn(&self, amount: Nat) -> TxReceipt;
     async fn name(&self) -> Result<String, TxError>;
     async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
+    async fn symbol(&self) -> Result<String, TxError>;
     async fn transfer_from(&self, from: Principal, to: Principal, amount: Nat) -> TxReceipt;
 }
 
@@ -26,6 +27,20 @@ impl Dip20 for Principal {
         };
 
         Ok(name.0)
+    }
+
+    async fn symbol(&self) -> Result<String, TxError> {
+        let symbol: (String,) = match call(*self, "symbol", ()).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(TxError::Other(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
+
+        Ok(symbol.0)
     }
 
     async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt {

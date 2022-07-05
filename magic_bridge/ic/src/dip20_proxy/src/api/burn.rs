@@ -10,8 +10,6 @@ use crate::common::types::{
 use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
-// should we allow users to just pass in the corresponding eth_addr on ETH
-// or should we use our magic_bridge to check if a key exists
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(
@@ -24,19 +22,22 @@ async fn burn(
 
     let magic_bridge = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
 
-    let token_id: Principal = match magic_bridge.get_canister(eth_contract_as_principal).await {
+    let token_id: Principal = match magic_bridge
+        .get_canister(eth_contract_as_principal.clone())
+        .await
+    {
         Ok(canister_id) => canister_id,
         Err(error) => return Err(error),
     };
 
-    let token_name = token_id.name().await;
-    if token_name.is_err() {
+    let token_symbol = token_id.symbol().await;
+    if token_symbol.is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
             token_id.to_string(),
         )));
     }
-    let token_name_str = token_name.unwrap();
+    let token_symbol_str = token_symbol.unwrap();
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
@@ -53,14 +54,14 @@ async fn burn(
 
             match burn {
                 Ok(burn_txn_id) => {
-                    let from_slice =
-                        hex::decode("c3E1C4F236223804b004Eb4fe4226292A859A33d").unwrap();
-                    let eth_contract_addr =
-                        Nat::from(num_bigint::BigUint::from_bytes_be(&from_slice[..]));
                     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
 
-                    let payload =
-                        [eth_contract_addr, eth_addr.clone().to_nat(), amount.clone()].to_vec();
+                    let payload = [
+                        eth_contract_as_principal.to_nat(),
+                        eth_addr.clone().to_nat(),
+                        amount.clone(),
+                    ]
+                    .to_vec();
 
                     let send_message: Result<OutgoingMessage, TxError> =
                         tera_id.send_message(erc20_addr_pid, payload.clone()).await;
@@ -82,7 +83,7 @@ async fn burn(
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
                                     msg_hash: outgoing_message.msg_hash.clone(),
-                                    token_name: token_name_str,
+                                    token_symbol: token_symbol_str,
                                     token: token_id.clone(),
                                     amount: amount.clone(),
                                 });
