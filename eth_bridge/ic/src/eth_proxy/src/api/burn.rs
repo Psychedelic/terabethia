@@ -39,7 +39,7 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
                     let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
 
-                    let send_message = tera_id.send_message(weth_ic_addr_pid, payload).await;
+                    let send_message = tera_id.send_message(eth_addr, payload).await;
                     match send_message {
                         Ok(outgoing_message) => {
                             // there could be an underflow here
