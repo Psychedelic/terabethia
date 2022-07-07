@@ -67,27 +67,26 @@ contract Terabethia is Initializable, ITerabethiaCore {
         external
         returns (bytes32)
     {
-        simpleStorage().nonce += 1;
+        unchecked {
+            simpleStorage().nonce += 1;
+        }
+
+        uint256 nonce = simpleStorage().nonce;
 
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 uint256(uint160(msg.sender)),
                 to_address,
-                simpleStorage().nonce,
+                nonce,
                 payload.length,
                 payload
             )
         );
 
-        simpleStorage().messages[msgHash] += 1;
+        simpleStorage().messages[msgHash] = 1;
 
         // we only emit event, so we can auto-trigger message consumption on the IC
-        emit LogMessageToL2(
-            msg.sender,
-            to_address,
-            simpleStorage().nonce,
-            payload
-        );
+        emit LogMessageToL2(msg.sender, to_address, nonce, payload);
 
         return msgHash;
     }
