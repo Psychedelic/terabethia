@@ -86,7 +86,9 @@ const handleMessage = async (body: MessagePayload) => {
     await bluebird.delay(2500);
   } catch (e) {
     // dump error response
-    console.log(JSON.stringify(e.response));
+    console.log(e);
+    // dump just body
+    console.log(e.response.body);
     throw e;
   }
 

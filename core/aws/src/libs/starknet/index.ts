@@ -1,43 +1,46 @@
 import {
-  Provider, Signer, ec, stark, AddTransactionResponse, GetTransactionStatusResponse,
+  Provider, Signer, ec, AddTransactionResponse, GetTransactionStatusResponse, hash,
 } from 'starknet';
 import BN from 'bn.js';
 
-const { getSelectorFromName } = stark;
+const { getSelectorFromName } = hash;
 
 // declare type NetworkName = 'mainnet-alpha' | 'georli-alpha';
 
 export enum NetworkName {
   MAINNET = 'mainnet-alpha',
-  TESTNET = 'georli-alpha'
+  TESTNET = 'goerli-alpha',
 }
 
 class TerabethiaStarknet {
   private provider: Provider;
 
+  private signer: Signer;
+
   private address: string;
 
-  constructor(account: string, privateKey: BN, address: string, network: NetworkName = NetworkName.TESTNET) {
-    const provider = new Provider({ network });
+  constructor(account: string, privateKey: BN, address: string, network: NetworkName) {
     const keyPair = ec.getKeyPair(privateKey);
-    const signer = new Signer(provider, account, keyPair);
+    const signer = new Signer(keyPair);
+    this.provider = new Provider({ network });
 
-    this.provider = signer;
+    this.signer = signer;
     this.address = address;
   }
 
   async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
-    return this.provider.addTransaction({
+    return this.provider.fe({
       type: 'INVOKE_FUNCTION',
       contract_address: this.address,
       entry_point_selector: getSelectorFromName('send_message'),
       calldata: [p1.toString(), p2.toString()],
       nonce,
+      max_fee: 10,
     });
   }
 
-  getTransactionStatus(hash: string): Promise<GetTransactionStatusResponse> {
-    return this.provider.getTransactionStatus(hash);
+  getTransactionStatus(hashStr: string): Promise<GetTransactionStatusResponse> {
+    return this.provider.getTransactionStatus(hashStr);
   }
 }
 
