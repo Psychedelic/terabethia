@@ -24,12 +24,16 @@ class TerabethiaStarknet {
     const signer = new Signer(keyPair);
     this.provider = new Provider({ network });
 
+    // @todo: how the signer works now?
+    // @todo: how the account works now?
+    // https://www.starknetjs.com/docs/API/account
     this.signer = signer;
     this.address = address;
   }
 
   async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
-    return this.provider.fe({
+    // @todo: change this to something that currently works
+    return this.provider.callContract({
       type: 'INVOKE_FUNCTION',
       contract_address: this.address,
       entry_point_selector: getSelectorFromName('send_message'),
