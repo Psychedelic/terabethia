@@ -2,7 +2,7 @@ import 'source-map-support/register';
 
 import { splitUint256, requireEnv, sqsHandler } from '@libs/utils';
 import StarknetDatabase from '@libs/dynamo/starknet';
-import TerabethiaStarknet, { NetworkName } from '@libs/starknet';
+import TerabethiaStarknet, { Network } from '@libs/starknet';
 import {
   SQSClient,
   SendMessageCommand,
@@ -39,7 +39,7 @@ const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 const sqsClient = new SQSClient({});
 const kmsClient = new KMSClient({});
 
-const network = envs.AWS_STAGE === 'dev' ? NetworkName.TESTNET : NetworkName.MAINNET;
+const network = envs.AWS_STAGE === 'dev' ? Network.TESTNET : Network.MAINNET;
 
 let terabethia: TerabethiaStarknet;
 

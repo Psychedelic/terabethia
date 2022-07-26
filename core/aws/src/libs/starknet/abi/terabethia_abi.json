@@ -1,0 +1,43 @@
+[
+    {
+        "inputs": [
+            {
+                "name": "contract_addr",
+                "type": "felt"
+            }
+        ],
+        "name": "set_l1_contract",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "msg_1",
+                "type": "felt"
+            },
+            {
+                "name": "msg_2",
+                "type": "felt"
+            }
+        ],
+        "name": "send_message",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "msg_hashes_len",
+                "type": "felt"
+            },
+            {
+                "name": "msg_hashes",
+                "type": "felt*"
+            }
+        ],
+        "name": "send_message_batch",
+        "outputs": [],
+        "type": "function"
+    }
+]

@@ -1,39 +1,54 @@
 import {
-  Provider, Signer, ec, stark, AddTransactionResponse, GetTransactionStatusResponse,
+  Provider, ec, AddTransactionResponse, GetTransactionStatusResponse, Account, Contract,
 } from 'starknet';
 import BN from 'bn.js';
 
-const { getSelectorFromName } = stark;
+const parsedABI = JSON.parse('./abi/terabethia_abi.json');
 
-// declare type NetworkName = 'mainnet-alpha' | 'georli-alpha';
+const NetworkConfig = {
+  testnet: {
+    baseUrl: 'https://alpha4.starknet.io',
+    feederGatewayUrl: 'feeder_gateway',
+    gatewayUrl: 'gateway',
+  },
+  mainnet: {
+    baseUrl: 'https://alpha4.starknet.io', // TBD
+    feederGatewayUrl: 'feeder_gateway', // TBD
+    gatewayUrl: 'gateway', // TBD
+  },
+};
 
-export enum NetworkName {
-  MAINNET = 'mainnet-alpha',
-  TESTNET = 'georli-alpha'
+export enum Network {
+  TESTNET = 'testnet',
+  MAINNET = 'mainnet',
 }
 
 class TerabethiaStarknet {
   private provider: Provider;
 
-  private address: string;
+  private account: Account;
 
-  constructor(account: string, privateKey: BN, address: string, network: NetworkName = NetworkName.TESTNET) {
-    const provider = new Provider({ network });
+  private contract: Contract;
+
+  constructor(accountAddress: string, privateKey: BN, contractAddress: string, network: Network = Network.TESTNET) {
+    const networkConfig = NetworkConfig[network] || NetworkConfig.testnet;
+    const provider = new Provider(networkConfig);
     const keyPair = ec.getKeyPair(privateKey);
-    const signer = new Signer(provider, account, keyPair);
+    const account = new Account(provider, accountAddress, keyPair);
+    const contract = new Contract(parsedABI, contractAddress);
 
-    this.provider = signer;
-    this.address = address;
+    this.provider = provider;
+    this.account = account;
+    this.contract = contract;
   }
 
   async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
-    return this.provider.addTransaction({
-      type: 'INVOKE_FUNCTION',
-      contract_address: this.address,
-      entry_point_selector: getSelectorFromName('send_message'),
-      calldata: [p1.toString(), p2.toString()],
-      nonce,
-    });
+    this.contract.connect(this.account);
+    return this.contract.send_message(
+      p1,
+      p2,
+      { nonce },
+    );
   }
 
   getTransactionStatus(hash: string): Promise<GetTransactionStatusResponse> {
