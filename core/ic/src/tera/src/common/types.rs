@@ -47,7 +47,7 @@ pub struct OutgoingMessage {
     pub(crate) msg_hash: String,
 }
 
-#[derive(Serialize, CandidType, Deserialize)]
+#[derive(Serialize, CandidType, Deserialize, Clone)]
 pub struct OutgoingMessagePair {
     pub(crate) msg_key: String,
     pub(crate) msg_hash: String,

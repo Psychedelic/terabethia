@@ -7,9 +7,19 @@ use crate::{
     tera::STATE,
 };
 
+const MAX_REMOVE_MESSAGES: usize = 1000;
+
 #[update(name = "remove_messages", guard = "is_authorized")]
 #[candid_method(update, rename = "remove_messages")]
 fn remove_messages(messages: Vec<OutgoingMessagePair>) -> RemoveMessagesResponse {
+    if messages.len() > MAX_REMOVE_MESSAGES {
+        return RemoveMessagesResponse(Err(format!(
+            "Trying to remove {} OutgoingMessages, Max limit is: {}",
+            messages.len(),
+            MAX_REMOVE_MESSAGES
+        )));
+    }
+
     STATE.with(|s| RemoveMessagesResponse(s.remove_messages(messages)))
 }
 
@@ -60,16 +70,37 @@ mod tests {
 
         let msg_key = hex::encode(store_message.unwrap().msg_key);
         let messages_to_remove = vec![OutgoingMessagePair {
-            msg_key,
+            msg_key: msg_key.clone(),
             msg_hash: msg_hash(),
         }];
 
-        let remove_messages = remove_messages(messages_to_remove);
+        let remove_messages_res = remove_messages(messages_to_remove);
 
-        assert!(remove_messages.0.is_ok());
+        assert!(remove_messages_res.0.is_ok());
 
         let stored_messages = get_messages();
 
         assert_eq!(stored_messages.len(), 0);
+
+        let max_remove_messages = vec![
+            OutgoingMessagePair {
+                msg_key: msg_key.clone(),
+                msg_hash: msg_hash()
+            };
+            MAX_REMOVE_MESSAGES + 1
+        ];
+
+        let remove_messages_res_2: RemoveMessagesResponse =
+            remove_messages(max_remove_messages.clone());
+
+        assert!(remove_messages_res_2.0.is_err());
+        assert_eq!(
+            remove_messages_res_2.0.err().unwrap(),
+            format!(
+                "Trying to remove {} OutgoingMessages, Max limit is: {}",
+                max_remove_messages.len(),
+                MAX_REMOVE_MESSAGES
+            )
+        )
     }
 }
