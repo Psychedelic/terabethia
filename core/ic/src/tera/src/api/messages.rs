@@ -29,6 +29,13 @@ fn get_messages() -> Vec<OutgoingMessagePair> {
     STATE.with(|s| s.get_messages())
 }
 
+#[query(name = "get_messages_count", guard = "is_authorized")]
+#[candid_method(query, rename = "get_messages_count")]
+fn get_messages_count() -> u32 {
+    let count = STATE.with(|s| s.outgoing_messages_count()) as u32;
+    count
+}
+
 #[cfg(test)]
 mod tests {
     use ic_kit::{mock_principals, MockContext};
@@ -59,6 +66,9 @@ mod tests {
         assert_eq!(stored_messages.len(), 1);
 
         assert_eq!(stored_messages.first().unwrap().msg_hash, msg_hash());
+
+        let out_messages_count = get_messages_count();
+        assert_eq!(out_messages_count, 1);
     }
 
     #[test]

@@ -11,7 +11,9 @@ thread_local! {
     pub static STATE: TerabetiaState = TerabetiaState::default();
 }
 
-#[derive(CandidType, Deserialize, Default)]
+const MAX_OUTGOING_MESSAGES_COUNT: usize = 10_000;
+
+#[derive(CandidType, Deserialize)]
 pub struct TerabetiaState {
     /// Incoming messages from L1
     pub messages: RefCell<HashMap<String, u32>>,
@@ -128,6 +130,18 @@ impl FromNat for Principal {
     }
 }
 
+impl Default for TerabetiaState {
+    fn default() -> Self {
+        TerabetiaState {
+            messages: RefCell::new(HashMap::default()),
+            nonce: RefCell::new(HashSet::default()),
+            messages_out: RefCell::new(HashSet::with_capacity(MAX_OUTGOING_MESSAGES_COUNT)),
+            message_out_index: RefCell::new(u64::default()),
+            authorized: RefCell::new(Vec::default()),
+        }
+    }
+}
+
 impl TerabetiaState {
     ///
     /// Outgoing
@@ -144,6 +158,9 @@ impl TerabetiaState {
 
     /// Store outgoing messages to L1
     pub fn store_outgoing_message(&self, msg_hash: String) -> Result<OutgoingMessage, String> {
+        if self.outgoing_messages_count() >= MAX_OUTGOING_MESSAGES_COUNT {
+            return Err(String::from("Max OutgoingMessages amount reached"));
+        }
         // we increment outgoing message counter
         let mut index = self.message_out_index.borrow_mut();
         *index += 1;
@@ -165,6 +182,10 @@ impl TerabetiaState {
         });
 
         Ok(true)
+    }
+
+    pub fn outgoing_messages_count(&self) -> usize {
+        self.messages_out.borrow().len()
     }
 
     ///
@@ -482,6 +503,26 @@ mod tests {
         mock_env.update_caller(new_controller_pid);
         let is_authorized = STATE.with(|s| s.is_authorized());
         assert!(is_authorized.is_ok());
+    }
+
+    #[test]
+    fn store_message_with_max_limit_reached() {
+        let capacity = STATE.with(|s| s.messages_out.borrow().capacity());
+        assert!(capacity >= MAX_OUTGOING_MESSAGES_COUNT);
+
+        for i in 0..MAX_OUTGOING_MESSAGES_COUNT {
+            let result = STATE.with(|s| s.store_outgoing_message(i.to_string()));
+            assert!(result.is_ok());
+        }
+        assert_eq!(
+            STATE.with(|s| s.outgoing_messages_count()),
+            MAX_OUTGOING_MESSAGES_COUNT
+        );
+
+        // when reach max it returns error
+        let result = STATE.with(|s| s.store_outgoing_message("0x00".to_string()));
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "Max OutgoingMessages amount reached");
     }
 
     #[test]
