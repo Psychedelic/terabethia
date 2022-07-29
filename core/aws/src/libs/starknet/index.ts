@@ -5,22 +5,9 @@ import BN from 'bn.js';
 
 const parsedABI = JSON.parse('./abi/terabethia_abi.json');
 
-const NetworkConfig = {
-  testnet: {
-    baseUrl: 'https://alpha4.starknet.io',
-    feederGatewayUrl: 'feeder_gateway',
-    gatewayUrl: 'gateway',
-  },
-  mainnet: {
-    baseUrl: 'https://alpha4.starknet.io', // TBD
-    feederGatewayUrl: 'feeder_gateway', // TBD
-    gatewayUrl: 'gateway', // TBD
-  },
-};
-
-export enum Network {
-  TESTNET = 'testnet',
-  MAINNET = 'mainnet',
+export enum NetworkName {
+  MAINNET = 'mainnet-alpha',
+  TESTNET = 'goerli-alpha'
 }
 
 class TerabethiaStarknet {
@@ -30,9 +17,8 @@ class TerabethiaStarknet {
 
   private contract: Contract;
 
-  constructor(accountAddress: string, privateKey: BN, contractAddress: string, network: Network = Network.TESTNET) {
-    const networkConfig = NetworkConfig[network] || NetworkConfig.testnet;
-    const provider = new Provider(networkConfig);
+  constructor(accountAddress: string, privateKey: BN, contractAddress: string, network: NetworkName = NetworkName.TESTNET) {
+    const provider = new Provider({ network });
     const keyPair = ec.getKeyPair(privateKey);
     const account = new Account(provider, accountAddress, keyPair);
     const contract = new Contract(parsedABI, contractAddress);
