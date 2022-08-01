@@ -93,6 +93,12 @@ pub trait ToNat {
     fn to_nat(&self) -> Nat;
 }
 
+impl ToNat for [u8; 32] {
+    fn to_nat(&self) -> Nat {
+        Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
+    }
+}
+
 impl ToNat for Principal {
     #[inline(always)]
     fn to_nat(&self) -> Nat {

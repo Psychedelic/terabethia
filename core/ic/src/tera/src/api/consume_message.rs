@@ -4,7 +4,7 @@ use ic_kit::ic::caller;
 
 use crate::{
     common::{
-        types::{ConsumeMessageResponse, IncomingMessageHashParams, Message, Nonce},
+        types::{ConsumeMessageResponse, IncomingMessageHashParams, Message},
         utils::Keccak256HashFn,
     },
     tera::{ToNat, STATE},
@@ -12,7 +12,8 @@ use crate::{
 
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> ConsumeMessageResponse {
+fn consume(from: Principal, nonce_bytes: [u8; 32], payload: Vec<Nat>) -> ConsumeMessageResponse {
+    let nonce = nonce_bytes.to_nat();
     let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
     if nonce_exists {
         return ConsumeMessageResponse(Err(format!(
@@ -61,9 +62,20 @@ fn consume(from: Principal, nonce: Nonce, payload: Vec<Nat>) -> ConsumeMessageRe
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use ic_kit::{mock_principals, MockContext};
 
     use super::*;
+
+    fn bytes_from_nat(number: Nat) -> [u8; 32] {
+        let nonce = number.0.to_bytes_be();
+        let be_bytes_len = nonce.len();
+        let padding_bytes = 32 - be_bytes_len;
+        let mut p_slice = vec![0u8; padding_bytes];
+        p_slice.extend_from_slice(&nonce);
+        p_slice.try_into().unwrap()
+    }
 
     fn before_each() -> &'static mut MockContext {
         MockContext::new()
@@ -73,7 +85,7 @@ mod tests {
 
     fn concume_message_with_nonce(
         mock_ctx: &mut MockContext,
-        nonce: Nonce,
+        nonce: [u8; 32],
     ) -> ConsumeMessageResponse {
         // originating eth address as pid
         let from = mock_principals::john();
@@ -90,7 +102,7 @@ mod tests {
         let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
             from: from.to_nat(),
             to: to.to_nat(),
-            nonce: nonce.clone(),
+            nonce: nonce.clone().to_nat(),
             payload: payload.clone(),
         });
 
@@ -105,7 +117,7 @@ mod tests {
     #[test]
     fn test_consume_message() {
         let mock_ctx = before_each();
-        let nonce = Nat::from(4);
+        let nonce = bytes_from_nat(Nat::from(4));
 
         let consume_message = concume_message_with_nonce(mock_ctx, nonce);
 
@@ -119,7 +131,7 @@ mod tests {
     #[test]
     fn test_panic_consume_message_twice() {
         let mock_ctx = before_each();
-        let nonce = Nat::from(4);
+        let nonce = bytes_from_nat(Nat::from(4));
 
         let consume_message_1 = concume_message_with_nonce(mock_ctx, nonce.clone());
 
