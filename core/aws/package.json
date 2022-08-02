@@ -50,7 +50,7 @@
     "minimalistic-assert": "^1.0.1",
     "remove": "^0.1.5",
     "source-map-support": "^0.5.21",
-    "starknet": "^3.10.2",
+    "starknet": "^3.18.2",
     "web3": "^1.6.1"
   },
   "devDependencies": {

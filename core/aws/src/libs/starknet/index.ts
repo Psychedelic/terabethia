@@ -29,9 +29,10 @@ class TerabethiaStarknet {
 
   async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
     this.contract.connect(this.account);
+
     return this.contract.send_message(
-      p1,
-      p2,
+      p1.toString(), 
+      p2.toString(),
       { nonce },
     );
   }
