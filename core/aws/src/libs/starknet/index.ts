@@ -12,26 +12,21 @@ export enum NetworkName {
 class TerabethiaStarknet {
   private provider: Provider;
 
-  private account: Account;
-
   private contract: Contract;
 
   constructor(accountAddress: string, privateKey: BN, contractAddress: string, network: NetworkName = NetworkName.TESTNET) {
     const provider = new Provider({ network });
     const keyPair = ec.getKeyPair(privateKey);
     const account = new Account(provider, accountAddress, keyPair);
-    const contract = new Contract(parsedABI, contractAddress);
+    const contract = new Contract(parsedABI, contractAddress, account.address);
 
     this.provider = provider;
-    this.account = account;
     this.contract = contract;
   }
 
   async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
-    this.contract.connect(this.account);
-
     return this.contract.send_message(
-      p1.toString(), 
+      p1.toString(),
       p2.toString(),
       { nonce },
     );
