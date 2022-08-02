@@ -8,6 +8,8 @@ use crate::factory::CreateCanisterParam;
 use crate::{magic::STATE, types::*};
 
 const DAB_TOKEN_ADDRESS: &str = "eclat-5qaaa-aaaaa-aaica-cai";
+const DAB_PROXY_ADDRESS: &str = "tdc6j-iiaaa-aaaah-abj2q-cai";
+
 const MAX_DAB_RETRIES: u8 = 10;
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Debug)]
@@ -94,6 +96,7 @@ async fn register_dip20(
     params: &CreateCanisterParam,
 ) -> Result<(), OperationError> {
     let dab_tokens_address = ic_kit::Principal::from_str(&DAB_TOKEN_ADDRESS).unwrap();
+    let dab_proxy_address = ic_kit::Principal::from_str(&DAB_PROXY_ADDRESS).unwrap();
 
     let details = vec![
         (
@@ -120,16 +123,16 @@ async fn register_dip20(
         details: details,
     };
 
-    let canister_call: (DABResponse,) = match ic::call(dab_tokens_address, "add", (dab_args,)).await
-    {
-        Ok(res) => res,
-        Err((code, err)) => {
-            return Err(OperationError::Unknown(format!(
-                "RejectionCode: {:?}\n{}",
-                code, err
-            )))
-        }
-    };
+    let canister_call: (DABResponse,) =
+        match ic::call(dab_proxy_address, "add", (dab_tokens_address, dab_args)).await {
+            Ok(res) => res,
+            Err((code, err)) => {
+                return Err(OperationError::Unknown(format!(
+                    "RejectionCode: {:?}\n{}",
+                    code, err
+                )))
+            }
+        };
 
     match canister_call {
         (Ok(_),) => return Ok(()),
