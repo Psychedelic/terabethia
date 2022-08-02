@@ -18,7 +18,7 @@ class TerabethiaStarknet {
     const provider = new Provider({ network });
     const keyPair = ec.getKeyPair(privateKey);
     const account = new Account(provider, accountAddress, keyPair);
-    const contract = new Contract(parsedABI, contractAddress, account.address);
+    const contract = new Contract(parsedABI, contractAddress, account);
 
     this.provider = provider;
     this.contract = contract;
