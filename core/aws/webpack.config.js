@@ -14,7 +14,7 @@ module.exports = {
   entry: slsw.lib.entries,
   devtool: slsw.lib.webpack.isLocal ? 'eval-cheap-module-source-map' : 'source-map',
   resolve: {
-    extensions: ['.mjs', '.json', '.ts'],
+    extensions: ['.ts'],
     symlinks: false,
     cacheWithContext: false,
     plugins: [
@@ -35,22 +35,43 @@ module.exports = {
   externals: [nodeExternals()],
   module: {
     rules: [
-      // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
       {
-        test: /\.(tsx?)$/,
-        loader: 'ts-loader',
+        // Include ts, tsx, js, and jsx files.
+        test: /\.(ts|js)x?$/,
         exclude: [
           [
             path.resolve(__dirname, 'node_modules'),
             path.resolve(__dirname, '.serverless'),
             path.resolve(__dirname, '.webpack'),
+            path.resolve(__dirname, '.webpackCache'),
           ],
         ],
-        options: {
-          transpileOnly: true,
-          experimentalWatchApi: true,
-        },
+        use: [
+          {
+            loader: "cache-loader",
+            options: {
+              cacheDirectory: path.resolve(".webpackCache"),
+            },
+          },
+          "babel-loader",
+        ],
       },
+      // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
+      // {
+      //   test: /\.(tsx?)$/,
+      //   loader: 'ts-loader',
+      //   exclude: [
+      //     [
+      //       path.resolve(__dirname, 'node_modules'),
+      //       path.resolve(__dirname, '.serverless'),
+      //       path.resolve(__dirname, '.webpack'),
+      //     ],
+      //   ],
+      //   options: {
+      //     transpileOnly: true,
+      //     experimentalWatchApi: true,
+      //   },
+      // },
     ],
   },
   plugins: [],

@@ -51,7 +51,9 @@ custom:
     sns-endpoint: http://127.0.0.1:4002
   webpack:
     webpackConfig: ./webpack.config.js
-    includeModules: true
+    includeModules:
+      forceExclude:
+        - aws-sdk
     packager: yarn
   serverless-iam-roles-per-function:
     defaultInherit: true # Each function will inherit the service level roles too.

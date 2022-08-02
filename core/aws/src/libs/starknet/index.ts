@@ -2,8 +2,7 @@ import {
   Provider, ec, AddTransactionResponse, GetTransactionStatusResponse, Account, Contract,
 } from 'starknet';
 import BN from 'bn.js';
-
-const parsedABI = JSON.parse('./abi/terabethia_abi.json');
+import parsedABI from './abi/terabethia_abi.json';
 
 export enum NetworkName {
   MAINNET = 'mainnet-alpha',

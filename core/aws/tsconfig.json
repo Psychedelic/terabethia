@@ -2,12 +2,14 @@
   "extends": "./tsconfig.paths.json",
   "compilerOptions": {
     "lib": [
-      "ESNext",
-      "dom"
+      "ES2020.Promise",
     ], // specifies which default set of type definitions to use ("DOM", "ES6", etc)
     "outDir": "dist", // .js (as well as .d.ts, .js.map, etc.) files will be emitted into this directory.,
     "removeComments": true, // Strips all comments from TypeScript files when converting into JavaScript- you rarely read compiled code so this saves space
-    "target": "ES2020", // Target environment. Most modern browsers support ES6, but you may want to set it to newer or older. (defaults to ES3)
+    "target": "es2020", // Target environment. Most modern browsers support ES6, but you may want to set it to newer or older. (defaults to ES3)
+    "types": [
+      "node"
+    ],
     // Module resolution
     "esModuleInterop": true, // fixes some issues TS originally had with the ES6 spec where TypeScript treats CommonJS/AMD/UMD modules similar to ES6 module
     "moduleResolution": "node", // Pretty much always node for modern JS. Other option is "classic"
