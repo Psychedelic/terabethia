@@ -50,7 +50,7 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
                     .to_vec();
 
                     let send_message: Result<OutgoingMessage, TxError> =
-                        tera_id.send_message(erc20_addr_pid, payload.clone()).await;
+                        tera_id.send_message(eth_addr, payload.clone()).await;
 
                     match send_message {
                         Ok(outgoing_message) => {
