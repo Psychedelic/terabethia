@@ -9,6 +9,7 @@ export enum NetworkName {
   TESTNET = 'goerli-alpha'
 }
 
+const STARKNET_MAX_FEE = 1_000_000_000_000_000;
 class TerabethiaStarknet {
   private provider: Provider;
 
@@ -28,7 +29,10 @@ class TerabethiaStarknet {
     return this.contract.send_message(
       p1.toString(),
       p2.toString(),
-      { nonce },
+      {
+        nonce,
+        maxFee: STARKNET_MAX_FEE,
+      },
     );
   }
 
