@@ -5,7 +5,7 @@ use ic_kit::{ic, macros::update};
 
 use crate::common::tera::Tera;
 use crate::common::weth::Weth;
-use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_IC};
+use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{ClaimableMessage, EthereumAddr, TxError, TxReceipt};
@@ -39,7 +39,11 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
                     let payload = [eth_addr.clone().to_nat(), amount.clone()].to_vec();
 
-                    let send_message = tera_id.send_message(eth_addr, payload).await;
+                    let weth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
+                    let weth_eth_addr_pid =
+                        Principal::from_slice(&hex::decode(weth_addr_hex).unwrap());
+
+                    let send_message = tera_id.send_message(weth_eth_addr_pid, payload).await;
                     match send_message {
                         Ok(outgoing_message) => {
                             // there could be an underflow here
