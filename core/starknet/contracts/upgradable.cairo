@@ -139,7 +139,7 @@ func get_l1_contract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
 end
 
 #
-#  Delegated calls
+#  Delegated calls / Library Calls
 #
 @external
 func set_l1_contract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -149,8 +149,8 @@ func set_l1_contract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     # save new contract addr
     let (implementation_address) = implementation.read()
 
-    ITerabethiaContract.delegate_set_l1_contract(
-        contract_address=implementation_address, contract_addr=contract_addr)
+    ITerabethiaContract.library_call_set_l1_contract(
+        class_hash=implementation_address, contract_addr=contract_addr)
 
     return ()
 end
@@ -161,8 +161,8 @@ func send_message{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     require_operator()
     let (implementation_address) = implementation.read()
 
-    ITerabethiaContract.delegate_send_message(
-        contract_address=implementation_address, msg_1=msg_1, msg_2=msg_2)
+    ITerabethiaContract.library_call_send_message(
+        class_hash=implementation_address, msg_1=msg_1, msg_2=msg_2)
 
     return ()
 end
@@ -175,8 +175,8 @@ func send_message_batch{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
 
     let (implementation_address) = implementation.read()
 
-    ITerabethiaContract.delegate_send_message_batch(
-        contract_address=implementation_address,
+    ITerabethiaContract.library_call_send_message_batch(
+        class_hash=implementation_address,
         msg_hashes_len=msg_hashes_len,
         msg_hashes=msg_hashes)
 
