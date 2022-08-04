@@ -2,20 +2,33 @@ use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
 use crate::common::dip20::Dip20;
+use crate::common::magic::Magic;
 use crate::common::tera::Tera;
 use crate::common::types::{
     ClaimableMessage, EthereumAddr, OutgoingMessage, TokendId, TxError, TxReceipt,
 };
-use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
+use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
-// should we allow users to just pass in the corresponding eth_addr on ETH
-// or should we use our magic_bridge to check if a key exists
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
-async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
+async fn burn(
+    eth_contract_as_principal: TokendId,
+    eth_addr: EthereumAddr,
+    amount: Nat,
+) -> TxReceipt {
     let caller = ic::caller();
     let self_id = ic::id();
+
+    let magic_bridge = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
+
+    let token_id: Principal = match magic_bridge
+        .get_canister(eth_contract_as_principal.clone())
+        .await
+    {
+        Ok(canister_id) => canister_id,
+        Err(error) => return Err(error),
+    };
 
     let token_name = token_id.name().await;
     if token_name.is_err() {
@@ -42,8 +55,9 @@ async fn burn(token_id: TokendId, eth_addr: EthereumAddr, amount: Nat) -> TxRece
             match burn {
                 Ok(burn_txn_id) => {
                     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
+
                     let payload = [
-                        token_id.clone().to_nat(),
+                        eth_contract_as_principal.to_nat(),
                         eth_addr.clone().to_nat(),
                         amount.clone(),
                     ]
