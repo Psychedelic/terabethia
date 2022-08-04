@@ -12,7 +12,7 @@ pub trait Magic {
 #[async_trait]
 impl Magic for Principal {
     async fn get_canister(&self, erc20_addr_pid: Principal) -> Result<Principal, TxError> {
-        let get_canister: (Result<Option<Principal>, String>,) =
+        let get_canister: (Option<Principal>,) =
             match call(*self, "get_canister", (erc20_addr_pid,)).await {
                 Ok(res) => res,
                 Err((code, err)) => {
@@ -24,14 +24,10 @@ impl Magic for Principal {
             };
 
         match get_canister {
-            (Ok(Some(canister_id)),) => Ok(canister_id),
-            (Ok(None),) => Err(TxError::Other(format!(
-                "Canister from address: {:?} not found in MagicBridge",
+            (Some(canister_id),) => Ok(canister_id),
+            (None,) => Err(TxError::Other(format!(
+                "Canister with address: {:?} not found in MagicBridge",
                 erc20_addr_pid.to_string()
-            ))),
-            (Err(error),) => Err(TxError::Other(format!(
-                "Call magic_bridge failed with error: {:?}",
-                error
             ))),
         }
     }
