@@ -30,14 +30,14 @@ async fn burn(
         Err(error) => return Err(error),
     };
 
-    let token_symbol = token_id.symbol().await;
-    if token_symbol.is_err() {
+    let token_name = token_id.name().await;
+    if token_name.is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
             token_id.to_string(),
         )));
     }
-    let token_symbol_str = token_symbol.unwrap();
+    let token_name_str = token_name.unwrap();
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
@@ -83,7 +83,7 @@ async fn burn(
                                 s.add_claimable_message(ClaimableMessage {
                                     owner: eth_addr.clone(),
                                     msg_hash: outgoing_message.msg_hash.clone(),
-                                    token_symbol: token_symbol_str,
+                                    token_name: token_name_str,
                                     token: token_id.clone(),
                                     amount: amount.clone(),
                                 });
