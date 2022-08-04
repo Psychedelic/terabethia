@@ -4,7 +4,7 @@ use ic_kit::ic::caller;
 
 use crate::{
     common::{
-        types::{ConsumeMessageResponse, IncomingMessageHashParams, Message},
+        types::{ConsumeMessageResponse, IncomingMessageHashParams, Message, NonceBytes},
         utils::Keccak256HashFn,
     },
     tera::{ToNat, STATE},
@@ -12,7 +12,7 @@ use crate::{
 
 #[update(name = "consume_message")]
 #[candid_method(update, rename = "consume_message")]
-fn consume(from: Principal, nonce_bytes: [u8; 32], payload: Vec<Nat>) -> ConsumeMessageResponse {
+fn consume(from: Principal, nonce_bytes: NonceBytes, payload: Vec<Nat>) -> ConsumeMessageResponse {
     let nonce = nonce_bytes.to_nat();
     let nonce_exists = STATE.with(|s| s.nonce_exists(&nonce));
     if nonce_exists {
@@ -68,7 +68,7 @@ mod tests {
 
     use super::*;
 
-    fn bytes_from_nat(number: Nat) -> [u8; 32] {
+    fn bytes_from_nat(number: Nat) -> NonceBytes {
         let nonce = number.0.to_bytes_be();
         let be_bytes_len = nonce.len();
         let padding_bytes = 32 - be_bytes_len;
@@ -85,7 +85,7 @@ mod tests {
 
     fn concume_message_with_nonce(
         mock_ctx: &mut MockContext,
-        nonce: [u8; 32],
+        nonce: NonceBytes,
     ) -> ConsumeMessageResponse {
         // originating eth address as pid
         let from = mock_principals::john();

@@ -1,4 +1,4 @@
-use crate::common::types::{Nonce, OutgoingMessage, OutgoingMessagePair};
+use crate::common::types::{Nonce, NonceBytes, OutgoingMessage, OutgoingMessagePair};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
@@ -93,7 +93,7 @@ pub trait ToNat {
     fn to_nat(&self) -> Nat;
 }
 
-impl ToNat for [u8; 32] {
+impl ToNat for NonceBytes {
     fn to_nat(&self) -> Nat {
         Nat::from(num_bigint::BigUint::from_bytes_be(&self.as_slice()[..]))
     }

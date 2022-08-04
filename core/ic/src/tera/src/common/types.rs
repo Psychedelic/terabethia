@@ -2,6 +2,7 @@ use ic_kit::candid::{CandidType, Deserialize, Nat};
 use serde::Serialize;
 
 pub type Nonce = Nat;
+pub type NonceBytes = [u8; 32];
 
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct ConsumeMessageResponse(pub(crate) Result<bool, String>);
