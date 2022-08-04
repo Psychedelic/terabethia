@@ -7,7 +7,7 @@ use crate::{
     tera::STATE,
 };
 
-const MAX_REMOVE_MESSAGES: usize = 1000;
+const MAX_REMOVE_MESSAGES: usize = 10_000;
 
 #[update(name = "remove_messages", guard = "is_authorized")]
 #[candid_method(update, rename = "remove_messages")]
