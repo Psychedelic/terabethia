@@ -42,7 +42,7 @@ async fn trigger_call(
 
     let args_raw = encode_args((&from, &nonce, &payload)).unwrap();
 
-    match api::call::call_raw(to, "handle_message", args_raw, 0).await {
+    match api::call::call_raw(to, "handle_message", &args_raw[..], 0).await {
         Ok(x) => StoreMessageResponse(Ok(CallResult { r#return: x })),
         Err((code, msg)) => StoreMessageResponse(Err(format!(
             "An error happened during the call: {}: {}",
