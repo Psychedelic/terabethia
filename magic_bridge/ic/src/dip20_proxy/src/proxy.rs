@@ -10,7 +10,7 @@ use crate::common::types::{
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
 pub const MAGIC_ADDRESS_IC: &str = "7z6fu-giaaa-aaaab-qafkq-cai";
-pub const ERC20_ADDRESS_ETH: &str = "0x15b661f6d3fd9a7ed8ed4c88bccfd1546644443f";
+pub const ERC20_ADDRESS_ETH: &str = "0x8CA1651eadeF97D3aC36c25DAE4A552c1368F27d";
 
 thread_local! {
     pub static STATE: ProxyState = ProxyState::default();
