@@ -6,7 +6,7 @@ type SendMessageResponse = variant { Ok : OutgoingMessage; Err : text };
 type StoreMessageResponse = variant { Ok : CallResult; Err : text };
 service : {
   authorize : (principal) -> ();
-  consume_message : (principal, nat, vec nat) -> (ConsumeMessageResponse);
+  consume_message : (principal, vec nat8, vec nat) -> (ConsumeMessageResponse);
   get_messages : () -> (vec OutgoingMessagePair) query;
   get_nonces : () -> (vec nat) query;
   remove_messages : (vec OutgoingMessagePair) -> (ConsumeMessageResponse);
