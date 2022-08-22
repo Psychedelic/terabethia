@@ -4,10 +4,18 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ITerabethiaCore.sol";
+import "./IWeth.sol";
+import "./IEthProxy.sol";
 
 contract ERC20Bridge {
     // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
+
+    // EthProxy contract.
+    IEthProxy ethProxy;
+
+    // Weth contract.
+    IWeth weth;
 
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001540101;
@@ -15,8 +23,14 @@ contract ERC20Bridge {
     /**
       Initializes the contract state.
     */
-    constructor(ITerabethiaCore terabethiaCore_) {
+    constructor(
+        ITerabethiaCore terabethiaCore_,
+        IEthProxy ethProxy_,
+        IWeth weth_
+    ) {
         terabethiaCore = terabethiaCore_;
+        ethProxy = ethProxy_;
+        weth = weth_;
     }
 
     function withdraw(address token, uint256 amount) external {
@@ -54,6 +68,13 @@ contract ERC20Bridge {
             amount
         );
 
+        if (token == address(weth)) {
+            // unwarp weth to eth
+            weth.withdraw(amount);
+            // ethProxy handles the payload and the sendMessage call.
+            return ethProxy.deposit{value: amount}(user);
+        }
+
         // Construct the deposit message's payload.
         uint256[] memory payload = new uint256[](6);
         payload[0] = uint256(uint160(token));
@@ -66,6 +87,10 @@ contract ERC20Bridge {
         // Send the message to the IC
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 
     function stringToBytes32(string memory source)
         public
