@@ -1,23 +1,15 @@
 import 'source-map-support/register';
 
-import {
-  formatJSONResponse,
-  ValidatedEventAPIGatewayProxyEvent,
-} from '@libs/apiGateway';
+import { formatJSONResponse, ValidatedEventAPIGatewayProxyEvent } from '@libs/apiGateway';
 import { requireEnv } from '@libs/utils';
 import { middyfy } from '@libs/lambda';
-import {
-  SQSClient,
-  SendMessageCommand,
-} from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import schema from './schema';
 
 const envs = requireEnv(['QUEUE_URL']);
 const sqsClient = new SQSClient({});
 
-export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
-  typeof schema
-> = async (event): Promise<any> => {
+export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<typeof schema> = async (event): Promise<any> => {
   if (!event.body) {
     return formatJSONResponse({
       statusCode: 500,
@@ -26,12 +18,17 @@ export const blockNativeEventHook: ValidatedEventAPIGatewayProxyEvent<
   }
 
   try {
-    await sqsClient.send(new SendMessageCommand({
-      QueueUrl: envs.QUEUE_URL,
-      MessageBody: JSON.stringify(event.body),
-      MessageDeduplicationId: event.body.hash,
-      MessageGroupId: 'ethereum',
-    }));
+    await sqsClient.send(
+      new SendMessageCommand({
+        QueueUrl: envs.QUEUE_URL,
+        MessageBody: JSON.stringify(event.body),
+        // @todo: why this stopped working?
+        // eslint-disable-next-line
+        // @ts-ignore
+        MessageDeduplicationId: event.body.hash,
+        MessageGroupId: 'ethereum',
+      }),
+    );
 
     return formatJSONResponse({
       statusCode: 200,

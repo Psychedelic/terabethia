@@ -33,10 +33,11 @@ const config: HardhatUserConfig = {
   // etherscan: {
   //   apiKey: process.env.ETHERSCAN_API_KEY,
   // },
-  cairo: {
+  starknet: {
     // The default in this version of the plugin
     // version: "0.6.2",
-    venv: "/Users/vojtechstudenka/cairo_venv",
+    // venv: "/Users/vojtechstudenka/cairo_venv",
+    dockerizedVersion: "0.9.1",
   },
   paths: {
     starknetSources: "contracts",

@@ -1,39 +1,39 @@
 import {
-  Provider, Signer, ec, stark, AddTransactionResponse, GetTransactionStatusResponse,
+  Provider, ec, AddTransactionResponse, GetTransactionStatusResponse, Account, Contract,
 } from 'starknet';
 import BN from 'bn.js';
-
-const { getSelectorFromName } = stark;
-
-// declare type NetworkName = 'mainnet-alpha' | 'georli-alpha';
+import parsedABI from './abi/terabethia_abi.json';
 
 export enum NetworkName {
   MAINNET = 'mainnet-alpha',
-  TESTNET = 'georli-alpha'
+  TESTNET = 'goerli-alpha'
 }
 
+const STARKNET_MAX_FEE = 1_000_000_000_000_000;
 class TerabethiaStarknet {
   private provider: Provider;
 
-  private address: string;
+  private contract: Contract;
 
-  constructor(account: string, privateKey: BN, address: string, network: NetworkName = NetworkName.TESTNET) {
+  constructor(accountAddress: string, privateKey: BN, contractAddress: string, network: NetworkName = NetworkName.TESTNET) {
     const provider = new Provider({ network });
     const keyPair = ec.getKeyPair(privateKey);
-    const signer = new Signer(provider, account, keyPair);
+    const account = new Account(provider, accountAddress, keyPair);
+    const contract = new Contract(parsedABI, contractAddress, account);
 
-    this.provider = signer;
-    this.address = address;
+    this.provider = provider;
+    this.contract = contract;
   }
 
   async sendMessage(p1: BigInt, p2: BigInt, nonce: string | undefined): Promise<AddTransactionResponse> {
-    return this.provider.addTransaction({
-      type: 'INVOKE_FUNCTION',
-      contract_address: this.address,
-      entry_point_selector: getSelectorFromName('send_message'),
-      calldata: [p1.toString(), p2.toString()],
-      nonce,
-    });
+    return this.contract.send_message(
+      p1.toString(),
+      p2.toString(),
+      {
+        nonce,
+        maxFee: STARKNET_MAX_FEE,
+      },
+    );
   }
 
   getTransactionStatus(hash: string): Promise<GetTransactionStatusResponse> {

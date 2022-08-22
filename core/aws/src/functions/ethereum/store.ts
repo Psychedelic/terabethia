@@ -10,11 +10,10 @@ import EthereumDatabase from '@libs/dynamo/ethereum';
 import { sqsHandler, requireEnv } from '@libs/utils';
 import bluebird from 'bluebird';
 import BN from 'bn.js';
-import {
-  KMSClient,
-} from '@aws-sdk/client-kms';
+import { KMSClient } from '@aws-sdk/client-kms';
 
-const envs = requireEnv(['ETHEREUM_TABLE_NAME',
+const envs = requireEnv([
+  'ETHEREUM_TABLE_NAME',
   'ETHEREUM_PROVIDER_URL',
   'CANISTER_ID',
   'QUEUE_URL',
@@ -56,13 +55,15 @@ const handleL1Message = async (message: BlockNativePayload) => {
 
   let logs = [];
   try {
-    logs = receipt.logs.map((log) => {
-      try {
-        return ethContract.interface.parseLog(log);
-      } catch (e) {
-        return null;
-      }
-    }).filter((log) => log && log.args && log.args.from_address);
+    logs = receipt.logs
+      .map((log) => {
+        try {
+          return ethContract.interface.parseLog(log);
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter((log) => log && log.args && log.args.from_address);
   } catch (e) {
     console.log(e);
     console.log('error during parsing logs, exiting');
@@ -76,6 +77,10 @@ const handleL1Message = async (message: BlockNativePayload) => {
 
   // we need to loop through the logs, because 1 transaction can emit multiple messages
   await bluebird.each(logs, async (log) => {
+    if (!log) {
+      return;
+    }
+
     const {
       from_address: fromAddress, to_address: toAddress, nonce, payload,
     } = log.args;
@@ -87,7 +92,11 @@ const handleL1Message = async (message: BlockNativePayload) => {
     );
 
     console.log({
-      fromAddress, toAddress, nonce, payloadLength: payload.length, payload,
+      fromAddress,
+      toAddress,
+      nonce,
+      payloadLength: payload.length,
+      payload,
     });
 
     const hasMessageHash = await db.hasMessageHash(messageHash);
@@ -112,7 +121,11 @@ const handleL1Message = async (message: BlockNativePayload) => {
     const arr = new BN(toAddress.toBigInt()).toArray();
 
     // we also need to handle 10 bytes padding for canister ids
-    const paddedArr = new Uint8Array(Array(10 - arr.length).fill(0).concat(arr));
+    const paddedArr = new Uint8Array(
+      Array(10 - arr.length)
+        .fill(0)
+        .concat(arr),
+    );
     const toAddressPid = Principal.fromUint8Array(paddedArr);
 
     console.log({
