@@ -1,6 +1,6 @@
 export default ({ IDL }: { IDL: any }) => {
   const RemoveClaimableResponse = IDL.Variant({
-    Ok: IDL.bool,
+    Ok: IDL.Bool,
     Err: IDL.Text
   });
   return IDL.Service({
