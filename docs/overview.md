@@ -99,6 +99,36 @@ The burn flow is very similar to our previous release with the WETHProxy, where 
 
 ## Instructions
 
+### Install
+
+#### Core
+
+ETH:
+```shell
+cd core/eth/
+yarn
+```
+
+Starknet: [env setup](https://www.cairo-lang.org/docs/quickstart.html#quickstart)
+```shell
+cd core/starknet
+
+# activate your environment
+source ~/cairo_venv/bin/activate
+```
+
+#### ETH Bridge
+```shell
+cd eth_bridge/eth/
+yarn
+```
+#### Magic Bridge
+```shell
+cd magic_bridge/eth/
+yarn
+```
+
+
 ### Deploy
 
 #### Core
@@ -124,10 +154,19 @@ The burn flow is very similar to our previous release with the WETHProxy, where 
 ### Tests
 
 #### Core
+
+ETH:
 ```shell
 cd core/eth/
 npx hardhat test
 ```
+
+Starknet:
+```
+cd core/starknet
+pytest cairo/terabethia_test.py
+```
+
 #### ETH Bridge
 ```shell
 cd eth_bridge/eth/
