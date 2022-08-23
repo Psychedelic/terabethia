@@ -20,6 +20,13 @@ const envs = requireEnv([
 // EthProxy ETH
 const provider = new ethers.providers.StaticJsonRpcProvider(envs.ETHEREUM_PROVIDER_URL);
 
+const principalArrayFromEthAddress = (ethAddress: string) => {
+  const arr = ethers.utils.arrayify(ethAddress);
+  const paddedArr = Array(29 - arr.length).fill(0);
+  const concat = new Uint8Array([...paddedArr, ...arr]);
+  return Principal.fromUint8Array(concat);
+}
+
 
 export const handleWithdraw = async (message: BlockNativePayload) => {
   if (message.status !== 'confirmed') {
@@ -52,7 +59,7 @@ export const handleWithdraw = async (message: BlockNativePayload) => {
 
   const amountAsNat = BigInt(transactionMetadata.payload.amount);
 
-  const tokenAddressPid = Principal.fromHex(transactionMetadata.payload.token.slice(2))
+  const tokenAddressPid = principalArrayFromEthAddress(transactionMetadata.payload.token);
   const dip20CanisterPid = await magicBridge.getPrincipal(tokenAddressPid);
   const dip20Principal = Principal.fromText(dip20CanisterPid.toString());
 
@@ -65,4 +72,5 @@ export const handleWithdraw = async (message: BlockNativePayload) => {
 };
 
 export const main = sqsHandler<BlockNativePayload>(handleWithdraw, envs.QUEUE_URL, undefined, 1);
+
 
