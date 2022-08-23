@@ -13,7 +13,7 @@ dfx canister --network ic call token getHolders "(0:nat64, 10:nat64)"
 
 dfx canister call tera authorize '(principal "avesb-mgo2l-ds25i-g7kd4-3he5l-z7ary-3biiq-sojiw-xjgbk-ich5l-mae")'
 
-dfx canister --network ic call eth_proxy burn '(principal "2bohb-y75ql-l2xk6-biylz-rxvvu-xmycj-qd7xl-fbta", 20000:nat)'
+dfx canister --network ic call eth_proxy burn '(principal "fle2e-ltcun-tpi5w-25chp-byb56-dfl72-f664t-slvy", 20000:nat)'
 
 dfx canister --network ic call tera authorize '(principal "xirxu-t46gy-l2x5a-3h7iy-zzreg-54cge-s7k26-n2gft-ka2dk-rjl4d-iqe")'
 
@@ -31,9 +31,9 @@ dfx canister --network ic call eth_proxy __get_candid_interface_tmp_hack
 dfx canister --network ic call token balanceOf "(principal \"cryx2-4wayj-bjxaa-iwno6-245vh-lfcgx-a5kwi-4ieq\")"
 
 # Starknet
-dfx canister --network=ic call token approve '(principal "tpni3-tiaaa-aaaab-qaeeq-cai", 1000000:nat)'
+dfx canister --network=ic call token approve '(principal "tpni3-tiaaa-aaaab-qaeeq-cai", 4200000000:nat)'
 
-dfx canister --network ic call eth_proxy burn '(principal "2bohb-y75ql-l2xk6-biylz-rxvvu-xmycj-qd7xl-fbta", 10000:nat)'
+dfx canister --network ic call eth_proxy burn '(principal "fle2e-ltcun-tpi5w-25chp-byb56-dfl72-f664t-slvy", 4200000000:nat)'
 
 dfx canister --network=ic call token getUserApprovals  '(principal "tpni3-tiaaa-aaaab-qaeeq-cai")'
 
