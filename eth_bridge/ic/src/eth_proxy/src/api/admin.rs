@@ -11,7 +11,7 @@ fn authorize(other: Principal) {
     STATE.with(|s| s.authorize(other))
 }
 
-#[query(name = "authorized")]
+#[query(name = "authorized", guard = "is_authorized")]
 #[candid_method(query)]
 fn authorized() -> Vec<Principal> {
     STATE.with(|s| s.controllers.borrow().clone())
