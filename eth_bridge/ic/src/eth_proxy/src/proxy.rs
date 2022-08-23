@@ -99,8 +99,7 @@ impl ProxyState {
         eth_address: EthereumAddr,
         amount: Nat,
     ) -> Result<(), String> {
-        let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
-        let eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
+        let eth_addr_pid = Principal::from_text(WETH_ADDRESS_IC).unwrap();
 
         let mut map = self.messages_unclaimed.borrow_mut();
         let messages = map
@@ -418,8 +417,6 @@ mod tests {
 
     #[test]
     fn test_claimable_messages() {
-        const WETH_ADDRESS_ETH: &str = "2e130e57021bb4dfb95eb4dd0dd8cfceb936148a";
-
         let eth_addr_1 = Principal::from_slice(
             &hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap(),
         );
@@ -427,7 +424,7 @@ mod tests {
 
         let msg_hash_1 = String::from("123123123");
         let msg_key_2: [u8; 32] = [1; 32];
-        let token_id_1 = Principal::from_slice(&hex::decode(WETH_ADDRESS_ETH).unwrap());
+        let token_id_1 = Principal::from_text(WETH_ADDRESS_IC).unwrap();
         let amount_1 = Nat::from(1_u64);
 
         // first msg
@@ -480,14 +477,12 @@ mod tests {
 
     #[test]
     fn test_claimable_messages_with_different_amounts() {
-        const WETH_ADDRESS_ETH: &str = "2e130e57021bb4dfb95eb4dd0dd8cfceb936148a";
-
         let eth_addr_1 = Principal::from_slice(
             &hex::decode("15B661f6D3FD9A7ED8Ed4c88bCcfD1546644443f").unwrap(),
         );
         let msg_key_1: [u8; 32] = [0; 32];
         let msg_hash_1 = String::from("123123123");
-        let weth_principal = Principal::from_slice(&hex::decode(WETH_ADDRESS_ETH).unwrap());
+        let weth_principal = Principal::from_text(WETH_ADDRESS_IC).unwrap();
         let amount_1 = Nat::from(1_u64);
 
         let msg_key_2: [u8; 32] = [1; 32];
