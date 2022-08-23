@@ -1,6 +1,6 @@
 # Terabethia
 
-![Image](https://github.com/Psychedelic/terabethia/blob/master/design/terabeta.png?raw=true "Design")
+![Image](https://github.com/Psychedelic/terabethia/blob/master/docs/terabeta.png?raw=true "Design")
 
 ## Overview
 Terabethia is a simple messaging protocol between Layer 1 (Ethereum) and Internet Computer. It’s using Starknet for cheap & efficient L2 → L1 message delivery.
