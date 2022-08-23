@@ -133,7 +133,7 @@ functions:
       IC_IDENTITY: ${env:IC_IDENTITY}
       DIP20_PROXY_CANISTER_ID: ${env:DIP20_PROXY_CANISTER_ID}
       QUEUE_URL: !Ref ERC20TxWithdrawQueue
-      MAGIC_BRIDGE_CANISTER_ID: ${env.MAGIC_BRIDGE_CANISTER_ID}
+      MAGIC_BRIDGE_CANISTER_ID: ${env:MAGIC_BRIDGE_CANISTER_ID}
     events:
       - sqs:
           arn: !GetAtt
