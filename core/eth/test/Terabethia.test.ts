@@ -39,11 +39,10 @@ describe("Terabethia", () => {
 
   describe("Sending Messages", () => {
     let tera: Terabethia;
-    let owner: SignerWithAddress;
     let addr1: SignerWithAddress;
 
     beforeEach(async () => {
-      [owner, addr1] = await ethers.getSigners();
+      [addr1] = await ethers.getSigners();
 
       // We get the contract to deploy
       const Terabethia = (await ethers.getContractFactory(
