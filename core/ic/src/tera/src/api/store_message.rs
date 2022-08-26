@@ -1,6 +1,5 @@
-use candid::{candid_method, encode_args, Nat, Principal};
-use ic_cdk::api;
-use ic_cdk_macros::update;
+use candid::{candid_method, Nat, Principal};
+use ic_kit::macros::update;
 
 use super::admin::is_authorized;
 use crate::{
@@ -40,9 +39,9 @@ async fn trigger_call(
         return StoreMessageResponse(Err(message_exists.err().unwrap()));
     }
 
-    let args_raw = encode_args((&from, &nonce, &payload)).unwrap();
+    let args_raw = ic_kit::candid::encode_args((&from, &nonce, &payload)).unwrap();
 
-    match api::call::call_raw(to, "handle_message", &args_raw[..], 0).await {
+    match ic_kit::ic::call_raw(to, "handle_message", args_raw, 0).await {
         Ok(x) => StoreMessageResponse(Ok(CallResult { r#return: x })),
         Err((code, msg)) => StoreMessageResponse(Err(format!(
             "An error happened during the call: {}: {}",
