@@ -1,5 +1,5 @@
 use candid::candid_method;
-use ic_cdk_macros::update;
+use ic_cdk_macros::{query, update};
 
 use super::admin::is_authorized;
 use crate::{
