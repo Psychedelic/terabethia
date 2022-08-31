@@ -5,7 +5,7 @@ use crate::common::dip20::Dip20;
 use crate::common::magic::Magic;
 use crate::common::tera::Tera;
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, OutgoingMessage, TokendId, TxError, TxReceipt,
+    ClaimableMessage, EthereumAddr, OutgoingMessage, TokendId, TxError, TxFlag, TxReceipt,
 };
 use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
@@ -41,6 +41,13 @@ async fn burn(
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
+
+    // One user cannot make multiple tx at the same time for the same token
+    if STATE.with(|s| s.user_is_flagged(caller, token_id)) {
+        return Err(TxError::MultipleTokenTx);
+    }
+
+    let _ = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Burning));
 
     let transfer_from = token_id
         .transfer_from(caller, self_id, amount.clone())
@@ -87,12 +94,15 @@ async fn burn(
                                     token: token_id.clone(),
                                     amount: amount.clone(),
                                 });
+
+                                s.remove_user_flag(caller, token_id)
                             });
                             // All correct
                             return Ok(burn_txn_id);
                         }
                         // send_message error
                         Err(_) => {
+                            STATE.with(|s| s.remove_user_flag(caller, token_id));
                             return Err(TxError::Other(format!(
                                 "Sending message to L1 failed with caller {:?}!",
                                 caller.to_string()
@@ -102,11 +112,15 @@ async fn burn(
                 }
                 // burn error
                 Err(error) => {
+                    STATE.with(|s| s.remove_user_flag(caller, token_id));
                     return Err(error);
                 }
             };
         }
         // transfer error
-        Err(error) => Err(error),
+        Err(error) => {
+            STATE.with(|s| s.remove_user_flag(caller, token_id));
+            Err(error)
+        }
     }
 }

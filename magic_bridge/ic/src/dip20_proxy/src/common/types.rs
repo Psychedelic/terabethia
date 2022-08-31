@@ -36,6 +36,12 @@ pub enum MessageStatus {
     ConsumedNotMinted,
 }
 
+#[derive(Clone, CandidType, Deserialize, Eq, PartialEq, Debug)]
+pub enum TxFlag {
+    Burning,
+    Withdrawing,
+}
+
 #[derive(CandidType, Deserialize)]
 pub struct IncomingMessageHashParams {
     pub from: Nat,
@@ -76,6 +82,8 @@ pub struct ProxyState {
     pub controllers: RefCell<Vec<Principal>>,
     // store outgoing massages waiting to be claimed
     pub messages_unclaimed: RefCell<HashMap<EthereumAddr, Vec<ClaimableMessage>>>,
+    // user state flag
+    pub user_actions: RefCell<HashMap<(Principal, Principal), TxFlag>>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
@@ -88,6 +96,8 @@ pub struct StableProxyState {
     pub controllers: Vec<Principal>,
     // store outgoing massages waiting to be claimed
     pub messages_unclaimed: HashMap<EthereumAddr, Vec<ClaimableMessage>>,
+    // user state flag
+    pub user_actions: HashMap<(Principal, Principal), TxFlag>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Copy)]
@@ -106,5 +116,6 @@ pub enum TxError {
     BlockUsed,
     ErrorOperationStyle,
     ErrorTo,
+    MultipleTokenTx,
     Other(String),
 }

@@ -5,7 +5,7 @@ use ic_kit::ic;
 
 use crate::common::types::{
     ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, NonceBytes, ProxyState,
-    StableProxyState, TokendId,
+    StableProxyState, TokendId, TxError, TxFlag,
 };
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -114,6 +114,36 @@ impl ProxyState {
         return unclaimed_messages;
     }
 
+    pub fn set_user_flag(
+        &self,
+        user: Principal,
+        token: Principal,
+        flag: TxFlag,
+    ) -> Result<(), TxError> {
+        self.user_actions.borrow_mut().insert((user, token), flag);
+        Ok(())
+    }
+
+    pub fn remove_user_flag(&self, user: Principal, token: Principal) {
+        self.user_actions.borrow_mut().remove(&(user, token));
+    }
+
+    pub fn get_user_flag(&self, user: Principal, token: Principal) -> Option<TxFlag> {
+        let flag = if let Some(flag) = self.user_actions.borrow().get(&(user, token)) {
+            flag.to_owned()
+        } else {
+            return None;
+        };
+        Some(flag)
+    }
+
+    pub fn user_is_flagged(&self, user: Principal, token: Principal) -> bool {
+        if self.get_user_flag(user, token).is_none() {
+            return false;
+        }
+        true
+    }
+
     pub fn authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
@@ -136,6 +166,7 @@ impl ProxyState {
             controllers: self.controllers.take(),
             incoming_messages: self.incoming_messages.take(),
             messages_unclaimed: self.messages_unclaimed.take(),
+            user_actions: self.user_actions.take(),
         }
     }
 
@@ -144,6 +175,7 @@ impl ProxyState {
         self.controllers.borrow_mut().clear();
         self.incoming_messages.borrow_mut().clear();
         self.messages_unclaimed.borrow_mut().clear();
+        self.user_actions.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_message_state: StableProxyState) {
@@ -153,6 +185,7 @@ impl ProxyState {
             .replace(stable_message_state.incoming_messages);
         self.messages_unclaimed
             .replace(stable_message_state.messages_unclaimed);
+        self.user_actions.replace(stable_message_state.user_actions);
     }
 }
 
