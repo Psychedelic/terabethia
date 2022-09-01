@@ -1,7 +1,16 @@
 type CallResult = record { return : vec nat8 };
 type ConsumeMessageResponse = variant { Ok : bool; Err : text };
 type OutgoingMessage = record { msg_hash : text; msg_key : vec nat8 };
-type OutgoingMessagePair = record { msg_hash : text; msg_key : text };
+type OutgoingMessageHashParams = record {
+  to : nat;
+  from : nat;
+  payload : vec nat;
+};
+type OutgoingMessagePair = record {
+  msg_hash : text;
+  msg_key : text;
+  msg_hash_params : OutgoingMessageHashParams;
+};
 type SendMessageResponse = variant { Ok : OutgoingMessage; Err : text };
 type StoreMessageResponse = variant { Ok : CallResult; Err : text };
 service : {

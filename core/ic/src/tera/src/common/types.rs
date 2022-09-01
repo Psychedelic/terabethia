@@ -1,4 +1,4 @@
-use ic_kit::candid::{CandidType, Deserialize, Nat};
+use candid::{CandidType, Deserialize, Nat};
 use serde::Serialize;
 
 pub type Nonce = Nat;
@@ -24,7 +24,7 @@ pub struct IncomingMessageHashParams {
     pub(crate) payload: Vec<Nat>,
 }
 
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Serialize, Clone)]
 pub struct OutgoingMessageHashParams {
     pub(crate) from: Nat,
     pub(crate) to: Nat,
@@ -51,4 +51,5 @@ pub struct OutgoingMessage {
 pub struct OutgoingMessagePair {
     pub(crate) msg_key: String,
     pub(crate) msg_hash: String,
+    pub(crate) msg_hash_params: OutgoingMessageHashParams,
 }
