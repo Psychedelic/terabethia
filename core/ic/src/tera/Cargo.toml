@@ -9,7 +9,7 @@ path = "src/main.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.7.4"
+candid = "0.7.16"
 ic-cdk = "0.5.5"
 sha2 = "0.10.1"
 ic-cdk-macros = "0.5.5"
