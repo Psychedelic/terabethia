@@ -21,12 +21,23 @@ fn get_messages() -> Vec<OutgoingMessagePair> {
 
 #[cfg(test)]
 mod tests {
+    use candid::Nat;
     use ic_kit::{mock_principals, MockContext};
+
+    use crate::common::types::OutgoingMessageHashParams;
 
     use super::*;
 
     pub fn msg_hash() -> String {
         String::from("d0379be15bb6f33737b756e512dad1e71226b31fa648da57811f930badf6c163")
+    }
+
+    pub fn msh_hash_params() -> OutgoingMessageHashParams {
+        OutgoingMessageHashParams {
+            from: Nat::from(1),
+            to: Nat::from(2),
+            payload: vec![Nat::from(3)],
+        }
     }
 
     fn before_each() -> &'static mut MockContext {
@@ -38,7 +49,7 @@ mod tests {
     #[test]
     fn test_get_messages() {
         let _mock_ctx = before_each();
-        let store_message = STATE.with(|s| s.store_outgoing_message(msg_hash()));
+        let store_message = STATE.with(|s| s.store_outgoing_message(msg_hash(), msh_hash_params()));
 
         assert!(store_message.is_ok());
 
@@ -54,7 +65,7 @@ mod tests {
     #[test]
     fn test_remove_messages() {
         let _mock_ctx = before_each();
-        let store_message = STATE.with(|s| s.store_outgoing_message(msg_hash()));
+        let store_message = STATE.with(|s| s.store_outgoing_message(msg_hash(), msh_hash_params()));
 
         assert!(store_message.is_ok());
 
@@ -62,6 +73,7 @@ mod tests {
         let messages_to_remove = vec![OutgoingMessagePair {
             msg_key,
             msg_hash: msg_hash(),
+            msg_hash_params: msh_hash_params(),
         }];
 
         let remove_messages = remove_messages(messages_to_remove);

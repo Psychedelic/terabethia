@@ -15,13 +15,17 @@ use crate::{
 fn send(to: Principal, payload: Vec<Nat>) -> SendMessageResponse {
     let caller = caller();
 
-    let msg_hash = Message.calculate_hash(OutgoingMessageHashParams {
+    let outgoing_message_hash_params = OutgoingMessageHashParams {
         from: caller.to_nat(),
         to: to.to_nat(),
         payload: payload.clone(),
-    });
+    };
 
-    STATE.with(|s| SendMessageResponse(s.store_outgoing_message(msg_hash)))
+    let msg_hash = Message.calculate_hash(outgoing_message_hash_params);
+
+    STATE.with(|s| {
+        SendMessageResponse(s.store_outgoing_message(msg_hash, outgoing_message_hash_params))
+    })
 }
 
 #[cfg(test)]

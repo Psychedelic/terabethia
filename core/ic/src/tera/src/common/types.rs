@@ -24,8 +24,9 @@ pub struct IncomingMessageHashParams {
     pub(crate) payload: Vec<Nat>,
 }
 
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Serialize)]
 pub struct OutgoingMessageHashParams {
+    #[serde(with = "serde_bytes")]
     pub(crate) from: Nat,
     pub(crate) to: Nat,
     pub(crate) payload: Vec<Nat>,
@@ -51,4 +52,5 @@ pub struct OutgoingMessage {
 pub struct OutgoingMessagePair {
     pub(crate) msg_key: String,
     pub(crate) msg_hash: String,
+    pub(crate) msg_hash_params: OutgoingMessageHashParams,
 }

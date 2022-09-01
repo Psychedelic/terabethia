@@ -1,4 +1,6 @@
-use crate::common::types::{Nonce, NonceBytes, OutgoingMessage, OutgoingMessagePair};
+use crate::common::types::{
+    Nonce, NonceBytes, OutgoingMessage, OutgoingMessageHashParams, OutgoingMessagePair,
+};
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
@@ -20,7 +22,7 @@ pub struct TerabetiaState {
     pub nonce: RefCell<HashSet<Nonce>>,
 
     /// Outgoing messages
-    pub messages_out: RefCell<HashSet<OutgoingMessage>>,
+    pub messages_out: RefCell<HashMap<OutgoingMessage, OutgoingMessageHashParams>>,
 
     /// Outgoing message index
     pub message_out_index: RefCell<u64>,
@@ -38,7 +40,7 @@ pub struct StableTerabetiaState {
     pub nonce: HashSet<Nonce>,
 
     /// Outgoing messages
-    pub messages_out: HashSet<OutgoingMessage>,
+    pub messages_out: HashMap<OutgoingMessage, OutgoingMessageHashParams>,
 
     /// Outgoing message index
     pub message_out_index: u64,
@@ -82,10 +84,12 @@ impl From<OutgoingMessagePair> for OutgoingMessage {
 
 fn msg_key_bytes_to_string(message: &OutgoingMessage) -> OutgoingMessagePair {
     let msg_key = hex::encode(&message.msg_key);
+    let msg_hash_params = STATE.with(|s| s.messages_out.borrow().get(message).unwrap());
 
     OutgoingMessagePair {
         msg_key,
         msg_hash: message.msg_hash.clone(),
+        msg_hash_params: *msg_hash_params,
     }
 }
 
@@ -137,20 +141,24 @@ impl TerabetiaState {
     pub fn get_messages(&self) -> Vec<OutgoingMessagePair> {
         self.messages_out
             .borrow()
-            .iter()
+            .keys()
             .map(msg_key_bytes_to_string)
             .collect()
     }
 
     /// Store outgoing messages to L1
-    pub fn store_outgoing_message(&self, msg_hash: String) -> Result<OutgoingMessage, String> {
+    pub fn store_outgoing_message(
+        &self,
+        msg_hash: String,
+        message_hash_params: OutgoingMessageHashParams,
+    ) -> Result<OutgoingMessage, String> {
         // we increment outgoing message counter
         let mut index = self.message_out_index.borrow_mut();
         *index += 1;
 
         let mut map = self.messages_out.borrow_mut();
         let message_out_key = OutgoingMessage::new(msg_hash, *index);
-        map.insert(message_out_key.clone());
+        map.insert(message_out_key.clone(), message_hash_params);
 
         Ok(message_out_key)
     }
@@ -281,6 +289,14 @@ mod tests {
     use super::*;
     use ic_kit::{MockContext, Principal};
 
+    pub fn msg_hash_params() -> OutgoingMessageHashParams {
+        OutgoingMessageHashParams {
+            from: Nat::from(1),
+            to: Nat::from(2),
+            payload: vec![Nat::from(3)],
+        }
+    }
+
     #[test]
     fn test_outgoing_message_from() {
         let index: u64 = 1;
@@ -292,6 +308,7 @@ mod tests {
         let expected_message_out = OutgoingMessage::from(OutgoingMessagePair {
             msg_key: expected_msg_key.to_string(),
             msg_hash: msg_hash.to_string(),
+            msg_hash_params: msg_hash_params(),
         });
 
         assert_eq!(
@@ -305,7 +322,7 @@ mod tests {
         let msg_key = "13c1e4094887e7ede4cff2cc3b32f010363b8b2b6a71897e12f8aaa6959fbe27";
         let msg_hash = "c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1";
 
-        let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.to_string()));
+        let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.to_string(), msg_hash_params()));
 
         let messages = STATE.with(|s| s.get_messages());
 
@@ -385,7 +402,7 @@ mod tests {
 
         assert_eq!(msg_hash, msg_hash_expected);
 
-        let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.clone()));
+        let _ = STATE.with(|s| s.store_outgoing_message(msg_hash.clone(), msg_hash_params()));
 
         let outoging_messages = STATE.with(|s| s.get_messages());
         assert_eq!(outoging_messages.len(), 1);
@@ -397,7 +414,7 @@ mod tests {
             String::from("c9e23418a985892acc0fa031331080bfce112bdf841a3ae04a5181c6da1610b1");
 
         let message_out = STATE
-            .with(|s| s.store_outgoing_message(msg_hash.clone()))
+            .with(|s| s.store_outgoing_message(msg_hash.clone(), msg_hash_params()))
             .unwrap();
 
         let mut outoging_messages = STATE.with(|s| s.get_messages());
@@ -407,8 +424,13 @@ mod tests {
         let msg_key = hex::encode(message_out.msg_key);
         let msg_hash = message_out.msg_hash;
 
-        let remove_message =
-            STATE.with(|s| s.remove_messages(vec![OutgoingMessagePair { msg_key, msg_hash }]));
+        let remove_message = STATE.with(|s| {
+            s.remove_messages(vec![OutgoingMessagePair {
+                msg_key,
+                msg_hash,
+                msg_hash_params: msg_hash_params(),
+            }])
+        });
 
         assert_eq!(remove_message.unwrap(), true);
 
