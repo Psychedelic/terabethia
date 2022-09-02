@@ -34,8 +34,10 @@ service : {
   flush_failed_registrations : () -> ();
   get_all : () -> (vec record { principal; principal }) query;
   get_canister : (principal) -> (opt principal) query;
+  get_current_commit : () -> (text) query;
   get_failed_registrations : () -> (
       vec record { principal; record { CreateCanisterParam; nat8 } },
     ) query;
+  get_version : () -> (text) query;
   upgrade_code : (principal, TokenType) -> (Result_1);
 }

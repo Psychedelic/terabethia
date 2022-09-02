@@ -25,6 +25,8 @@ service : {
   claimable_get_all : (principal) -> (vec ClaimableMessage) query;
   get_all_token_balance : () -> (Result_1);
   get_balance : (principal) -> (opt nat);
+  get_current_commit : () -> (text) query;
+  get_version : () -> (text) query;
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (principal, nat, vec nat) -> (Result);
   remove_claimable : (principal, principal, nat) -> (Result_2);

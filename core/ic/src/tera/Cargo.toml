@@ -17,6 +17,7 @@ ic-kit = "0.4.8"
 sha3 = "0.9.1"
 hex = "0.4.3"
 serde = "1.0.130"
+git-version = "0.3.5"
 serde_bytes = "0.11.5"
 num-bigint = "0.4.3"
 
