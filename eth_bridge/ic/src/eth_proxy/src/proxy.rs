@@ -4,8 +4,8 @@ use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, ProxyState, StableProxyState,
-    TokendId,
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, NonceBytes, ProxyState,
+    StableProxyState, TokendId,
 };
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -188,6 +188,23 @@ impl FromNat for Principal {
         let mut p_slice = vec![0u8; padding_bytes];
         p_slice.extend_from_slice(&be_bytes);
         Principal::from_slice(&p_slice)
+    }
+}
+
+pub trait ToBytes {
+    fn to_nonce_bytes(&self) -> NonceBytes;
+}
+impl ToBytes for Nat {
+    fn to_nonce_bytes(&self) -> NonceBytes {
+        let be_bytes = self.0.to_bytes_be();
+        let be_bytes_len = be_bytes.len();
+        let padding_bytes = 32 - be_bytes_len;
+
+        let mut p_slice = vec![0u8; padding_bytes];
+        p_slice.extend_from_slice(&be_bytes);
+
+        let nonce_bytes: [u8; 32] = p_slice.as_slice()[..].try_into().unwrap();
+        nonce_bytes
     }
 }
 

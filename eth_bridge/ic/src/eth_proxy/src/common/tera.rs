@@ -4,12 +4,14 @@ use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{Nonce, OutgoingMessage, TxError};
 
+use super::types::NonceBytes;
+
 #[async_trait]
 pub trait Tera {
     async fn consume_message(
         &self,
         erc20_addr_pid: Principal,
-        nonce: Nonce,
+        nonce: NonceBytes,
         payload: Vec<Nat>,
     ) -> Result<bool, TxError>;
     async fn send_message(
@@ -24,7 +26,7 @@ impl Tera for Principal {
     async fn consume_message(
         &self,
         erc20_addr_pid: Principal,
-        nonce: Nonce,
+        nonce: NonceBytes,
         payload: Vec<Nat>,
     ) -> Result<bool, TxError> {
         let consume: (Result<bool, String>,) = match call(

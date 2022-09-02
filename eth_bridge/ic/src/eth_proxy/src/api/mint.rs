@@ -6,7 +6,9 @@ use ic_kit::{ic, macros::update};
 use crate::common::tera::Tera;
 use crate::common::utils::{GweiToWei, Keccak256HashFn};
 use crate::common::weth::Weth;
-use crate::proxy::{FromNat, ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
+use crate::proxy::{
+    FromNat, ToBytes, ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC,
+};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{
@@ -50,7 +52,7 @@ pub async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     } else {
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
         if tera_id
-            .consume_message(weth_eth_addr_pid, nonce, payload.clone())
+            .consume_message(weth_eth_addr_pid, nonce.to_nonce_bytes(), payload.clone())
             .await
             .is_err()
         {
