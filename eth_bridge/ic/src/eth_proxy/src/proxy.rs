@@ -1,5 +1,6 @@
 use std::{collections::HashMap, ops::AddAssign};
 
+use git_version::git_version;
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
@@ -14,6 +15,8 @@ pub const WETH_ADDRESS_ETH: &str = "0x2e130e57021bb4dfb95eb4dd0dd8cfceb936148a";
 
 thread_local! {
     pub static STATE: ProxyState = ProxyState::default();
+    pub static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    pub static CURRENT_COMMIT: &'static str = git_version!(args = ["--always", "--exclude", "*"], fallback = "unknown");
 }
 
 impl ProxyState {

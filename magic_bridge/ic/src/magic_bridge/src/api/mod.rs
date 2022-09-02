@@ -6,3 +6,4 @@ mod init;
 mod inspect_message;
 mod install;
 mod upgrade;
+mod version;

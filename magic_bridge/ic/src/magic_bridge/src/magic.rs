@@ -1,5 +1,6 @@
 use crate::factory::CreateCanisterParam;
 use crate::types::*;
+use git_version::git_version;
 use ic_kit::candid::{CandidType, Deserialize};
 use ic_kit::interfaces::management::{
     CanisterStatus, CanisterStatusResponse, DeleteCanister, DepositCycles, StartCanister,
@@ -14,6 +15,8 @@ use std::str;
 
 thread_local! {
     pub static STATE: MagicState = MagicState::default();
+    pub static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    pub static CURRENT_COMMIT: &'static str = git_version!(args = ["--always", "--exclude", "*"], fallback = "unknown");
 }
 
 #[derive(CandidType, Deserialize, Default)]

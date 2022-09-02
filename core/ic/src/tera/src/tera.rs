@@ -1,5 +1,6 @@
 use crate::common::types::{Nonce, NonceBytes, OutgoingMessage, OutgoingMessagePair};
 use candid::{CandidType, Deserialize, Nat, Principal};
+use git_version::git_version;
 use ic_kit::ic::caller;
 use sha2::{Digest, Sha256};
 use std::{
@@ -9,6 +10,8 @@ use std::{
 
 thread_local! {
     pub static STATE: TerabetiaState = TerabetiaState::default();
+    pub static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    pub static CURRENT_COMMIT: &'static str = git_version!(args = ["--always", "--exclude", "*"], fallback = "unknown");
 }
 
 #[derive(CandidType, Deserialize, Default)]
