@@ -4,7 +4,7 @@ use ic_kit::{ic, macros::update};
 use crate::common::dip20::Dip20;
 use crate::common::tera::Tera;
 use crate::common::utils::Keccak256HashFn;
-use crate::proxy::{FromNat, ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
+use crate::proxy::{FromNat, ToBytes, ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
 
 use crate::common::types::{
@@ -47,7 +47,7 @@ pub async fn mint(token_id: TokendId, nonce: Nonce, payload: Vec<Nat>) -> TxRece
     } else {
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
         if tera_id
-            .consume_message(erc20_addr_pid, nonce, payload.clone())
+            .consume_message(erc20_addr_pid, nonce.to_nonce_bytes(), payload.clone())
             .await
             .is_err()
         {
