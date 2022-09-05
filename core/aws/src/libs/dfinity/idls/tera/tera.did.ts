@@ -27,7 +27,7 @@ export default ({ IDL }: { IDL: any }) => {
       [ConsumeMessageResponse],
       [],
     ),
-    get_messages: IDL.Func([], [IDL.Vec(OutgoingMessagePair)], ['query']),
+    get_messages: IDL.Func([], [IDL.Vec(OutgoingMessagePair)], []),
     get_nonces: IDL.Func([], [IDL.Vec(IDL.Nat)], ['query']),
     remove_messages: IDL.Func(
       [IDL.Vec(OutgoingMessagePair)],
