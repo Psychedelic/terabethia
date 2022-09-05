@@ -579,4 +579,49 @@ mod tests {
         // the message that is left is the one with amount_1
         assert_eq!(claimable_messages[0].amount, amount_1);
     }
+
+    #[test]
+    fn test_user_flags() {
+        let token_one = Principal::from_str("nnplb-2yaaa-aaaab-qagjq-cai").unwrap();
+        let token_two = Principal::from_str("o25ht-laaaa-aaaab-qagba-cai").unwrap();
+        let user =
+            Principal::from_str("srxch-xqaaa-aaaaa-aaaaa-ab53f-ob63o-jlvzy-wyeai-ba6r7-f5666-gam")
+                .unwrap();
+        let flag_one = STATE.with(|s| s.set_user_flag(user, token_one, TxFlag::Withdrawing));
+
+        assert!(flag_one.is_ok());
+
+        let get_flag_one = STATE.with(|s| s.get_user_flag(user, token_one));
+
+        assert_eq!(get_flag_one.unwrap(), TxFlag::Withdrawing);
+
+        let user_is_flagged = STATE.with(|s| s.user_is_flagged(user, token_one));
+
+        assert!(user_is_flagged);
+
+        //user is not flagged for token_two
+        let user_is_flagged_token_two = STATE.with(|s| s.user_is_flagged(user, token_two));
+        assert_eq!(user_is_flagged_token_two, false);
+
+        // When try to flag a flagged user it returns error
+        let flag_flagged_user =
+            STATE.with(|s| s.set_user_flag(user, token_one, TxFlag::Withdrawing));
+        assert!(flag_flagged_user.is_err());
+        assert_eq!(flag_flagged_user.err().unwrap(), TxError::MultipleTokenTx);
+
+        //when try to flag user for another token is Ok()
+        let flag_user_other_token =
+            STATE.with(|s| s.set_user_flag(user, token_two, TxFlag::Burning));
+
+        assert!(flag_user_other_token.is_ok());
+
+        //remove flag
+        STATE.with(|s| s.remove_user_flag(user, token_one));
+        assert_eq!(STATE.with(|s| s.user_is_flagged(user, token_one)), false);
+
+        // now it can be flaged again for token_one
+        assert!(STATE
+            .with(|s| s.set_user_flag(user, token_one, TxFlag::Burning))
+            .is_ok())
+    }
 }
