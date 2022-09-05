@@ -120,6 +120,9 @@ impl ProxyState {
         token: Principal,
         flag: TxFlag,
     ) -> Result<(), TxError> {
+        if self.user_is_flagged(user, token) {
+            return Err(TxError::MultipleTokenTx);
+        }
         self.user_actions.borrow_mut().insert((user, token), flag);
         Ok(())
     }

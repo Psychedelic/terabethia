@@ -22,11 +22,10 @@ use crate::{
 pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     let caller = ic::caller();
 
-    let flagged = STATE.with(|s| s.user_is_flagged(caller, token_id));
-    if flagged {
-        return Err(TxError::MultipleTokenTx);
-    }
-    let _ = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing));
+    match STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing)) {
+        Ok(()) => {}
+        Err(_error) => return Err(TxError::MultipleTokenTx),
+    };
 
     if (token_id.name().await).is_err() {
         STATE.with(|s| s.remove_user_flag(caller, token_id));

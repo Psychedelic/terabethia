@@ -43,11 +43,10 @@ async fn burn(
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
     // One user cannot make multiple tx at the same time for the same token
-    if STATE.with(|s| s.user_is_flagged(caller, token_id)) {
-        return Err(TxError::MultipleTokenTx);
+    match STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Burning)) {
+        Ok(()) => {}
+        Err(_error) => return Err(TxError::MultipleTokenTx),
     }
-
-    let _ = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Burning));
 
     let transfer_from = token_id
         .transfer_from(caller, self_id, amount.clone())
