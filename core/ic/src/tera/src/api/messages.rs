@@ -1,5 +1,5 @@
 use candid::candid_method;
-use ic_cdk_macros::{query, update};
+use ic_cdk_macros::update;
 
 use super::admin::is_authorized;
 use crate::{
@@ -13,8 +13,8 @@ fn remove_messages(messages: Vec<OutgoingMessagePair>) -> RemoveMessagesResponse
     STATE.with(|s| RemoveMessagesResponse(s.remove_messages(messages)))
 }
 
-#[query(name = "get_messages", guard = "is_authorized")]
-#[candid_method(query, rename = "get_messages")]
+#[update(name = "get_messages", guard = "is_authorized")]
+#[candid_method(update, rename = "get_messages")]
 fn get_messages() -> Vec<OutgoingMessagePair> {
     STATE.with(|s| s.get_messages())
 }
