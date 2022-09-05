@@ -22,18 +22,17 @@ use crate::{
 pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     let caller = ic::caller();
 
-    match STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing)) {
-        Ok(()) => {}
-        Err(_error) => return Err(TxError::MultipleTokenTx),
-    };
-
     if (token_id.name().await).is_err() {
-        STATE.with(|s| s.remove_user_flag(caller, token_id));
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
             token_id.to_string(),
         )));
     }
+
+    match STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing)) {
+        Ok(()) => {}
+        Err(_error) => return Err(TxError::MultipleTokenTx),
+    };
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
