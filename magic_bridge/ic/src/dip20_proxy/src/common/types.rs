@@ -6,6 +6,8 @@ use serde::Serialize;
 
 pub type Nonce = Nat;
 
+pub type NonceBytes = [u8; 32];
+
 pub type TokendId = Principal;
 
 pub type MessageHash = String;
