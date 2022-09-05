@@ -8,7 +8,7 @@ use crate::common::weth::Weth;
 use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
 use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::common::types::{ClaimableMessage, EthereumAddr, TxError, TxReceipt};
+use crate::common::types::{ClaimableMessage, EthereumAddr, TxError, TxFlag, TxReceipt};
 
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
@@ -22,6 +22,11 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
             "Token {} canister is not responding!",
             weth_ic_addr_pid.to_string(),
         )));
+    }
+
+    match STATE.with(|s| s.set_user_flag(caller, TxFlag::Burning)) {
+        Ok(()) => {}
+        Err(_) => return Err(TxError::MultipleTokenTx),
     }
 
     let transfer_from = weth_ic_addr_pid
@@ -66,12 +71,15 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                                     token: weth_ic_addr_pid.clone(),
                                     amount: amount.clone(),
                                 });
+
+                                s.remove_user_flag(caller)
                             });
                             // All correct
                             return Ok(burn_txn_id);
                         }
                         // send_message to Tera error
                         Err(_) => {
+                            STATE.with(|s| s.remove_user_flag(caller));
                             return Err(TxError::Other(format!(
                                 "Sending message to L1 failed with caller {:?}!",
                                 caller.to_string()
@@ -81,11 +89,15 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                 }
                 // burn error
                 Err(error) => {
+                    STATE.with(|s| s.remove_user_flag(caller));
                     return Err(error);
                 }
             };
         }
         // transfer_from error
-        Err(error) => Err(error),
+        Err(error) => {
+            STATE.with(|s| s.remove_user_flag(caller));
+            Err(error)
+        }
     }
 }
