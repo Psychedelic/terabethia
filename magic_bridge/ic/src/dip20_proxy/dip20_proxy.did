@@ -11,6 +11,7 @@ type Result_2 = variant { Ok : bool; Err : text };
 type TxError = variant {
   InsufficientAllowance;
   InsufficientBalance;
+  MultipleTokenTx;
   ErrorOperationStyle;
   Unauthorized;
   LedgerTrap;
