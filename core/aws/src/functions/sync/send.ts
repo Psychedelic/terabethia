@@ -3,10 +3,7 @@ import 'source-map-support/register';
 import { splitUint256, requireEnv, sqsHandler } from '@libs/utils';
 import StarknetDatabase from '@libs/dynamo/starknet';
 import TerabethiaStarknet, { NetworkName } from '@libs/starknet';
-import {
-  SQSClient,
-  SendMessageCommand,
-} from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import {
   KMSClient,
   DecryptCommand,
@@ -20,6 +17,9 @@ export interface TransactionPayload {
   txHash: string;
   msgHash: string;
   msgKey: string;
+  to: bigint;
+  from: bigint;
+  payload: Array<bigint>;
   nonce: string;
 }
 
@@ -46,7 +46,9 @@ let terabethia: TerabethiaStarknet;
 const handleMessage = async (body: MessagePayload) => {
   if (!terabethia) {
     const command = new DecryptCommand({
-      CiphertextBlob: new Uint8Array(Buffer.from(envs.STARKNET_PRIVATE_KEY, 'base64')),
+      CiphertextBlob: new Uint8Array(
+        Buffer.from(envs.STARKNET_PRIVATE_KEY, 'base64'),
+      ),
       KeyId: envs.KMS_KEY_ID,
       EncryptionAlgorithm: EncryptionAlgorithmSpec.RSAES_OAEP_SHA_256,
     });
@@ -58,10 +60,17 @@ const handleMessage = async (body: MessagePayload) => {
       return;
     }
 
-    terabethia = new TerabethiaStarknet(envs.STARKNET_ACCOUNT_ADDRESS, new BN(res.Plaintext), envs.STARKNET_CONTRACT_ADDRESS, network);
+    terabethia = new TerabethiaStarknet(
+      envs.STARKNET_ACCOUNT_ADDRESS,
+      new BN(res.Plaintext),
+      envs.STARKNET_CONTRACT_ADDRESS,
+      network,
+    );
   }
 
-  const { hash, key, nonce } = body;
+  const {
+    hash, key, nonce, to, from, payload: messagePayload,
+  } = body;
 
   const [a, b] = splitUint256(hash);
   let tx;
@@ -102,23 +111,32 @@ const handleMessage = async (body: MessagePayload) => {
         await db.storeLastNonce(nextNonceBn.addn(1));
       }
 
-      await db.storeTransaction(tx.transaction_hash, [key]);
+      await db.storeTransaction(
+        tx.transaction_hash,
+        { to, from, payload: messagePayload },
+        [key],
+      );
 
       const payload: TransactionPayload = {
         msgHash: hash,
         msgKey: key,
+        to,
+        from,
+        payload: messagePayload,
         txHash: tx.transaction_hash,
         nonce: nextNonce, // if tx fails, we'll replay it with same nonce
       };
 
       // we need to make sure the tx was accepted
       // so we delay another event
-      await sqsClient.send(new SendMessageCommand({
-        QueueUrl: envs.CHECK_QUEUE_URL,
-        MessageBody: JSON.stringify(payload),
-        MessageGroupId: 'starknet',
-        MessageDeduplicationId: tx.transaction_hash,
-      }));
+      await sqsClient.send(
+        new SendMessageCommand({
+          QueueUrl: envs.CHECK_QUEUE_URL,
+          MessageBody: JSON.stringify(payload),
+          MessageGroupId: 'starknet',
+          MessageDeduplicationId: tx.transaction_hash,
+        }),
+      );
     } catch (e) {
       console.log('error after starknet tx submitted');
       console.log(e.message);
@@ -131,4 +149,9 @@ const handleMessage = async (body: MessagePayload) => {
   }
 };
 
-export const main = sqsHandler<MessagePayload>(handleMessage, envs.QUEUE_URL, undefined, 1);
+export const main = sqsHandler<MessagePayload>(
+  handleMessage,
+  envs.QUEUE_URL,
+  undefined,
+  1,
+);

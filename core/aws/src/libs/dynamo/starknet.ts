@@ -7,6 +7,12 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import Database from './database';
 
+export interface MessageDetails {
+  from: bigint;
+  to: bigint;
+  payload: Array<bigint>;
+}
+
 class StarknetDatabase extends Database {
   async isProcessingMessage(msgKey: string): Promise<boolean> {
     const item = await this.db.send(
@@ -33,12 +39,19 @@ class StarknetDatabase extends Database {
     );
   }
 
-  async storeTransaction(txHash: string, messages: string[]): Promise<void> {
+  async storeTransaction(
+    txHash: string,
+    transactionDetails: MessageDetails,
+    messages: string[],
+  ): Promise<void> {
     await this.db.send(
       new PutCommand({
         TableName: this.tableName,
         Item: {
           PrimaryKey: txHash,
+          to: transactionDetails.to,
+          from: transactionDetails.from,
+          payload: transactionDetails.payload,
           Messages: JSON.stringify(messages),
           CreatedAt: Date.now(),
         },
@@ -74,7 +87,7 @@ class StarknetDatabase extends Database {
     return [];
   }
 
-  async getTxHashByMessageKey(messageKey: string): Promise<string|null> {
+  async getTxHashByMessageKey(messageKey: string): Promise<string | null> {
     const res = await this.db.send(
       new GetCommand({
         TableName: this.tableName,
@@ -103,7 +116,7 @@ class StarknetDatabase extends Database {
     );
   }
 
-  async getLastNonce(): Promise<BN|undefined> {
+  async getLastNonce(): Promise<BN | undefined> {
     const res = await this.db.send(
       new GetCommand({
         TableName: this.tableName,

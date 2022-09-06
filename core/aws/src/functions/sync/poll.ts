@@ -9,9 +9,7 @@ import {
 import bluebird from 'bluebird';
 import { Terabethia, KMSIdentity } from '@libs/dfinity';
 import { Secp256k1PublicKey } from '@dfinity/identity';
-import {
-  KMSClient,
-} from '@aws-sdk/client-kms';
+import { KMSClient } from '@aws-sdk/client-kms';
 import _ from 'lodash';
 
 const envs = requireEnv([
@@ -24,7 +22,9 @@ const envs = requireEnv([
 
 // Terabethia IC with KMS
 const kms = new KMSClient({});
-const publicKey = Secp256k1PublicKey.fromRaw(Buffer.from(envs.KMS_PUBLIC_KEY, 'base64'));
+const publicKey = Secp256k1PublicKey.fromRaw(
+  Buffer.from(envs.KMS_PUBLIC_KEY, 'base64'),
+);
 const identity = new KMSIdentity(publicKey, kms, envs.KMS_KEY_ID);
 const terabethia = new Terabethia(envs.CANISTER_ID, identity);
 
@@ -34,6 +34,9 @@ const db = new StarknetDatabase(envs.STARKNET_TABLE_NAME);
 export interface MessagePayload {
   key: string;
   hash: string;
+  from: bigint;
+  to: bigint;
+  payload: Array<bigint>;
   nonce?: string; // if the message is requeued, we'll use same nonce
 }
 
@@ -58,16 +61,24 @@ export const main: ScheduledHandler = async () => {
   const notProcessedMessages = messages.filter((m) => !m.isProcessing);
 
   // map message to SQS entries
-  const entries: SendMessageBatchRequestEntry[] = notProcessedMessages.map((m) => {
-    const payload: MessagePayload = { hash: m.msg_hash, key: m.msg_key };
+  const entries: SendMessageBatchRequestEntry[] = notProcessedMessages.map(
+    (m) => {
+      const payload: MessagePayload = {
+        hash: m.msg_hash,
+        key: m.msg_key,
+        from: m.msg_hash_params.from,
+        to: m.msg_hash_params.to,
+        payload: m.msg_hash_params.payload,
+      };
 
-    return {
-      Id: m.msg_key,
-      MessageBody: JSON.stringify(payload),
-      MessageDeduplicationId: m.msg_key,
-      MessageGroupId: 'starknet',
-    };
-  });
+      return {
+        Id: m.msg_key,
+        MessageBody: JSON.stringify(payload),
+        MessageDeduplicationId: m.msg_key,
+        MessageGroupId: 'starknet',
+      };
+    },
+  );
 
   // if there are no messages, we skip
   if (entries.length === 0) {

@@ -3,9 +3,15 @@ export default ({ IDL }: { IDL: any }) => {
     Ok: IDL.Bool,
     Err: IDL.Text,
   });
+  const OutgoingMessageHashParams = IDL.Record({
+    to: IDL.Nat,
+    from: IDL.Nat,
+    payload: IDL.Vec(IDL.Nat),
+  });
   const OutgoingMessagePair = IDL.Record({
     msg_hash: IDL.Text,
     msg_key: IDL.Text,
+    msg_hash_params: OutgoingMessageHashParams,
   });
   const OutgoingMessage = IDL.Record({
     msg_hash: IDL.Text,

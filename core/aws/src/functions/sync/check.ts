@@ -4,10 +4,7 @@ import { requireEnv, sqsHandler } from '@libs/utils';
 // import StarknetDatabase from '@libs/dynamo/starknet';
 import { NetworkName } from '@libs/starknet';
 import { Provider } from 'starknet';
-import {
-  SQSClient,
-  SendMessageCommand,
-} from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { TransactionPayload } from './send';
 import { MessagePayload } from './poll';
 
@@ -30,7 +27,13 @@ const starknet = new Provider({
 
 const handleMessage = async (body: TransactionPayload) => {
   const {
-    msgKey, msgHash, txHash, nonce,
+    msgKey,
+    msgHash,
+    txHash,
+    nonce,
+    to,
+    from,
+    payload: messagePayload,
   } = body;
 
   const { tx_status: txStatus } = await starknet.getTransactionStatus(txHash);
@@ -52,14 +55,28 @@ const handleMessage = async (body: TransactionPayload) => {
   }
 
   // only REJECTED transactions are put back to messages queue
-  const payload: MessagePayload = { hash: msgHash, key: msgKey, nonce };
+  const payload: MessagePayload = {
+    hash: msgHash,
+    key: msgKey,
+    nonce,
+    to,
+    from,
+    payload: messagePayload,
+  };
 
-  await sqsClient.send(new SendMessageCommand({
-    QueueUrl: envs.MESSAGES_QUEUE_URL,
-    MessageBody: JSON.stringify(payload),
-    MessageGroupId: 'starknet',
-    MessageDeduplicationId: msgKey,
-  }));
+  await sqsClient.send(
+    new SendMessageCommand({
+      QueueUrl: envs.MESSAGES_QUEUE_URL,
+      MessageBody: JSON.stringify(payload),
+      MessageGroupId: 'starknet',
+      MessageDeduplicationId: msgKey,
+    }),
+  );
 };
 
-export const main = sqsHandler<TransactionPayload>(handleMessage, envs.QUEUE_URL, undefined, 1);
+export const main = sqsHandler<TransactionPayload>(
+  handleMessage,
+  envs.QUEUE_URL,
+  undefined,
+  1,
+);
