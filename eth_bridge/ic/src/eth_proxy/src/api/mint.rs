@@ -22,6 +22,11 @@ pub async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
+    let to = match Principal::from_nat(payload[0].clone()) {
+        Ok(canister) => canister,
+        Err(msg) => return Err(TxError::Other(msg)),
+    };
+
     if (weth_ic_addr_pid.name().await).is_err() {
         return Err(TxError::Other(format!(
             "Token {} canister is not responding!",
@@ -66,7 +71,6 @@ pub async fn mint(nonce: Nonce, payload: Vec<Nat>) -> TxReceipt {
 
     STATE.with(|s| s.update_incoming_message_status(msg_hash.clone(), MessageStatus::Consuming));
 
-    let to = Principal::from_nat(payload[0].clone());
     // ETH_PROXY contract on Ethereum performs a division of the amount by / 1 gwei (1e9) in order to remove 0s.
     // We add those 0s back to the amount to get the correct amount of ETH to be sent(minted) to the WETH contract.
     let amount_gweis = Nat::from(payload[1].0.clone());

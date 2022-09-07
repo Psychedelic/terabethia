@@ -1,5 +1,6 @@
 use crate::api::admin::is_authorized;
 use crate::factory::{FromNat, CAP_ADDRESS};
+use crate::types::FactoryError;
 use crate::{
     factory::{CreateCanisterParam, Factory},
     magic::STATE,
@@ -19,7 +20,10 @@ use std::str;
 async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
     let self_id = ic::id();
     let caller = ic::caller();
-    let eth_addr = Principal::from_nat(payload[0].clone());
+    let eth_addr = match Principal::from_nat(payload[0].clone()) {
+        Ok(canister) => canister,
+        Err(_msg) => return Err(FactoryError::InvalidCanisterId),
+    };
 
     let canister_exits = STATE.with(|s| s.get_canister(eth_addr));
 
