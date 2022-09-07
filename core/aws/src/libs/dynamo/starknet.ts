@@ -5,12 +5,15 @@ import {
   GetCommand,
   PutCommandOutput,
 } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
+import { Message } from 'js-sha256';
 import Database from './database';
 
 export interface MessageDetails {
   from: bigint;
   to: bigint;
   payload: Array<bigint>;
+  txHash?: string;
 }
 
 class StarknetDatabase extends Database {
@@ -131,6 +134,32 @@ class StarknetDatabase extends Database {
     }
 
     return undefined;
+  }
+
+  async getMessagesForEthAddress(ethAddressAsBN: bigint, ethContract: bigint): Promise<MessageDetails[]> {
+    const res = await this.db.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        ExpressionAttributeValues: {
+          ':r': ethAddressAsBN,
+          ':c': ethContract,
+        },
+        FilterExpression: 'to = :c AND contains(payload, :r)',
+      }),
+    );
+
+    if (!res.Items) {
+      return [];
+    }
+    const detailItems: MessageDetails[] = res.Items.map((m) => (
+      {
+        from: m.from,
+        to: m.to,
+        payload: m.payload,
+        txHash: m.PrimaryKey,
+      } as unknown as MessageDetails));
+
+    return detailItems;
   }
 }
 

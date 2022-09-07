@@ -1,3 +1,5 @@
+import { Principal } from '@dfinity/principal';
+import { BigNumber } from 'ethers';
 import _ from 'lodash';
 
 type EnvWithKeys<T extends string> = Record<T, string>;
@@ -23,6 +25,11 @@ export const splitUint256 = (hexString: string): [BigInt, BigInt] => {
   // uint256(uint128(msgInt))
   const b = sliceToBigInt(buff, -16);
   return [a, b];
+};
+
+export const ethAddressAsPrincipalBN = (ethAddress: string) => {
+  const ethAddressAsArray = Principal.fromHex(ethAddress.slice(2)).toUint8Array();
+  return BigNumber.from(ethAddressAsArray).toBigInt();
 };
 
 export const requireEnv = <T extends string>(names: T[]): EnvWithKeys<T> => {
