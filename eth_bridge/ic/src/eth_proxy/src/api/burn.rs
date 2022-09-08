@@ -26,7 +26,7 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
 
     match STATE.with(|s| s.set_user_flag(caller, TxFlag::Burning)) {
         Ok(()) => {}
-        Err(_) => return Err(TxError::MultipleTokenTx),
+        Err(error) => return Err(TxError::Other(error)),
     }
 
     let transfer_from = weth_ic_addr_pid

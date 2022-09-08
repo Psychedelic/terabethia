@@ -37,7 +37,7 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
 
     match STATE.with(|s| s.set_user_flag(caller, TxFlag::Withdrawing)) {
         Ok(()) => {}
-        Err(_) => return Err(TxError::MultipleTokenTx),
+        Err(error) => return Err(TxError::Other(error)),
     }
 
     let get_balance = STATE.with(|s| s.get_balance(caller, weth_ic_addr_pid));

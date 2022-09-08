@@ -45,7 +45,7 @@ async fn burn(
     // One user cannot make multiple tx at the same time for the same token
     match STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Burning)) {
         Ok(()) => {}
-        Err(_error) => return Err(TxError::MultipleTokenTx),
+        Err(error) => return Err(TxError::Other(error)),
     }
 
     let transfer_from = token_id

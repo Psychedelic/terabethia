@@ -119,9 +119,12 @@ impl ProxyState {
         user: Principal,
         token: Principal,
         flag: TxFlag,
-    ) -> Result<(), TxError> {
+    ) -> Result<(), String> {
         if self.user_is_flagged(user, token) {
-            return Err(TxError::MultipleTokenTx);
+            return Err(format!(
+                "User: {} is perfoming another action with token: {}",
+                user, token
+            ));
         }
         self.user_actions.borrow_mut().insert((user, token), flag);
         Ok(())
@@ -607,7 +610,13 @@ mod tests {
         let flag_flagged_user =
             STATE.with(|s| s.set_user_flag(user, token_one, TxFlag::Withdrawing));
         assert!(flag_flagged_user.is_err());
-        assert_eq!(flag_flagged_user.err().unwrap(), TxError::MultipleTokenTx);
+        assert_eq!(
+            flag_flagged_user.err().unwrap(),
+            format!(
+                "User: {} is perfoming another action with token: {}",
+                user, token_one
+            )
+        );
 
         //when try to flag user for another token is Ok()
         let flag_user_other_token =

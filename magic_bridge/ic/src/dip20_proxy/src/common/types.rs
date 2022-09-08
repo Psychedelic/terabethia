@@ -116,6 +116,5 @@ pub enum TxError {
     BlockUsed,
     ErrorOperationStyle,
     ErrorTo,
-    MultipleTokenTx,
     Other(String),
 }

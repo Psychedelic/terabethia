@@ -113,7 +113,6 @@ pub enum TxError {
     Unauthorized,
     LedgerTrap,
     AmountTooSmall,
-    MultipleTokenTx,
     BlockUsed,
     ErrorOperationStyle,
     ErrorTo,
