@@ -35,9 +35,13 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
-    match STATE.with(|s| s.set_user_flag(caller, TxFlag::Withdrawing)) {
-        Ok(()) => {}
-        Err(error) => return Err(TxError::Other(error)),
+    let set_flag = STATE.with(|s| s.set_user_flag(caller, TxFlag::Withdrawing));
+    if set_flag.is_err() {
+        return Err(TxError::Other(
+            set_flag
+                .err()
+                .unwrap_or("Multiple token transactions".to_string()),
+        ));
     }
 
     let get_balance = STATE.with(|s| s.get_balance(caller, weth_ic_addr_pid));

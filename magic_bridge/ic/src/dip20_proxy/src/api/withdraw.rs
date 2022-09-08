@@ -29,9 +29,13 @@ pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) 
         )));
     }
 
-    match STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing)) {
-        Ok(()) => {}
-        Err(error) => return Err(TxError::Other(error)),
+    let set_flag = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing));
+    if set_flag.is_err() {
+        return Err(TxError::Other(
+            set_flag
+                .err()
+                .unwrap_or("Multiple token transactions".to_string()),
+        ));
     };
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
