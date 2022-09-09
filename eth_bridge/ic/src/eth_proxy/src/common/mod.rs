@@ -1,3 +1,4 @@
+pub mod cap;
 pub mod tera;
 pub mod types;
 pub mod utils;
