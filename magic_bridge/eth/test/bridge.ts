@@ -38,7 +38,11 @@ describe("Eth Proxy", () => {
         STARKNET_CONTRACT,
       ])) as Terabethia;
 
-      erc20Bridge = await ERC20Bridge.deploy(terabethia.address);
+      erc20Bridge = await ERC20Bridge.deploy(
+        terabethia.address,
+        "0x2E130E57021Bb4dfb95Eb4Dd0dD8CFCeB936148a",
+        "0xb7e94Cce902E34e618A23Cb82432B95d03096146"
+      );
     });
 
     it("Should have balance of 0 on init", async () => {
@@ -75,7 +79,11 @@ describe("Eth Proxy", () => {
         STARKNET_CONTRACT,
       ])) as Terabethia;
 
-      erc20Bridge = await ERC20Bridge.deploy(terabethia.address);
+      erc20Bridge = await ERC20Bridge.deploy(
+        terabethia.address,
+        "0x2E130E57021Bb4dfb95Eb4Dd0dD8CFCeB936148a",
+        "0xb7e94Cce902E34e618A23Cb82432B95d03096146"
+      );
 
       const TestToken = await ethers.getContractFactory("TestToken");
       const token = (await TestToken.deploy(
