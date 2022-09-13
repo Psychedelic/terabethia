@@ -21,6 +21,7 @@ type TxError = variant {
 };
 service : {
   authorize : (principal) -> ();
+  authorized : () -> (vec principal) query;
   burn : (principal, nat) -> (Result);
   get_all : (principal) -> (vec ClaimableMessage) query;
   get_all_token_balance : () -> (Result_1);
