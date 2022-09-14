@@ -10,7 +10,7 @@ use ic_kit::{
 use crate::{
     common::{
         tera::Tera,
-        types::{EthereumAddr, TxError, TxReceipt},
+        types::{EthereumAddr, TxError, TxFlag, TxReceipt},
         weth::Weth,
     },
     proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC},
@@ -35,6 +35,15 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
     let weth_eth_addr_pid = Principal::from_slice(&hex::decode(eth_addr_hex).unwrap());
 
+    let set_flag = STATE.with(|s| s.set_user_flag(caller, TxFlag::Withdrawing));
+    if set_flag.is_err() {
+        return Err(TxError::Other(
+            set_flag
+                .err()
+                .unwrap_or("Multiple token transactions".to_string()),
+        ));
+    }
+
     let get_balance = STATE.with(|s| s.get_balance(caller, weth_ic_addr_pid));
     if let Some(balance) = get_balance {
         let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
@@ -44,13 +53,18 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
             .await
             .is_err()
         {
+            STATE.with(|s| s.remove_user_flag(caller));
             return Err(TxError::Other(format!("Sending message to L1 failed!")));
         }
 
         let zero = Nat::from(0_u32);
-        STATE.with(|s| s.update_balance(caller, weth_ic_addr_pid, zero));
+        STATE.with(|s| {
+            s.update_balance(caller, weth_ic_addr_pid, zero);
+            s.remove_user_flag(caller);
+        });
     }
 
+    STATE.with(|s| s.remove_user_flag(caller));
     Err(TxError::Other(format!(
         "No balance for caller {:?} in canister {:?}!",
         caller.to_string(),

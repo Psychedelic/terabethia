@@ -9,7 +9,7 @@ use crate::{
     common::{
         dip20::Dip20,
         tera::Tera,
-        types::{EthereumAddr, TokendId, TxError, TxReceipt},
+        types::{EthereumAddr, TokendId, TxError, TxFlag, TxReceipt},
     },
     proxy::{ToNat, ERC20_ADDRESS_ETH, STATE, TERA_ADDRESS},
 };
@@ -29,6 +29,15 @@ pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) 
         )));
     }
 
+    let set_flag = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing));
+    if set_flag.is_err() {
+        return Err(TxError::Other(
+            set_flag
+                .err()
+                .unwrap_or("Multiple token transactions".to_string()),
+        ));
+    };
+
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
@@ -37,13 +46,18 @@ pub async fn withdraw(token_id: TokendId, eth_addr: EthereumAddr, _amount: Nat) 
         let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
         let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
         if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
+            STATE.with(|s| s.remove_user_flag(caller, token_id));
             return Err(TxError::Other(format!("Sending message to L1 failed!")));
         }
 
         let zero = Nat::from(0_u32);
-        STATE.with(|s| s.update_balance(caller, token_id, zero));
+        STATE.with(|s| {
+            s.update_balance(caller, token_id, zero);
+            s.remove_user_flag(caller, token_id);
+        });
     }
 
+    STATE.with(|s| s.remove_user_flag(caller, token_id));
     Err(TxError::Other(format!(
         "No balance for caller {:?} in canister {:?}!",
         caller.to_string(),

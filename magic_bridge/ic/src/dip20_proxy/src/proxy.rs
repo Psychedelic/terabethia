@@ -5,7 +5,7 @@ use ic_kit::ic;
 
 use crate::common::types::{
     ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, NonceBytes, ProxyState,
-    StableProxyState, TokendId,
+    StableProxyState, TokendId, TxFlag,
 };
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -114,6 +114,40 @@ impl ProxyState {
         return unclaimed_messages;
     }
 
+    pub fn set_user_flag(
+        &self,
+        user: Principal,
+        token: Principal,
+        flag: TxFlag,
+    ) -> Result<(), String> {
+        if self.user_is_flagged(user, token) {
+            return Err(format!(
+                "User: {} is perfoming another action with token: {}",
+                user, token
+            ));
+        }
+        self.user_actions.borrow_mut().insert((user, token), flag);
+        Ok(())
+    }
+
+    pub fn remove_user_flag(&self, user: Principal, token: Principal) {
+        self.user_actions.borrow_mut().remove(&(user, token));
+    }
+
+    pub fn get_user_flag(&self, user: Principal, token: Principal) -> Option<TxFlag> {
+        if let Some(flag) = self.user_actions.borrow().get(&(user, token)) {
+            return Some(flag.to_owned());
+        }
+        return None;
+    }
+
+    pub fn user_is_flagged(&self, user: Principal, token: Principal) -> bool {
+        if self.get_user_flag(user, token).is_none() {
+            return false;
+        }
+        true
+    }
+
     pub fn authorize(&self, other: Principal) {
         let caller = ic::caller();
         let caller_autorized = self.controllers.borrow().iter().any(|p| *p == caller);
@@ -136,6 +170,7 @@ impl ProxyState {
             controllers: self.controllers.take(),
             incoming_messages: self.incoming_messages.take(),
             messages_unclaimed: self.messages_unclaimed.take(),
+            user_actions: Some(self.user_actions.take()),
         }
     }
 
@@ -144,6 +179,7 @@ impl ProxyState {
         self.controllers.borrow_mut().clear();
         self.incoming_messages.borrow_mut().clear();
         self.messages_unclaimed.borrow_mut().clear();
+        self.user_actions.borrow_mut().clear();
     }
 
     pub fn replace_all(&self, stable_message_state: StableProxyState) {
@@ -153,6 +189,8 @@ impl ProxyState {
             .replace(stable_message_state.incoming_messages);
         self.messages_unclaimed
             .replace(stable_message_state.messages_unclaimed);
+        self.user_actions
+            .replace(stable_message_state.user_actions.unwrap_or_default());
     }
 }
 
@@ -542,5 +580,56 @@ mod tests {
 
         // the message that is left is the one with amount_1
         assert_eq!(claimable_messages[0].amount, amount_1);
+    }
+
+    #[test]
+    fn test_user_flags() {
+        let token_one = Principal::from_str("nnplb-2yaaa-aaaab-qagjq-cai").unwrap();
+        let token_two = Principal::from_str("o25ht-laaaa-aaaab-qagba-cai").unwrap();
+        let user =
+            Principal::from_str("srxch-xqaaa-aaaaa-aaaaa-ab53f-ob63o-jlvzy-wyeai-ba6r7-f5666-gam")
+                .unwrap();
+        let flag_one = STATE.with(|s| s.set_user_flag(user, token_one, TxFlag::Withdrawing));
+
+        assert!(flag_one.is_ok());
+
+        let get_flag_one = STATE.with(|s| s.get_user_flag(user, token_one));
+
+        assert_eq!(get_flag_one.unwrap(), TxFlag::Withdrawing);
+
+        let user_is_flagged = STATE.with(|s| s.user_is_flagged(user, token_one));
+
+        assert!(user_is_flagged);
+
+        //user is not flagged for token_two
+        let user_is_flagged_token_two = STATE.with(|s| s.user_is_flagged(user, token_two));
+        assert_eq!(user_is_flagged_token_two, false);
+
+        // When try to flag a flagged user it returns error
+        let flag_flagged_user =
+            STATE.with(|s| s.set_user_flag(user, token_one, TxFlag::Withdrawing));
+        assert!(flag_flagged_user.is_err());
+        assert_eq!(
+            flag_flagged_user.err().unwrap(),
+            format!(
+                "User: {} is perfoming another action with token: {}",
+                user, token_one
+            )
+        );
+
+        //when try to flag user for another token is Ok()
+        let flag_user_other_token =
+            STATE.with(|s| s.set_user_flag(user, token_two, TxFlag::Burning));
+
+        assert!(flag_user_other_token.is_ok());
+
+        //remove flag
+        STATE.with(|s| s.remove_user_flag(user, token_one));
+        assert_eq!(STATE.with(|s| s.user_is_flagged(user, token_one)), false);
+
+        // now it can be flaged again for token_one
+        assert!(STATE
+            .with(|s| s.set_user_flag(user, token_one, TxFlag::Burning))
+            .is_ok())
     }
 }
