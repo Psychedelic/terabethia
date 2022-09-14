@@ -97,7 +97,7 @@ pub struct StableProxyState {
     // store outgoing massages waiting to be claimed
     pub messages_unclaimed: HashMap<EthereumAddr, Vec<ClaimableMessage>>,
     // user state flag
-    pub user_actions: HashMap<(Principal, Principal), TxFlag>,
+    pub user_actions: Option<HashMap<(Principal, Principal), TxFlag>>,
 }
 
 #[derive(CandidType, Deserialize, Clone, Copy)]

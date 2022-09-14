@@ -5,7 +5,7 @@ use ic_kit::ic;
 
 use crate::common::types::{
     ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, NonceBytes, ProxyState,
-    StableProxyState, TokendId, TxError, TxFlag,
+    StableProxyState, TokendId, TxFlag,
 };
 
 pub const TERA_ADDRESS: &str = "timop-6qaaa-aaaab-qaeea-cai";
@@ -164,7 +164,7 @@ impl ProxyState {
             controllers: self.controllers.take(),
             incoming_messages: self.incoming_messages.take(),
             messages_unclaimed: self.messages_unclaimed.take(),
-            user_actions: self.user_actions.take(),
+            user_actions: Some(self.user_actions.take()),
         }
     }
 
@@ -183,7 +183,7 @@ impl ProxyState {
             .replace(stable_message_state.incoming_messages);
         self.messages_unclaimed
             .replace(stable_message_state.messages_unclaimed);
-        self.user_actions.replace(stable_message_state.user_actions);
+        self.user_actions.replace(stable_message_state.user_actions.unwrap_or_default());
     }
 }
 
