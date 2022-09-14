@@ -126,12 +126,10 @@ impl ProxyState {
     }
 
     pub fn get_user_flag(&self, user: Principal) -> Option<TxFlag> {
-        let flag = if let Some(flag) = self.user_actions.borrow().get(&user) {
-            flag.to_owned()
-        } else {
-            return None;
-        };
-        return Some(flag);
+        if let Some(flag) = self.user_actions.borrow().get(&user) {
+            return Some(flag.to_owned());
+        }
+        return None;
     }
 
     pub fn remove_user_flag(&self, user: Principal) {
@@ -183,7 +181,8 @@ impl ProxyState {
             .replace(stable_message_state.incoming_messages);
         self.messages_unclaimed
             .replace(stable_message_state.messages_unclaimed);
-        self.user_actions.replace(stable_message_state.user_actions.unwrap_or_default());
+        self.user_actions
+            .replace(stable_message_state.user_actions.unwrap_or_default());
     }
 }
 

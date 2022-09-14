@@ -135,12 +135,10 @@ impl ProxyState {
     }
 
     pub fn get_user_flag(&self, user: Principal, token: Principal) -> Option<TxFlag> {
-        let flag = if let Some(flag) = self.user_actions.borrow().get(&(user, token)) {
-            flag.to_owned()
-        } else {
-            return None;
-        };
-        Some(flag)
+        if let Some(flag) = self.user_actions.borrow().get(&(user, token)) {
+            return Some(flag.to_owned());
+        }
+        return None;
     }
 
     pub fn user_is_flagged(&self, user: Principal, token: Principal) -> bool {
