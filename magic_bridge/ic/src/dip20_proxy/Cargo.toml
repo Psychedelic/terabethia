@@ -18,3 +18,5 @@ async-trait = "0.1.51"
 serde = "1.0.130"
 serde_bytes = "0.11.5"
 num-bigint = "0.4.3"
+cap-std = { git = "https://github.com/Psychedelic/cap", branch = "main", package="cap-standards", features = ["alpha-dip20", "cap-sdk", "sdk-impls"] }
+cap-sdk = { git = "https://github.com/Psychedelic/cap.git", branch = "main" }
