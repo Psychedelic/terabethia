@@ -14,12 +14,8 @@ fn claimable_get_all(eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
     STATE.with(|s| s.get_claimable_messages(eth_address))
 }
 
-#[update(name = "remove_claimable", guard = "is_authorized")]
-#[candid_method(update, rename = "remove_claimable")]
-fn remove_claimable(
-    eth_address: EthereumAddr,
-    token_id: TokendId,
-    amount: Nat,
-) -> Result<bool, String> {
-    STATE.with(|s| s.remove_claimable_message(eth_address, token_id.clone(), amount.clone()))
+#[query(name = "get_claimable_message_size")]
+#[candid_method(query, rename = "get_claimable_message_size")]
+fn get_claimable_message_size() -> usize {
+    STATE.with(|s| s.get_claimable_messages_queue_size())
 }
