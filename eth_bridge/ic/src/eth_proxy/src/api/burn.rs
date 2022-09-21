@@ -71,15 +71,12 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                                 s.remove_user_flag(caller);
                             });
 
-                            ic_kit::ic::spawn(async move {
-                                insert_claimable_asset(ClaimableMessage {
-                                    owner: eth_addr.clone(),
-                                    msg_hash: outgoing_message.msg_hash.clone(),
-                                    msg_key: outgoing_message.msg_key.clone(),
-                                    token: weth_ic_addr_pid.clone(),
-                                    amount: amount.clone(),
-                                })
-                                .await
+                            insert_claimable_asset(ClaimableMessage {
+                                owner: eth_addr.clone(),
+                                msg_hash: outgoing_message.msg_hash.clone(),
+                                msg_key: outgoing_message.msg_key.clone(),
+                                token: weth_ic_addr_pid.clone(),
+                                amount: amount.clone(),
                             });
 
                             // All correct

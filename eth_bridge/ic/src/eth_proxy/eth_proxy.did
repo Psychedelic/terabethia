@@ -1,10 +1,3 @@
-type ClaimableMessage = record {
-  token : principal;
-  msg_hash : text;
-  owner : principal;
-  msg_key : vec nat8;
-  amount : nat;
-};
 type Result = variant { Ok : nat; Err : TxError };
 type Result_1 = variant { Ok : vec record { text; nat }; Err : text };
 type Result_2 = variant { Ok; Err : text };
@@ -23,10 +16,8 @@ service : {
   authorize : (principal) -> ();
   authorized : () -> (vec principal) query;
   burn : (principal, nat) -> (Result);
-  get_all : (principal) -> (vec ClaimableMessage) query;
   get_all_token_balance : () -> (Result_1);
   get_balance : (principal) -> (opt nat);
-  get_claimable_message_size : () -> (nat64) query;
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (nat, vec nat) -> (Result);
   perform_handshake : () -> (Result_2);
