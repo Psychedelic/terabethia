@@ -94,17 +94,15 @@ async fn burn(
                                 s.remove_user_flag(caller, token_id)
                             });
 
-                            ic_kit::ic::spawn(async move {
-                                insert_claimable_asset(ClaimableMessage {
-                                    owner: eth_addr.clone(),
-                                    msg_hash: outgoing_message.msg_hash.clone(),
-                                    msg_key: outgoing_message.msg_key.clone(),
-                                    token_name: token_name_str,
-                                    token: token_id.clone(),
-                                    amount: amount.clone(),
-                                })
-                                .await
+                            insert_claimable_asset(ClaimableMessage {
+                                owner: eth_addr.clone(),
+                                msg_hash: outgoing_message.msg_hash.clone(),
+                                msg_key: outgoing_message.msg_key.clone(),
+                                token_name: token_name_str,
+                                token: token_id.clone(),
+                                amount: amount.clone(),
                             });
+
                             // All correct
                             return Ok(burn_txn_id);
                         }
