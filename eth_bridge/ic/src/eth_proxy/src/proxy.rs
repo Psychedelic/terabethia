@@ -90,16 +90,18 @@ impl ProxyState {
         }
     }
 
-    pub fn remove_claimable_message(&self, message: ClaimableMessage) {
-        let mut binding = self.messages_unclaimed.borrow_mut();
-        let user_messages = binding.get_mut(&message.owner).unwrap();
-
-        let index = user_messages
-            .iter()
-            .position(|m| m.msg_key == message.msg_key);
-
-        if index.is_some() {
-            user_messages.swap_remove(index.unwrap());
+    pub fn get_claimable_messages(
+        &self,
+        eth_address_as_principal: Principal,
+    ) -> Vec<ClaimableMessage> {
+        if let Some(messages) = self
+            .messages_unclaimed
+            .borrow()
+            .get(&eth_address_as_principal)
+        {
+            messages.to_owned()
+        } else {
+            Vec::<ClaimableMessage>::default()
         }
     }
 
@@ -117,23 +119,17 @@ impl ProxyState {
         messages
     }
 
-    pub fn get_claimable_messages(
-        &self,
-        eth_address_as_principal: Principal,
-    ) -> Vec<ClaimableMessage> {
-        if let Some(messages) = self
-            .messages_unclaimed
-            .borrow()
-            .get(&eth_address_as_principal)
-        {
-            messages.to_owned()
-        } else {
-            Vec::<ClaimableMessage>::default()
-        }
-    }
+    pub fn remove_claimable_message(&self, message: ClaimableMessage) {
+        let mut binding = self.messages_unclaimed.borrow_mut();
+        let user_messages = binding.get_mut(&message.owner).unwrap();
 
-    pub fn get_claimable_messages_queue_size(&self) -> usize {
-        STATE.with(|s| s.messages_unclaimed.borrow().len())
+        let index = user_messages
+            .iter()
+            .position(|m| m.msg_key == message.msg_key);
+
+        if index.is_some() {
+            user_messages.swap_remove(index.unwrap());
+        }
     }
 
     pub fn set_user_flag(&self, user: Principal, flag: TxFlag) -> Result<(), String> {
@@ -283,6 +279,23 @@ impl ToEvent for ClaimableMessage {
             .details(details)
             .build()
             .unwrap()
+    }
+}
+
+impl From<IndefiniteEvent> for ClaimableMessage {
+    fn from(event: IndefiniteEvent) -> Self {
+        let msg_key: Nat = event.details[3].1.clone().try_into().unwrap();
+        let msg_hash: String = event.details[2].1.clone().try_into().unwrap();
+        let token: Principal = event.details[1].1.clone().try_into().unwrap();
+        let amount: Nat = event.details[4].1.clone().try_into().unwrap();
+
+        ClaimableMessage {
+            owner: event.caller,
+            msg_key: msg_key.to_nonce_bytes(),
+            msg_hash: msg_hash,
+            token: token,
+            amount: amount,
+        }
     }
 }
 
