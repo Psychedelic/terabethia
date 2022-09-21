@@ -259,11 +259,11 @@ impl ToBytes for Nat {
     }
 }
 
-pub trait ToEvent {
+pub trait ToCapEvent {
     fn to_cap_event(&self) -> IndefiniteEvent;
 }
 
-impl ToEvent for ClaimableMessage {
+impl ToCapEvent for ClaimableMessage {
     fn to_cap_event(&self) -> IndefiniteEvent {
         let details = DetailsBuilder::default()
             .insert("owner", self.owner)
@@ -271,6 +271,7 @@ impl ToEvent for ClaimableMessage {
             .insert("msgHash", self.msg_hash.clone())
             .insert("msgHashKey", self.msg_key.to_nat())
             .insert("amount", self.amount.clone())
+            .insert("name", String::from("Wrapped Ether"))
             .build();
 
         IndefiniteEventBuilder::new()

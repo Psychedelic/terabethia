@@ -1,4 +1,4 @@
-use crate::proxy::ToEvent;
+use crate::proxy::ToCapEvent;
 use cap_sdk::{pending_transactions, restore_pending_transactions};
 use ic_kit::ic;
 use ic_kit::macros::{post_upgrade, pre_upgrade};

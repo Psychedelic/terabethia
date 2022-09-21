@@ -274,11 +274,11 @@ impl ToBytes for Nat {
     }
 }
 
-pub trait ToEvent {
+pub trait ToCapEvent {
     fn to_cap_event(&self) -> IndefiniteEvent;
 }
 
-impl ToEvent for ClaimableMessage {
+impl ToCapEvent for ClaimableMessage {
     fn to_cap_event(&self) -> IndefiniteEvent {
         let details = DetailsBuilder::default()
             .insert("owner", self.owner)
