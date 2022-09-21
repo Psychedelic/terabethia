@@ -369,7 +369,25 @@ dependencies = [
 [[package]]
 name = "cap-common"
 version = "0.2.3"
-source = "git+https://github.com/Psychedelic/cap.git?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9de3cd634ba6bd7442b1889b4df8d31e3b7c55e66dd8a084706495cc6f93bb13"
+dependencies = [
+ "async-std",
+ "candid",
+ "certified-vars",
+ "ic-cdk 0.5.2",
+ "ic-certified-map",
+ "ic-kit",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+ "sha2 0.10.6",
+]
+
+[[package]]
+name = "cap-common"
+version = "0.2.3"
+source = "git+https://github.com/Psychedelic/cap?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
 dependencies = [
  "async-std",
  "candid",
@@ -386,12 +404,30 @@ dependencies = [
 [[package]]
 name = "cap-sdk"
 version = "0.2.4"
-source = "git+https://github.com/Psychedelic/cap.git?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c0745e2cce153b876a02ca30b58fc1bc5d7667611dbf60f62bb368273aca734"
 dependencies = [
  "async-std",
  "async-stream",
  "candid",
- "cap-sdk-core",
+ "cap-sdk-core 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures",
+ "ic-cdk 0.5.2",
+ "ic-kit",
+ "lazy_static",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cap-sdk"
+version = "0.2.4"
+source = "git+https://github.com/Psychedelic/cap?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
+dependencies = [
+ "async-std",
+ "async-stream",
+ "candid",
+ "cap-sdk-core 0.2.3 (git+https://github.com/Psychedelic/cap?branch=main)",
  "futures",
  "ic-cdk 0.5.2",
  "ic-kit",
@@ -403,10 +439,24 @@ dependencies = [
 [[package]]
 name = "cap-sdk-core"
 version = "0.2.3"
-source = "git+https://github.com/Psychedelic/cap.git?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bda800da9f054c973d479b315bd7f717fdf78427b0584bbe9127d8e4e609688"
 dependencies = [
  "candid",
- "cap-common",
+ "cap-common 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ic-cdk 0.5.2",
+ "ic-kit",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cap-sdk-core"
+version = "0.2.3"
+source = "git+https://github.com/Psychedelic/cap?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
+dependencies = [
+ "candid",
+ "cap-common 0.2.3 (git+https://github.com/Psychedelic/cap?branch=main)",
  "ic-cdk 0.5.2",
  "ic-kit",
  "serde",
@@ -416,11 +466,11 @@ dependencies = [
 [[package]]
 name = "cap-standards"
 version = "0.2.0"
-source = "git+https://github.com/Psychedelic/cap.git?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
+source = "git+https://github.com/Psychedelic/cap?branch=main#4ae1d09aa46c51e01fed37457255bdbebe601585"
 dependencies = [
  "bincode",
  "candid",
- "cap-sdk",
+ "cap-sdk 0.2.4 (git+https://github.com/Psychedelic/cap?branch=main)",
  "ic-cdk 0.5.2",
  "ic-cdk-macros 0.5.2",
  "num-bigint",
@@ -559,7 +609,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "candid",
- "cap-sdk",
+ "cap-sdk 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "cap-standards",
  "hex",
  "ic-cdk 0.5.2",

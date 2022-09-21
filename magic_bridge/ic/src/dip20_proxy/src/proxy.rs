@@ -286,6 +286,7 @@ impl ToEvent for ClaimableMessage {
             .insert("msgHash", self.msg_hash.clone())
             .insert("msgHashKey", self.msg_key.to_nat())
             .insert("amount", self.amount.clone())
+            .insert("name", self.token_name.clone())
             .build();
 
         IndefiniteEventBuilder::new()
@@ -294,6 +295,25 @@ impl ToEvent for ClaimableMessage {
             .details(details)
             .build()
             .unwrap()
+    }
+}
+
+impl From<IndefiniteEvent> for ClaimableMessage {
+    fn from(event: IndefiniteEvent) -> Self {
+        let msg_key: Nat = event.details[3].1.clone().try_into().unwrap();
+        let msg_hash: String = event.details[2].1.clone().try_into().unwrap();
+        let token: Principal = event.details[1].1.clone().try_into().unwrap();
+        let amount: Nat = event.details[4].1.clone().try_into().unwrap();
+        let name: String = event.details[5].1.clone().try_into().unwrap();
+
+        ClaimableMessage {
+            owner: event.caller,
+            msg_key: msg_key.to_nonce_bytes(),
+            msg_hash: msg_hash,
+            token: token,
+            amount: amount,
+            token_name: name,
+        }
     }
 }
 
@@ -629,23 +649,23 @@ mod tests {
         };
 
         // add first msg
-        STATE.with(|s| s.add_claimable_message(message_1));
+        STATE.with(|s| s.add_claimable_message(message_1.clone()));
         // add second msg
-        STATE.with(|s| s.add_claimable_message(message_2));
+        STATE.with(|s| s.add_claimable_message(message_2.clone()));
 
         // check if both messages are in the claimable messages list for eth_addr_1
         let mut claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
         assert_eq!(claimable_messages.len(), 2);
 
-        // remove one msg -> the one with amount_2 (both are the same token, but different amount)
-        let result_remove_1 = STATE.with(|s| s.remove_claimable_message(message_1.clone()));
+        // remove one msg -> the one with amount_1 (both are the same token, but different amount)
+        let _ = STATE.with(|s| s.remove_claimable_message(message_1.clone()));
 
         // check if only one message is in the claimable messages list for eth_addr_1
         claimable_messages = STATE.with(|s| s.get_claimable_messages(eth_addr_1.clone()));
         assert_eq!(claimable_messages.len(), 1);
 
-        // the message that is left is the one with amount_1
-        assert_eq!(claimable_messages[0].amount, amount_1);
+        // the message that is left is the one with amount_2
+        assert_eq!(claimable_messages[0].amount, amount_2);
     }
 
     #[test]
