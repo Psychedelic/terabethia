@@ -1,6 +1,6 @@
 use cap_sdk::insert_sync;
 
-use crate::proxy::ToEvent;
+use crate::proxy::ToCapEvent;
 
 use super::types::ClaimableMessage;
 
