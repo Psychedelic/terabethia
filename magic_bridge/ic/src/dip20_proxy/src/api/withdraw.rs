@@ -7,10 +7,11 @@ use ic_kit::{
 
 use crate::{
     common::{
+        cap::insert_claimable_asset,
         dip20::Dip20,
         magic::Magic,
         tera::Tera,
-        types::{EthereumAddr, TokendId, TxError, TxFlag, TxReceipt},
+        types::{ClaimableMessage, EthereumAddr, TokendId, TxError, TxFlag, TxReceipt},
     },
     proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS},
 };
@@ -26,7 +27,7 @@ pub async fn withdraw(
     _amount: Nat,
 ) -> TxReceipt {
     let caller = ic::caller();
-
+    let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
     let magic_bridge = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
 
     let token_id: Principal = match magic_bridge
@@ -37,12 +38,15 @@ pub async fn withdraw(
         Err(error) => return Err(error),
     };
 
-    if (token_id.name().await).is_err() {
-        return Err(TxError::Other(format!(
-            "Token {} canister is not responding!",
-            token_id.to_string(),
-        )));
-    }
+    let token_name = match token_id.name().await {
+        Ok(name) => name,
+        Err(_) => {
+            return Err(TxError::Other(format!(
+                "Token {} canister is not responding!",
+                token_id.to_string()
+            )))
+        }
+    };
 
     let set_flag = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing));
     if set_flag.is_err() {
@@ -64,17 +68,29 @@ pub async fn withdraw(
             balance.clone(),
         ]
         .to_vec();
-        let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
-        if tera_id.send_message(erc20_addr_pid, payload).await.is_err() {
-            STATE.with(|s| s.remove_user_flag(caller, token_id));
-            return Err(TxError::Other(format!("Sending message to L1 failed!")));
-        }
 
-        let zero = Nat::from(0_u32);
-        STATE.with(|s| {
-            s.update_balance(caller, token_id, zero);
-            s.remove_user_flag(caller, token_id);
-        });
+        match tera_id.send_message(erc20_addr_pid, payload).await {
+            Ok(outgoing_message) => {
+                let zero = Nat::from(0_u32);
+                STATE.with(|s| {
+                    s.update_balance(caller, token_id, zero);
+                    s.remove_user_flag(caller, token_id);
+                });
+
+                insert_claimable_asset(ClaimableMessage {
+                    owner: eth_addr.clone(),
+                    msg_hash: outgoing_message.msg_hash.clone(),
+                    msg_key: outgoing_message.msg_key.clone(),
+                    token_name: token_name,
+                    token: token_id.clone(),
+                    amount: balance.clone(),
+                })
+            }
+            Err(_) => {
+                STATE.with(|s| s.remove_user_flag(caller, token_id));
+                return Err(TxError::Other(format!("Sending message to L1 failed!")));
+            }
+        }
     }
 
     STATE.with(|s| s.remove_user_flag(caller, token_id));
