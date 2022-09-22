@@ -9,8 +9,9 @@ use ic_kit::{
 
 use crate::{
     common::{
+        cap::insert_claimable_asset,
         tera::Tera,
-        types::{EthereumAddr, TxError, TxFlag, TxReceipt},
+        types::{ClaimableMessage, EthereumAddr, TxError, TxFlag, TxReceipt},
         weth::Weth,
     },
     proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC},
@@ -24,6 +25,7 @@ use crate::{
 pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     let caller = ic::caller();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
+    let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
 
     if (weth_ic_addr_pid.name().await).is_err() {
         return Err(TxError::Other(format!(
@@ -47,21 +49,28 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
     let get_balance = STATE.with(|s| s.get_balance(caller, weth_ic_addr_pid));
     if let Some(balance) = get_balance {
         let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
-        let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
-        if tera_id
-            .send_message(weth_eth_addr_pid, payload)
-            .await
-            .is_err()
-        {
-            STATE.with(|s| s.remove_user_flag(caller));
-            return Err(TxError::Other(format!("Sending message to L1 failed!")));
-        }
 
-        let zero = Nat::from(0_u32);
-        STATE.with(|s| {
-            s.update_balance(caller, weth_ic_addr_pid, zero);
-            s.remove_user_flag(caller);
-        });
+        match tera_id.send_message(weth_eth_addr_pid, payload).await {
+            Ok(outgoing_message) => {
+                let zero = Nat::from(0_u32);
+                STATE.with(|s| {
+                    s.update_balance(caller, weth_ic_addr_pid, zero);
+                    s.remove_user_flag(caller);
+                });
+
+                insert_claimable_asset(ClaimableMessage {
+                    owner: eth_addr.clone(),
+                    msg_hash: outgoing_message.msg_hash.clone(),
+                    msg_key: outgoing_message.msg_key.clone(),
+                    token: weth_ic_addr_pid.clone(),
+                    amount: balance.clone(),
+                });
+            }
+            Err(_) => {
+                STATE.with(|s| s.remove_user_flag(caller));
+                return Err(TxError::Other(format!("Sending message to L1 failed!")));
+            }
+        }
     }
 
     STATE.with(|s| s.remove_user_flag(caller));
