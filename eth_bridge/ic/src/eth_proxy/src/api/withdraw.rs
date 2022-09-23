@@ -65,6 +65,7 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
                     token: weth_ic_addr_pid.clone(),
                     amount: balance.clone(),
                 });
+                return Ok(balance);
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller));
