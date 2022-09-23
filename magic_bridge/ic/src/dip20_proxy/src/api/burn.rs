@@ -59,7 +59,7 @@ async fn burn(
 
     match transfer_from {
         Ok(_) => {
-            STATE.with(|s| s.add_balance(caller, token_id, amount.clone()));
+            STATE.with(|s| s.add_balance(caller, eth_contract_as_principal, amount.clone()));
 
             let burn = token_id.burn(amount.clone()).await;
 
@@ -82,12 +82,13 @@ async fn burn(
                             STATE.with(|s| {
                                 // there could be an underflow here
                                 // like negative balance
-                                let current_balance =
-                                    s.get_balance(caller, token_id).unwrap_or(Nat::from(0));
+                                let current_balance = s
+                                    .get_balance(caller, eth_contract_as_principal)
+                                    .unwrap_or(Nat::from(0));
 
                                 s.update_balance(
                                     caller,
-                                    token_id,
+                                    eth_contract_as_principal,
                                     current_balance - amount.clone(),
                                 );
 

@@ -1,7 +1,7 @@
 use ic_cdk::export::candid::Principal;
 use ic_kit::{
     candid::{candid_method, Nat},
-    ic,
+    ic::{self, balance},
     macros::update,
 };
 
@@ -60,7 +60,7 @@ pub async fn withdraw(
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let get_balance = STATE.with(|s| s.get_balance(caller, token_id));
+    let get_balance = STATE.with(|s| s.get_balance(caller, eth_contract_as_principal));
     if let Some(balance) = get_balance {
         let payload = [
             eth_contract_as_principal.to_nat(),
@@ -73,18 +73,19 @@ pub async fn withdraw(
             Ok(outgoing_message) => {
                 let zero = Nat::from(0_u32);
                 STATE.with(|s| {
-                    s.update_balance(caller, token_id, zero);
+                    s.update_balance(caller, eth_contract_as_principal, zero);
                     s.remove_user_flag(caller, token_id);
                 });
 
                 insert_claimable_asset(ClaimableMessage {
                     owner: eth_addr.clone(),
                     msg_hash: outgoing_message.msg_hash.clone(),
-                    msg_key: outgoing_message.msg_key.clone(),
+                    msg_key: Some(outgoing_message.msg_key.clone()),
                     token_name: token_name,
                     token: token_id.clone(),
                     amount: balance.clone(),
-                })
+                });
+                return Ok(balance);
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller, token_id));
@@ -97,6 +98,6 @@ pub async fn withdraw(
     Err(TxError::Other(format!(
         "No balance for caller {:?} in canister {:?}!",
         caller.to_string(),
-        token_id.to_string(),
+        eth_contract_as_principal.to_string(),
     )))
 }
