@@ -19,7 +19,7 @@ pub type MsgHashKey = [u8; 32];
 pub type TxReceipt = Result<Nat, TxError>;
 
 #[derive(CandidType, Deserialize)]
-pub struct WithdrawableBalance(pub Vec<(String, String, Nat)>);
+pub struct WithdrawableBalance(pub Vec<(String, Nat)>);
 
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
@@ -81,7 +81,7 @@ pub struct ProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
     /// user balances
-    pub balances: RefCell<HashMap<Principal, HashMap<TokendId, Vec<(Principal, Nat)>>>>,
+    pub balances: RefCell<HashMap<Principal, Vec<(Principal, Nat)>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
     // store outgoing massages waiting to be claimed
@@ -95,7 +95,7 @@ pub struct StableProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: HashMap<MessageHash, MessageStatus>,
     /// user balances
-    pub balances: Option<HashMap<Principal, HashMap<TokendId, Vec<(Principal, Nat)>>>>,
+    pub balances: Option<HashMap<Principal, Vec<(Principal, Nat)>>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
     // store outgoing massages waiting to be claimed

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use ic_cdk::call;
 use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::common::types::{Nonce, OutgoingMessage, TxError};
+use crate::common::types::{OutgoingMessage, TxError};
 
 use super::types::NonceBytes;
 

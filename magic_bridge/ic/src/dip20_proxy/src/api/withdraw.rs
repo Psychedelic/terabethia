@@ -1,7 +1,7 @@
 use ic_cdk::export::candid::Principal;
 use ic_kit::{
     candid::{candid_method, Nat},
-    ic::{self, balance},
+    ic::{self},
     macros::update,
 };
 

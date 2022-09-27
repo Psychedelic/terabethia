@@ -40,7 +40,7 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
 
     match transfer_from {
         Ok(_) => {
-            STATE.with(|s| s.add_balance(caller, eth_addr, weth_ic_addr_pid, amount.clone()));
+            STATE.with(|s| s.add_balance(caller, eth_addr, amount.clone()));
 
             let burn = weth_ic_addr_pid.burn(amount.clone()).await;
 
@@ -60,13 +60,12 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                             // like negative balance
                             STATE.with(|s| {
                                 let current_balance = s
-                                    .get_balance(caller, weth_ic_addr_pid, eth_addr)
+                                    .get_balance(caller, eth_addr)
                                     .unwrap_or((Principal::anonymous(), Nat::from(0)));
 
                                 s.update_balance(
                                     caller,
                                     eth_addr,
-                                    weth_ic_addr_pid,
                                     current_balance.1 - amount.clone(),
                                 );
                                 s.remove_user_flag(caller);
