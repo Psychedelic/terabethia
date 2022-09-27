@@ -1,8 +1,3 @@
-use std::{
-    collections::HashMap,
-    ops::{AddAssign, Index},
-};
-
 use cap_sdk::{DetailsBuilder, IndefiniteEvent, IndefiniteEventBuilder};
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;

@@ -60,12 +60,12 @@ pub async fn withdraw(
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let get_balance = STATE.with(|s| s.get_balance(caller, eth_contract_as_principal));
+    let get_balance = STATE.with(|s| s.get_balance(caller, eth_contract_as_principal, eth_addr));
     if let Some(balance) = get_balance {
         let payload = [
             eth_contract_as_principal.to_nat(),
             eth_addr.clone().to_nat(),
-            balance.clone(),
+            balance.1.clone(),
         ]
         .to_vec();
 
@@ -73,7 +73,7 @@ pub async fn withdraw(
             Ok(outgoing_message) => {
                 let zero = Nat::from(0_u32);
                 STATE.with(|s| {
-                    s.update_balance(caller, eth_contract_as_principal, zero);
+                    s.update_balance(caller, eth_addr, eth_contract_as_principal, zero);
                     s.remove_user_flag(caller, token_id);
                 });
 
@@ -83,9 +83,9 @@ pub async fn withdraw(
                     msg_key: Some(outgoing_message.msg_key.clone()),
                     token_name: token_name,
                     token: token_id.clone(),
-                    amount: balance.clone(),
+                    amount: balance.1.clone(),
                 });
-                return Ok(balance);
+                return Ok(balance.1);
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller, token_id));
