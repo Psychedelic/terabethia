@@ -5,7 +5,7 @@ use ic_kit::ic;
 
 use crate::common::types::{
     ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, NonceBytes, ProxyState,
-    StableProxyState, TokendId, TxFlag, WithdrawableBalance,
+    StableProxyState, TokenId, TxFlag, WithdrawableBalance,
 };
 
 pub const CAP_ADDRESS: &str = "lj532-6iaaa-aaaah-qcc7a-cai";
@@ -40,7 +40,7 @@ impl ProxyState {
     pub fn get_balance(
         &self,
         caller: Principal,
-        token_id: TokendId,
+        token_id: TokenId,
         eth_address: EthereumAddr,
     ) -> Option<(Principal, Nat)> {
         let binding = self.balances.borrow();
@@ -82,7 +82,7 @@ impl ProxyState {
         Err(format!("User {} has no token balances!", &caller))
     }
 
-    pub fn add_balance(&self, caller: Principal, to: Principal, token_id: TokendId, amount: Nat) {
+    pub fn add_balance(&self, caller: Principal, to: Principal, token_id: TokenId, amount: Nat) {
         let mut binding = self.balances.borrow_mut();
         let balance = binding.entry(caller).or_default();
         match balance.get_mut(&token_id) {
@@ -101,13 +101,7 @@ impl ProxyState {
     }
 
     // Panics if theres no balance for the user/token_id or destination
-    pub fn update_balance(
-        &self,
-        caller: Principal,
-        to: Principal,
-        token_id: TokendId,
-        amount: Nat,
-    ) {
+    pub fn update_balance(&self, caller: Principal, to: Principal, token_id: TokenId, amount: Nat) {
         let mut binding = self.balances.borrow_mut();
         let user_balances = binding.get_mut(&caller).unwrap();
         let user_txs = user_balances.get_mut(&token_id).unwrap();

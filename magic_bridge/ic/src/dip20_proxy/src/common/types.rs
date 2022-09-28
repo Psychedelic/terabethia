@@ -8,7 +8,7 @@ pub type Nonce = Nat;
 
 pub type NonceBytes = [u8; 32];
 
-pub type TokendId = Principal;
+pub type TokenId = Principal;
 
 pub type MessageHash = String;
 
@@ -72,7 +72,7 @@ pub struct ClaimableMessage {
     pub msg_hash: String,
     pub msg_key: Option<[u8; 32]>,
     pub token_name: String,
-    pub token: TokendId,
+    pub token: TokenId,
     pub amount: Nat,
     pub from: Principal,
 }
@@ -82,7 +82,7 @@ pub struct ProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
     /// user balances
-    pub balances: RefCell<HashMap<Principal, HashMap<TokendId, Vec<(Principal, Nat)>>>>,
+    pub balances: RefCell<HashMap<Principal, HashMap<TokenId, Vec<(Principal, Nat)>>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
     // store outgoing massages waiting to be claimed
@@ -96,7 +96,7 @@ pub struct StableProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: HashMap<MessageHash, MessageStatus>,
     /// user balances
-    pub balances: Option<HashMap<Principal, HashMap<TokendId, Vec<(Principal, Nat)>>>>,
+    pub balances: Option<HashMap<Principal, HashMap<TokenId, Vec<(Principal, Nat)>>>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
     // store outgoing massages waiting to be claimed

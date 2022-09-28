@@ -11,7 +11,7 @@ use crate::{
         dip20::Dip20,
         magic::Magic,
         tera::Tera,
-        types::{ClaimableMessage, EthereumAddr, TokendId, TxError, TxFlag, TxReceipt},
+        types::{ClaimableMessage, EthereumAddr, TokenId, TxError, TxFlag, TxReceipt},
     },
     proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS},
 };
@@ -22,7 +22,7 @@ use crate::{
 #[update(name = "withdraw")]
 #[candid_method(update, rename = "withdraw")]
 pub async fn withdraw(
-    eth_contract_as_principal: TokendId,
+    eth_contract_as_principal: TokenId,
     eth_addr: EthereumAddr,
     _amount: Nat,
 ) -> TxReceipt {

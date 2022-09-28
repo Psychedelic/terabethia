@@ -6,7 +6,7 @@ use crate::common::dip20::Dip20;
 use crate::common::magic::Magic;
 use crate::common::tera::Tera;
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, OutgoingMessage, TokendId, TxError, TxFlag, TxReceipt,
+    ClaimableMessage, EthereumAddr, OutgoingMessage, TokenId, TxError, TxFlag, TxReceipt,
 };
 use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
@@ -14,7 +14,7 @@ use ic_cdk::export::candid::{Nat, Principal};
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(
-    eth_contract_as_principal: TokendId,
+    eth_contract_as_principal: TokenId,
     eth_addr: EthereumAddr,
     amount: Nat,
 ) -> TxReceipt {
