@@ -65,7 +65,7 @@ pub async fn withdraw(
         let payload = [
             eth_contract_as_principal.to_nat(),
             eth_addr.clone().to_nat(),
-            balance.1.clone(),
+            balance.clone(),
         ]
         .to_vec();
 
@@ -83,9 +83,9 @@ pub async fn withdraw(
                     msg_key: Some(outgoing_message.msg_key.clone()),
                     token_name: token_name,
                     token: token_id.clone(),
-                    amount: balance.1.clone(),
+                    amount: balance.clone(),
                 });
-                return Ok(balance.1);
+                return Ok(balance);
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller, token_id));
