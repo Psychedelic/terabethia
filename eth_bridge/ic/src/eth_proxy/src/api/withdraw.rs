@@ -48,13 +48,13 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
 
     let get_balance = STATE.with(|s| s.get_balance(caller, eth_addr));
     if let Some(balance) = get_balance {
-        let payload = [eth_addr.clone().to_nat(), balance.1.clone()].to_vec();
+        let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
 
         match tera_id.send_message(weth_eth_addr_pid, payload).await {
             Ok(outgoing_message) => {
                 let zero = Nat::from(0_u32);
                 STATE.with(|s| {
-                    s.update_balance(caller, balance.0.clone(), zero);
+                    s.update_balance(caller, eth_addr, zero);
                     s.remove_user_flag(caller);
                 });
 
@@ -63,9 +63,9 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
                     msg_hash: outgoing_message.msg_hash.clone(),
                     msg_key: outgoing_message.msg_key.clone(),
                     token: weth_ic_addr_pid.clone(),
-                    amount: balance.1.clone(),
+                    amount: balance.clone(),
                 });
-                return Ok(balance.1);
+                return Ok(balance);
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller));

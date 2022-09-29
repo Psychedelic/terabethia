@@ -1,4 +1,3 @@
-use candid::Principal;
 use ic_kit::{
     candid::{candid_method, Nat},
     ic,
@@ -12,7 +11,7 @@ use crate::{
 
 #[update(name = "get_balance")]
 #[candid_method(update, rename = "get_balance")]
-pub async fn get_balance(eth_address: EthereumAddr) -> Option<(Principal, Nat)> {
+pub async fn get_balance(eth_address: EthereumAddr) -> Option<Nat> {
     let caller = ic::caller();
     STATE.with(|s| s.get_balance(caller, eth_address))
 }

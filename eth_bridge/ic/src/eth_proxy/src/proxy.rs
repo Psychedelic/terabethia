@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cap_sdk::{DetailsBuilder, IndefiniteEvent, IndefiniteEventBuilder};
 use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
@@ -36,20 +38,13 @@ impl ProxyState {
         self.incoming_messages.borrow_mut().remove(&msg_hash)
     }
 
-    pub fn get_balance(
-        &self,
-        caller: Principal,
-        eth_address: EthereumAddr,
-    ) -> Option<(Principal, Nat)> {
-        let binding = self.balances.borrow();
-        let user_balances = binding.get(&caller);
-        match user_balances {
-            Some(txs) => match txs.into_iter().find(|tx| tx.0 == eth_address) {
-                Some((to, amount)) => Some((to.clone(), amount.clone())),
-                None => None,
-            },
-            None => None,
-        }
+    pub fn get_balance(&self, caller: Principal, eth_address: EthereumAddr) -> Option<Nat> {
+        self.balances
+            .borrow()
+            .get(&caller)
+            .unwrap_or(&HashMap::new())
+            .get(&eth_address)
+            .cloned()
     }
 
     pub fn get_all_balances(&self, caller: Principal) -> Result<WithdrawableBalance, String> {
@@ -67,27 +62,25 @@ impl ProxyState {
 
     pub fn add_balance(&self, caller: Principal, to: Principal, amount: Nat) {
         let mut binding = self.balances.borrow_mut();
-        let balance = binding.entry(caller).or_default();
-        match balance.into_iter().find(|tx| tx.0 == to) {
-            Some(value) => value.1 += amount,
+        let caller_txs: HashMap<Principal, Nat> = HashMap::new();
+        let user_tx = binding.entry(caller).or_insert(caller_txs);
+        match user_tx.get_mut(&to) {
+            Some(balance) => *balance += amount,
             None => {
-                balance.push((to, amount));
+                user_tx.insert(to, amount);
             }
         }
     }
 
-    // Panics if theres no balance for the user/token_id or destination
+    // Panics if theres no balance for the caller or destination
     pub fn update_balance(&self, caller: Principal, to: Principal, amount: Nat) {
         let mut binding = self.balances.borrow_mut();
-        let user_balances = binding.get_mut(&caller).unwrap();
-        // if new amount is zero, we remove the tx.
+        let tx = binding.get_mut(&caller).unwrap();
         if amount == 0 {
-            let index = user_balances.into_iter().position(|tx| tx.0 == to).unwrap();
-            user_balances.remove(index);
-        } else {
-            let mut balance = user_balances.iter_mut().find(|tx| tx.0 == to).unwrap();
-            balance.1 = amount;
+            tx.remove_entry(&to);
+            return;
         }
+        tx.get_mut(&to).and_then(|v| Some(*v = amount));
     }
 
     pub fn set_user_flag(&self, user: Principal, flag: TxFlag) -> Result<(), String> {
@@ -345,7 +338,7 @@ mod tests {
         // add amount_1 for eth_address_1
         STATE.with(|s| s.add_balance(caller.clone(), eth_address_1.clone(), amount_1.clone()));
         let current_balance_1 = STATE.with(|s| s.get_balance(caller, eth_address_1));
-        assert_eq!(current_balance_1.unwrap().1, amount_1.clone());
+        assert_eq!(current_balance_1.unwrap(), amount_1.clone());
 
         // add amount_2 for eth_address_2
         STATE.with(|s| s.add_balance(caller, eth_address_2.clone(), amount_2));
@@ -356,7 +349,7 @@ mod tests {
         // add amount_3 for eth_address_1 (100 + 100)
         STATE.with(|s| s.add_balance(caller, eth_address_1.clone(), amount_3.clone()));
         let current_balance_1 = STATE.with(|s| s.get_balance(caller, eth_address_1));
-        assert_eq!(current_balance_1.unwrap().1, amount_3 + amount_1);
+        assert_eq!(current_balance_1.unwrap(), amount_3 + amount_1);
     }
 
     #[test]
@@ -422,7 +415,7 @@ mod tests {
             .with(|s| s.get_balance(caller, eth_address_1.clone()))
             .unwrap();
 
-        assert_eq!(current_balance.1, amount_3);
+        assert_eq!(current_balance, amount_3);
         let balances = STATE.with(|s| s.get_all_balances(caller)).unwrap();
         // there are 2 eth addess
         assert!(balances.0.len() == 2);

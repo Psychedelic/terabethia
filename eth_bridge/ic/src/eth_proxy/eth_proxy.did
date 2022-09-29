@@ -17,7 +17,7 @@ service : {
   authorized : () -> (vec principal) query;
   burn : (principal, nat) -> (Result);
   get_all_token_balance : () -> (Result_1);
-  get_balance : (principal) -> (opt record { principal; nat });
+  get_balance : (principal) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (nat, vec nat) -> (Result);
   perform_handshake : () -> (Result_2);
