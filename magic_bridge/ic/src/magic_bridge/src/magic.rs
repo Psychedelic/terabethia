@@ -18,7 +18,7 @@ thread_local! {
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct MagicState {
-    pub canisters: RefCell<HashMap<EthereumAddr, CanisterId>>,
+    pub canisters: RefCell<HashMap<EthereumAddr, (Option<CanisterId>, TokenStatus)>>,
     pub controllers: RefCell<Vec<Principal>>,
     pub failed_registration_canisters:
         RefCell<HashMap<Principal, (CreateCanisterParam, RetryCount)>>,
@@ -26,7 +26,7 @@ pub struct MagicState {
 
 #[derive(CandidType, Deserialize, Default)]
 pub struct StableMagicState {
-    canisters: HashMap<EthereumAddr, CanisterId>,
+    canisters: HashMap<EthereumAddr, (Option<CanisterId>, TokenStatus)>,
     controllers: Vec<Principal>,
     failed_registration_canisters: HashMap<Principal, (CreateCanisterParam, RetryCount)>,
 }
@@ -35,7 +35,7 @@ impl MagicState {
     pub fn canister_exists(&self, canister_id: Principal) -> Result<Principal, String> {
         // find canister_id by iterating over canisters.values
         for value_canister_id in self.canisters.borrow().values() {
-            if *value_canister_id == canister_id {
+            if value_canister_id.0.is_some() && value_canister_id.0.unwrap() == canister_id {
                 return Ok(canister_id);
             }
         }
@@ -43,19 +43,32 @@ impl MagicState {
     }
 
     pub fn get_canister(&self, eth_addr: EthereumAddr) -> Option<CanisterId> {
-        self.canisters.borrow().get(&eth_addr).cloned()
+        let binding = self.canisters.borrow();
+        let canister = binding.get(&eth_addr);
+        if canister.is_some() {
+            return canister.unwrap().0;
+        }
+        None
     }
 
-    pub fn get_all_canisters(&self) -> Vec<(EthereumAddr, CanisterId)> {
-        self.canisters.borrow().clone().into_iter().collect::<_>()
+    pub fn get_all_canisters(&self) -> Vec<(EthereumAddr, Option<CanisterId>, TokenStatus)> {
+        let canisters = self.canisters.borrow().clone().into_iter();
+        let mut result: Vec<(EthereumAddr, Option<CanisterId>, TokenStatus)> = Vec::new();
+        for canister in canisters {
+            result.push((canister.0, canister.1 .0, canister.1 .1))
+        }
+        result
     }
 
     pub fn insert_canister(
         &self,
         eth_addr: EthereumAddr,
-        canister_id: CanisterId,
-    ) -> Option<CanisterId> {
-        self.canisters.borrow_mut().insert(eth_addr, canister_id)
+        canister_id: Option<CanisterId>,
+        status: TokenStatus,
+    ) -> Option<(Option<CanisterId>, TokenStatus)> {
+        self.canisters
+            .borrow_mut()
+            .insert(eth_addr, (canister_id, status))
     }
 
     pub fn add_failed_canister(

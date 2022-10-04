@@ -2,7 +2,7 @@ use ic_kit::{candid::candid_method, macros::query};
 
 use crate::{
     magic::STATE,
-    types::{CanisterId, EthereumAddr},
+    types::{CanisterId, EthereumAddr, TokenStatus},
 };
 
 #[query(name = "get_canister")]
@@ -13,6 +13,6 @@ fn get_canister(eth_addr: EthereumAddr) -> Option<CanisterId> {
 
 #[query(name = "get_all_canisters")]
 #[candid_method(query, rename = "get_all")]
-fn get_all_canisters() -> Vec<(EthereumAddr, CanisterId)> {
+fn get_all_canisters() -> Vec<(EthereumAddr, Option<CanisterId>, TokenStatus)> {
     STATE.with(|s| s.get_all_canisters())
 }

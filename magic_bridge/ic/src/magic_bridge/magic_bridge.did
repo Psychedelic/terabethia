@@ -13,11 +13,11 @@ type CreateCanisterParam = record {
   symbol : text;
 };
 type FactoryError = variant {
-  CanisterStatusNotAvailableError;
-  CreateCanisterError;
-  EncodeError;
-  CodeAlreadyInstalled;
-  InstallCodeError;
+  CanisterStatusNotAvailableError : opt principal;
+  CreateCanisterError : opt principal;
+  EncodeError : opt principal;
+  CodeAlreadyInstalled : opt principal;
+  InstallCodeError : opt principal;
 };
 type InstallCodeError = variant {
   CanisterStatusNotAvailableError;
@@ -27,12 +27,20 @@ type InstallCodeError = variant {
 };
 type Result = variant { Ok : principal; Err : FactoryError };
 type Result_1 = variant { Ok : principal; Err : InstallCodeError };
+type TokenStatus = variant {
+  Stopped;
+  Stopping;
+  Running;
+  NotCreated;
+  Created;
+  Installed;
+};
 type TokenType = variant { DIP20; DIP721 };
 service : {
   authorize : (principal) -> ();
   create : (TokenType, vec nat) -> (Result);
   flush_failed_registrations : () -> ();
-  get_all : () -> (vec record { principal; principal }) query;
+  get_all : () -> (vec record { principal; opt principal; TokenStatus }) query;
   get_canister : (principal) -> (opt principal) query;
   get_failed_registrations : () -> (
       vec record { principal; record { CreateCanisterParam; nat8 } },
