@@ -122,3 +122,14 @@ pub enum TxError {
     ErrorTo,
     Other(String),
 }
+
+#[derive(CandidType, Deserialize, PartialEq)]
+pub enum OperationFailure {
+    Burn(Option<TxError>),
+    DIP20NotResponding(Option<TxError>),
+    UserHasNotBalanceToWithdraw(Option<TxError>),
+    MultipleTxWithToken(Option<TxError>),
+    SendMessage(Option<TxError>),
+    TokenCanisterIdNotFound(Option<TxError>),
+    TransferFrom(Option<TxError>),
+}

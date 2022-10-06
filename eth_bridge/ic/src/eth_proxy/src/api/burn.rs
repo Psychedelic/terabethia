@@ -9,29 +9,31 @@ use crate::common::weth::Weth;
 use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
 use ic_cdk::export::candid::{Nat, Principal};
 
-use crate::common::types::{ClaimableMessage, EthereumAddr, TxError, TxFlag, TxReceipt};
+use crate::common::types::{ClaimableMessage, EthereumAddr, OperationFailure, TxError, TxFlag};
 
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
-async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
+async fn burn(eth_addr: EthereumAddr, amount: Nat) -> Result<Nat, OperationFailure> {
     let caller = ic::caller();
     let self_id = ic::id();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
 
     if (weth_ic_addr_pid.name().await).is_err() {
-        return Err(TxError::Other(format!(
-            "Token {} canister is not responding!",
-            weth_ic_addr_pid.to_string(),
-        )));
+        return Err(OperationFailure::DIP20NotResponding(Some(TxError::Other(
+            format!(
+                "Token {} canister is not responding!",
+                weth_ic_addr_pid.to_string()
+            ),
+        ))));
     }
 
     let set_flag = STATE.with(|s| s.set_user_flag(caller, TxFlag::Burning));
     if set_flag.is_err() {
-        return Err(TxError::Other(
+        return Err(OperationFailure::MultipleTxWithToken(Some(TxError::Other(
             set_flag
                 .err()
                 .unwrap_or("Multiple token transactions".to_string()),
-        ));
+        ))));
     }
 
     let transfer_from = weth_ic_addr_pid
@@ -85,24 +87,26 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                         // send_message to Tera error
                         Err(_) => {
                             STATE.with(|s| s.remove_user_flag(caller));
-                            return Err(TxError::Other(format!(
-                                "Sending message to L1 failed with caller {:?}!",
-                                caller.to_string()
-                            )));
+                            return Err(OperationFailure::SendMessage(Some(TxError::Other(
+                                format!(
+                                    "Sending message to L1 failed with caller {:?}!",
+                                    caller.to_string()
+                                ),
+                            ))));
                         }
                     }
                 }
                 // burn error
                 Err(error) => {
                     STATE.with(|s| s.remove_user_flag(caller));
-                    return Err(error);
+                    return Err(OperationFailure::Burn(Some(error)));
                 }
             };
         }
         // transfer_from error
         Err(error) => {
             STATE.with(|s| s.remove_user_flag(caller));
-            Err(error)
+            Err(OperationFailure::TransferFrom(Some(error)))
         }
     }
 }

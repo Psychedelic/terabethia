@@ -11,7 +11,7 @@ use crate::{
     common::{
         cap::insert_claimable_asset,
         tera::Tera,
-        types::{ClaimableMessage, EthereumAddr, TxError, TxFlag, TxReceipt},
+        types::{ClaimableMessage, EthereumAddr, OperationFailure, TxError, TxFlag},
         weth::Weth,
     },
     proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC},
@@ -22,16 +22,18 @@ use crate::{
 /// todo withdraw specific balance
 #[update(name = "withdraw")]
 #[candid_method(update, rename = "withdraw")]
-pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
+pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> Result<Nat, OperationFailure> {
     let caller = ic::caller();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
 
     if (weth_ic_addr_pid.name().await).is_err() {
-        return Err(TxError::Other(format!(
-            "Token {} canister is not responding!",
-            weth_ic_addr_pid.to_string(),
-        )));
+        return Err(OperationFailure::DIP20NotResponding(Some(TxError::Other(
+            format!(
+                "Token {} canister is not responding!",
+                weth_ic_addr_pid.to_string(),
+            ),
+        ))));
     }
 
     let eth_addr_hex = WETH_ADDRESS_ETH.trim_start_matches("0x");
@@ -39,11 +41,11 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
 
     let set_flag = STATE.with(|s| s.set_user_flag(caller, TxFlag::Withdrawing));
     if set_flag.is_err() {
-        return Err(TxError::Other(
+        return Err(OperationFailure::MultipleTxWithToken(Some(TxError::Other(
             set_flag
                 .err()
                 .unwrap_or("Multiple token transactions".to_string()),
-        ));
+        ))));
     }
 
     let get_balance = STATE.with(|s| s.get_balance(caller, eth_addr));
@@ -69,15 +71,19 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> TxReceipt {
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller));
-                return Err(TxError::Other(format!("Sending message to L1 failed!")));
+                return Err(OperationFailure::SendMessage(Some(TxError::Other(
+                    format!("Sending message to L1 failed!"),
+                ))));
             }
         }
     }
 
     STATE.with(|s| s.remove_user_flag(caller));
-    Err(TxError::Other(format!(
-        "No balance for caller {:?} in canister {:?}!",
-        caller.to_string(),
-        weth_ic_addr_pid.to_string(),
+    Err(OperationFailure::UserHasNotBalanceToWithdraw(Some(
+        TxError::Other(format!(
+            "No balance for caller {:?} in canister {:?}!",
+            caller.to_string(),
+            weth_ic_addr_pid.to_string(),
+        )),
     )))
 }
