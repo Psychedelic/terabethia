@@ -1,5 +1,5 @@
 use ic_kit::{
-    candid::{candid_method, Nat, Principal},
+    candid::{candid_method, Nat},
     ic,
     macros::update,
 };

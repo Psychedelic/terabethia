@@ -11,7 +11,7 @@ use crate::{
         dip20::Dip20,
         magic::Magic,
         tera::Tera,
-        types::{ClaimableMessage, EthereumAddr, TokenId, TxError, TxFlag, TxReceipt},
+        types::{ClaimableMessage, EthereumAddr, OperationFailure, TokenId, TxError, TxFlag},
     },
     proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS},
 };
@@ -25,7 +25,7 @@ pub async fn withdraw(
     eth_contract_as_principal: TokenId,
     eth_addr: EthereumAddr,
     _amount: Nat,
-) -> TxReceipt {
+) -> Result<Nat, OperationFailure> {
     let caller = ic::caller();
     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
     let magic_bridge = Principal::from_text(MAGIC_ADDRESS_IC).unwrap();
@@ -35,26 +35,25 @@ pub async fn withdraw(
         .await
     {
         Ok(canister_id) => canister_id,
-        Err(error) => return Err(error),
+        Err(error) => return Err(OperationFailure::TokenCanisterIdNotFound(Some(error))),
     };
 
     let token_name = match token_id.name().await {
         Ok(name) => name,
         Err(_) => {
-            return Err(TxError::Other(format!(
-                "Token {} canister is not responding!",
-                token_id.to_string()
-            )))
+            return Err(OperationFailure::DIP20NotResponding(Some(TxError::Other(
+                format!("Token {} canister is not responding!", token_id.to_string()),
+            ))));
         }
     };
 
     let set_flag = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Withdrawing));
     if set_flag.is_err() {
-        return Err(TxError::Other(
+        return Err(OperationFailure::MultipleTxWithToken(Some(TxError::Other(
             set_flag
                 .err()
                 .unwrap_or("Multiple token transactions".to_string()),
-        ));
+        ))));
     };
 
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
@@ -89,15 +88,19 @@ pub async fn withdraw(
             }
             Err(_) => {
                 STATE.with(|s| s.remove_user_flag(caller, token_id));
-                return Err(TxError::Other(format!("Sending message to L1 failed!")));
+                return Err(OperationFailure::SendMessage(Some(TxError::Other(
+                    format!("Sending message to L1 failed!"),
+                ))));
             }
         }
     }
 
     STATE.with(|s| s.remove_user_flag(caller, token_id));
-    Err(TxError::Other(format!(
-        "No balance for caller {:?} in canister {:?}!",
-        caller.to_string(),
-        eth_contract_as_principal.to_string(),
+    Err(OperationFailure::UserHasNotBalanceToWithdraw(Some(
+        TxError::Other(format!(
+            "No balance for caller {:?} in canister {:?}!",
+            caller.to_string(),
+            eth_contract_as_principal.to_string(),
+        )),
     )))
 }

@@ -111,7 +111,7 @@ pub enum TokenType {
     DIP721,
 }
 
-#[derive(Deserialize, CandidType, Debug, PartialEq)]
+#[derive(CandidType, Debug, Deserialize, PartialEq)]
 pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
@@ -122,4 +122,15 @@ pub enum TxError {
     ErrorOperationStyle,
     ErrorTo,
     Other(String),
+}
+
+#[derive(CandidType, Deserialize, PartialEq)]
+pub enum OperationFailure {
+    Burn(Option<TxError>),
+    DIP20NotResponding(Option<TxError>),
+    UserHasNotBalanceToWithdraw(Option<TxError>),
+    MultipleTxWithToken(Option<TxError>),
+    SendMessage(Option<TxError>),
+    TokenCanisterIdNotFound(Option<TxError>),
+    TransferFrom(Option<TxError>),
 }
