@@ -1,3 +1,10 @@
+type CanisterStatusResponse = record {
+  status : Status;
+  memory_size : nat;
+  cycles : nat;
+  settings : DefiniteCanisterSettings;
+  module_hash : opt vec nat8;
+};
 type CreateCanisterParam = record {
   cap : principal;
   fee : nat;
@@ -11,6 +18,12 @@ type CreateCanisterParam = record {
   token_type : TokenType;
   total_supply : nat;
   symbol : text;
+};
+type DefiniteCanisterSettings = record {
+  freezing_threshold : nat;
+  controllers : vec principal;
+  memory_allocation : nat;
+  compute_allocation : nat;
 };
 type FactoryError = variant {
   CanisterStatusNotAvailableError : opt principal;
@@ -26,24 +39,32 @@ type InstallCodeError = variant {
   InstallCodeError : text;
 };
 type Result = variant { Ok : principal; Err : FactoryError };
-type Result_1 = variant { Ok : principal; Err : InstallCodeError };
+type Result_1 = variant { Ok : principal; Err : text };
+type Result_2 = variant { Ok : CanisterStatusResponse; Err : text };
+type Result_3 = variant { Ok : principal; Err : InstallCodeError };
+type Status = variant { stopped; stopping; running };
 type TokenStatus = variant {
   Stopped;
   Stopping;
   Running;
   NotCreated;
   Created;
+  Deleted;
   Installed;
 };
 type TokenType = variant { DIP20; DIP721 };
 service : {
   authorize : (principal) -> ();
   create : (TokenType, vec nat) -> (Result);
+  delete_canister : (principal) -> (Result_1);
   flush_failed_registrations : () -> ();
   get_all : () -> (vec record { principal; opt principal; TokenStatus }) query;
   get_canister : (principal) -> (opt principal) query;
+  get_canister_status : (principal) -> (Result_2);
   get_failed_registrations : () -> (
       vec record { principal; record { CreateCanisterParam; nat8 } },
     ) query;
-  upgrade_code : (principal, TokenType) -> (Result_1);
+  start_canister : (principal) -> (Result_1);
+  stop_canister : (principal) -> (Result_1);
+  upgrade_code : (principal, TokenType) -> (Result_3);
 }

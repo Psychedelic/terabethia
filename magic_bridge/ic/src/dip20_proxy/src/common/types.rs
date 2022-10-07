@@ -23,11 +23,11 @@ pub struct Message;
 
 #[derive(CandidType, Deserialize, Debug)]
 pub enum FactoryError {
-    CreateCanisterError,
-    CanisterStatusNotAvailableError,
-    EncodeError,
-    CodeAlreadyInstalled,
-    InstallCodeError,
+    CreateCanisterError(Option<Principal>),
+    CanisterStatusNotAvailableError(Option<Principal>),
+    EncodeError(Option<Principal>),
+    CodeAlreadyInstalled(Option<Principal>),
+    InstallCodeError(Option<Principal>),
 }
 
 #[derive(Clone, CandidType, Deserialize, Eq, PartialEq, Debug)]

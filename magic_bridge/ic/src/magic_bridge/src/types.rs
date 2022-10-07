@@ -15,7 +15,7 @@ pub enum TokenType {
     DIP721,
 }
 
-#[derive(CandidType, Deserialize, Clone, Copy)]
+#[derive(CandidType, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum TokenStatus {
     NotCreated,
     Created,
@@ -23,6 +23,7 @@ pub enum TokenStatus {
     Running,
     Stopping,
     Stopped,
+    Deleted,
 }
 
 #[derive(CandidType, Deserialize, Debug)]
