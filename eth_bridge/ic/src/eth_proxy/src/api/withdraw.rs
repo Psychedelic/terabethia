@@ -22,7 +22,7 @@ use crate::{
 /// todo withdraw specific balance
 #[update(name = "withdraw")]
 #[candid_method(update, rename = "withdraw")]
-pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> Result<Nat, OperationFailure> {
+pub async fn withdraw(eth_addr: EthereumAddr, amount: Nat) -> Result<Nat, OperationFailure> {
     let caller = ic::caller();
     let weth_ic_addr_pid = Principal::from_str(WETH_ADDRESS_IC).unwrap();
     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
@@ -48,15 +48,14 @@ pub async fn withdraw(eth_addr: EthereumAddr, _amount: Nat) -> Result<Nat, Opera
         ))));
     }
 
-    let get_balance = STATE.with(|s| s.get_balance(caller, eth_addr));
+    let get_balance = STATE.with(|s| s.get_balance(caller, eth_addr, amount.clone()));
     if let Some(balance) = get_balance {
         let payload = [eth_addr.clone().to_nat(), balance.clone()].to_vec();
 
         match tera_id.send_message(weth_eth_addr_pid, payload).await {
             Ok(outgoing_message) => {
-                let zero = Nat::from(0_u32);
                 STATE.with(|s| {
-                    s.update_balance(caller, eth_addr, zero);
+                    s.remove_balance(caller, eth_addr, amount);
                     s.remove_user_flag(caller);
                 });
 

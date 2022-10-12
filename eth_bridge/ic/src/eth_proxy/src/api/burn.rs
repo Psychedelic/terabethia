@@ -58,17 +58,8 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> Result<Nat, OperationFailu
                     let send_message = tera_id.send_message(weth_eth_addr_pid, payload).await;
                     match send_message {
                         Ok(outgoing_message) => {
-                            // there could be an underflow here
-                            // like negative balance
                             STATE.with(|s| {
-                                let current_balance =
-                                    s.get_balance(caller, eth_addr).unwrap_or(Nat::from(0));
-
-                                s.update_balance(
-                                    caller,
-                                    eth_addr,
-                                    current_balance - amount.clone(),
-                                );
+                                s.remove_balance(caller, eth_addr, amount.clone());
                                 s.remove_user_flag(caller);
                             });
 
