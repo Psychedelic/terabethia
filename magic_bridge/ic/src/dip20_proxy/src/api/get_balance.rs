@@ -11,9 +11,9 @@ use crate::{
 
 #[update(name = "get_balance")]
 #[candid_method(update, rename = "get_balance")]
-pub async fn get_balance(token_id: TokenId, eth_address: EthereumAddr) -> Option<Nat> {
+pub async fn get_balance(token_id: TokenId, eth_address: EthereumAddr, amount: Nat) -> Option<Nat> {
     let caller = ic::caller();
-    STATE.with(|s| s.get_balance(caller, token_id, eth_address))
+    STATE.with(|s| s.get_balance(caller, token_id, eth_address, amount))
 }
 
 #[update(name = "get_all_token_balance")]

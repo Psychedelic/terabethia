@@ -24,7 +24,7 @@ use crate::{
 pub async fn withdraw(
     eth_contract_as_principal: TokenId,
     eth_addr: EthereumAddr,
-    _amount: Nat,
+    amount: Nat,
 ) -> Result<Nat, OperationFailure> {
     let caller = ic::caller();
     let tera_id = Principal::from_text(TERA_ADDRESS).unwrap();
@@ -59,7 +59,8 @@ pub async fn withdraw(
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let get_balance = STATE.with(|s| s.get_balance(caller, eth_contract_as_principal, eth_addr));
+    let get_balance =
+        STATE.with(|s| s.get_balance(caller, eth_contract_as_principal, eth_addr, amount.clone()));
     if let Some(balance) = get_balance {
         let payload = [
             eth_contract_as_principal.to_nat(),
@@ -70,9 +71,8 @@ pub async fn withdraw(
 
         match tera_id.send_message(erc20_addr_pid, payload).await {
             Ok(outgoing_message) => {
-                let zero = Nat::from(0_u32);
                 STATE.with(|s| {
-                    s.update_balance(caller, eth_addr, eth_contract_as_principal, zero);
+                    s.remove_balance(caller, eth_addr, eth_contract_as_principal, amount);
                     s.remove_user_flag(caller, token_id);
                 });
 

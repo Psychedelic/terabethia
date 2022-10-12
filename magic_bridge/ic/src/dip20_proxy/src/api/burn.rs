@@ -81,17 +81,11 @@ async fn burn(
                     match send_message {
                         Ok(outgoing_message) => {
                             STATE.with(|s| {
-                                // there could be an underflow here
-                                // like negative balance
-                                let current_balance = s
-                                    .get_balance(caller, eth_contract_as_principal, eth_addr)
-                                    .unwrap_or(Nat::from(0));
-
-                                s.update_balance(
+                                s.remove_balance(
                                     caller,
                                     eth_addr,
                                     eth_contract_as_principal,
-                                    current_balance - amount.clone(),
+                                    amount.clone(),
                                 );
 
                                 s.remove_user_flag(caller, token_id)

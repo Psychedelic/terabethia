@@ -82,7 +82,7 @@ pub struct ProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
     /// user balances
-    pub balances: RefCell<HashMap<Principal, HashMap<TokenId, HashMap<EthereumAddr, Nat>>>>,
+    pub balances: RefCell<HashMap<Principal, HashMap<TokenId, Vec<(EthereumAddr, Nat)>>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
     // store outgoing massages waiting to be claimed
@@ -96,7 +96,7 @@ pub struct StableProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: HashMap<MessageHash, MessageStatus>,
     /// user balances
-    pub balances: Option<HashMap<Principal, HashMap<TokenId, HashMap<EthereumAddr, Nat>>>>,
+    pub balances: Option<HashMap<Principal, HashMap<TokenId, Vec<(EthereumAddr, Nat)>>>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
     // store outgoing massages waiting to be claimed

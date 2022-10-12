@@ -44,62 +44,68 @@ impl ProxyState {
         caller: Principal,
         token_id: TokenId,
         eth_address: EthereumAddr,
+        amount: Nat,
     ) -> Option<Nat> {
-        self.balances
+        if let Some(balance) = self
+            .balances
             .borrow()
             .get(&caller)
             .unwrap_or(&HashMap::new())
             .get(&token_id)
-            .unwrap_or(&HashMap::new())
-            .get(&eth_address)
-            .cloned()
+            .unwrap_or(&Vec::new())
+            .into_iter()
+            .find(|m| m.0 == eth_address && m.1 == amount)
+        {
+            return Some(balance.1.clone());
+        } else {
+            return None;
+        }
     }
 
     pub fn get_all_balances(&self, caller: Principal) -> Result<WithdrawableBalance, String> {
-        let token_balances = self.balances.borrow().get(&caller).cloned();
+        let token_balances: Option<HashMap<TokenId, Vec<(EthereumAddr, Nat)>>> =
+            self.balances.borrow().get(&caller).cloned();
 
         if let Some(balances) = token_balances {
-            let mut destination = Vec::default();
-            for tokens in balances {
-                for tx in tokens.1 {
-                    destination.push((tokens.0.to_string(), tx.0.to_string(), tx.1))
-                }
+            let mut transactions: Vec<(String, String, Nat)> = Vec::new();
+            for txs in balances {
+                let token_tx: Vec<(String, String, Nat)> = txs
+                    .1
+                    .into_iter()
+                    .map(|tx| (txs.0.to_string(), tx.0.to_string(), tx.1))
+                    .collect();
+                transactions.extend(token_tx);
             }
-            return Ok(WithdrawableBalance(destination));
+            return Ok(WithdrawableBalance(transactions));
         }
         Err(format!("User {} has no token balances!", &caller))
     }
 
     pub fn add_balance(&self, caller: Principal, to: Principal, token_id: TokenId, amount: Nat) {
         let mut binding = self.balances.borrow_mut();
-        let caller_txs: HashMap<TokenId, HashMap<Principal, Nat>> = HashMap::new();
-        let token_txs: HashMap<Principal, Nat> = HashMap::new();
-        let user_tx = binding
+        let caller_txs: HashMap<TokenId, Vec<(Principal, Nat)>> = HashMap::new();
+        let token_txs: Vec<(Principal, Nat)> = Vec::new();
+        binding
             .entry(caller)
             .or_insert(caller_txs)
             .entry(token_id)
-            .or_insert(token_txs);
-        match user_tx.get_mut(&to) {
-            Some(balance) => *balance += amount,
-            None => {
-                user_tx.insert(to, amount);
-            }
-        }
+            .or_insert(token_txs)
+            .push((to, amount));
     }
 
-    // Panics if theres no balance for the user/token_id or destination
-    pub fn update_balance(&self, caller: Principal, to: Principal, token_id: TokenId, amount: Nat) {
+    /// Panics if theres no balance for the user/token_id or destination
+    pub fn remove_balance(&self, caller: Principal, to: Principal, token_id: TokenId, amount: Nat) {
         let mut binding = self.balances.borrow_mut();
-        let tx = binding
+        let txs = binding
             .get_mut(&caller)
             .unwrap()
             .get_mut(&token_id)
             .unwrap();
-        if amount == 0 {
-            tx.remove_entry(&to);
-            return;
-        }
-        tx.get_mut(&to).and_then(|v| Some(*v = amount));
+        let index = txs
+            .into_iter()
+            .position(|tx| tx.0 == to && tx.1 == amount)
+            .unwrap();
+        txs.remove(index);
     }
 
     pub fn set_user_flag(
@@ -366,8 +372,8 @@ mod tests {
     #[test]
     fn test_add_balance() {
         let amount_1 = Nat::from(100_u32);
-        let amount_2 = Nat::from(100_u32);
-        let amount_3 = Nat::from(100_u32);
+        let amount_2 = Nat::from(200_u32);
+        let amount_3 = Nat::from(300_u32);
         let caller = Principal::from_str("fle2e-ltcun-tpi5w-25chp-byb56-dfl72-f664t-slvy").unwrap();
         let eth_address_1 = mock_principals::bob();
         let eth_address_2 = mock_principals::john();
@@ -382,7 +388,8 @@ mod tests {
                 amount_1.clone(),
             )
         });
-        let current_balance_1 = STATE.with(|s| s.get_balance(caller, token_id, eth_address_1));
+        let current_balance_1 =
+            STATE.with(|s| s.get_balance(caller, token_id, eth_address_1, amount_1.clone()));
         assert_eq!(current_balance_1.unwrap(), amount_1.clone());
 
         // add amount_2 for token_1 and eth_address_2
@@ -398,7 +405,7 @@ mod tests {
         });
         assert_eq!(withdraw_address_count, 2);
 
-        // add amount_3 for token_1 and eth_address_1 (100 + 100)
+        // add amount_3 for token_1 and eth_address_1 (100 , 100)
         STATE.with(|s| {
             s.add_balance(
                 caller,
@@ -407,8 +414,9 @@ mod tests {
                 amount_3.clone(),
             )
         });
-        let current_balance_1 = STATE.with(|s| s.get_balance(caller, token_id, eth_address_1));
-        assert_eq!(current_balance_1.unwrap(), amount_3 + amount_1);
+        let current_balance_1 =
+            STATE.with(|s| s.get_balance(caller, token_id, eth_address_1, amount_3.clone()));
+        assert_eq!(current_balance_1.unwrap(), amount_3);
     }
 
     #[test]
@@ -429,7 +437,8 @@ mod tests {
                 eth_address_2=0
             }
             token_id_2: {
-                eth_address_1=300+100
+                eth_address_1=300
+                eth_address_1=100
                 eth_address_2=200
             }
         }
@@ -472,6 +481,12 @@ mod tests {
 
         let all_balances = balances.unwrap().0;
 
+        let w = (
+            token_id_2.clone().to_string(),
+            eth_address_1.clone().to_string(),
+            Nat::from(100),
+        );
+
         let x = (
             token_id_2.clone().to_string(),
             eth_address_2.clone().to_string(),
@@ -480,7 +495,7 @@ mod tests {
         let y = (
             token_id_2.clone().to_string(),
             eth_address_1.clone().to_string(),
-            Nat::from(400),
+            Nat::from(300),
         );
         let z = (
             token_id_1.clone().to_string(),
@@ -488,6 +503,7 @@ mod tests {
             Nat::from(100),
         );
 
+        assert!(all_balances.clone().into_iter().any(|e| e == w));
         assert!(all_balances.clone().into_iter().any(|e| e == x));
         assert!(all_balances.clone().into_iter().any(|e| e == y));
         assert!(all_balances.into_iter().any(|e| e == z));
@@ -497,7 +513,6 @@ mod tests {
     fn test_update_balance() {
         let amount_1 = Nat::from(100_u32);
         let amount_2 = Nat::from(200_u32);
-        let amount_3 = Nat::from(300_u32);
         let caller = mock_principals::bob();
         let eth_address_1 = mock_principals::alice();
         let eth_address_2 = mock_principals::john();
@@ -528,53 +543,61 @@ mod tests {
             )
         });
 
+        let all_balances = STATE.with(|s| s.get_all_balances(caller.clone()));
+        assert_eq!(all_balances.unwrap().0.len(), 2);
+
         /*
         ----  AFTER UPDATE ---
         caller: {
             token_id_1 : {
-                eth_address_1=300 <- THIS IS UPDATED 300 INTEAD OF 100
                 eth_address_2=200
             }
         }
         */
         STATE.with(|s| {
-            s.update_balance(
+            s.remove_balance(
                 caller,
                 eth_address_1.clone(),
                 token_id_1.clone(),
-                amount_3.clone(),
+                amount_1.clone(),
             )
         });
 
         let current_balance = STATE
-            .with(|s| s.get_balance(caller, token_id_1.clone(), eth_address_1.clone()))
+            .with(|s| {
+                s.get_balance(
+                    caller,
+                    token_id_1.clone(),
+                    eth_address_2.clone(),
+                    amount_2.clone(),
+                )
+            })
             .unwrap();
 
-        assert_eq!(current_balance, amount_3);
+        assert_eq!(current_balance, amount_2);
+
+        let removed_balance = STATE
+            .with(|s| s.get_balance(caller, token_id_1.clone(), eth_address_1.clone(), amount_1));
+
+        assert!(removed_balance.is_none());
+
         let balances = STATE.with(|s| s.get_all_balances(caller)).unwrap();
-        // there are 2 eth addess
-        assert!(balances.0.len() == 2);
+        // there is 1 eth addess
+        assert!(balances.0.len() == 1);
 
         /*
         ----  AFTER UPDATE ---
         caller: {
             token_id_1 : {
-                eth_address_1=300
-                eth_address_2=0 <- Because its zero, it should be removed
             }
         }
         */
         STATE.with(|s| {
-            s.update_balance(
-                caller,
-                eth_address_2.clone(),
-                token_id_1.clone(),
-                Nat::from(0),
-            )
+            s.remove_balance(caller, eth_address_2.clone(), token_id_1.clone(), amount_2)
         });
 
         let balances_final = STATE.with(|s| s.get_all_balances(caller)).unwrap();
-        assert!(balances_final.0.len() == 1);
+        assert!(balances_final.0.len() == 0);
     }
 
     #[test]
