@@ -4,6 +4,7 @@ mod claimable_assets;
 mod get_balance;
 mod handle_message;
 mod init;
+mod messages;
 mod mint;
 mod upgrade;
 mod withdraw;
