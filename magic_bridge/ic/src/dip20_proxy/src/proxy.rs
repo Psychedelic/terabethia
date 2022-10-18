@@ -234,6 +234,7 @@ impl ToCapEvent for ClaimableMessage {
             .insert("msgHashKey", hash_key.to_nat())
             .insert("amount", self.amount.clone())
             .insert("name", self.token_name.clone())
+            .insert("from", self.from.clone())
             .build();
 
         IndefiniteEventBuilder::new()
@@ -252,8 +253,10 @@ impl From<IndefiniteEvent> for ClaimableMessage {
         let token: Principal = event.details[1].1.clone().try_into().unwrap();
         let amount: Nat = event.details[4].1.clone().try_into().unwrap();
         let name: String = event.details[5].1.clone().try_into().unwrap();
+        let from: Principal = event.details[6].1.clone().try_into().unwrap();
 
         ClaimableMessage {
+            from: from,
             owner: event.caller,
             msg_key: Some(msg_key.to_nonce_bytes()),
             msg_hash: msg_hash,

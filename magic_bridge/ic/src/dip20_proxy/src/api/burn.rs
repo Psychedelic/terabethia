@@ -95,9 +95,10 @@ async fn burn(
                             });
 
                             insert_claimable_asset(ClaimableMessage {
+                                from: caller,
                                 owner: eth_addr.clone(),
                                 msg_hash: outgoing_message.msg_hash.clone(),
-                                msg_key: outgoing_message.msg_key.clone(),
+                                msg_key: Some(outgoing_message.msg_key.clone()),
                                 token_name: token_name_str,
                                 token: token_id.clone(),
                                 amount: amount.clone(),
