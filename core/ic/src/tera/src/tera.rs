@@ -156,6 +156,13 @@ impl TerabetiaState {
             .collect()
     }
 
+    /// Get outgoing messages to L1
+    pub fn get_incoming_messages(&self) -> HashMap<String, u32> {
+        self.messages
+            .borrow()
+            .clone()
+    }
+
     /// Store outgoing messages to L1
     pub fn store_outgoing_message(&self, msg_hash: String) -> Result<OutgoingMessage, String> {
         if self.outgoing_messages_count() >= MAX_OUTGOING_MESSAGES_COUNT {

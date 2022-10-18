@@ -10,6 +10,7 @@ fn main() {}
 fn main() {
     use crate::common::types::*;
     use candid::{Nat, Principal};
+    use std::collections::HashMap;
 
     ic_kit::candid::export_service!();
     std::print!("{}", __export_service());
