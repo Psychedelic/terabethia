@@ -1,5 +1,5 @@
 use candid::candid_method;
-use ic_cdk_macros::update;
+use ic_cdk_macros::{query, update};
 
 use super::admin::is_authorized;
 use crate::{
@@ -17,6 +17,13 @@ fn remove_messages(messages: Vec<OutgoingMessagePair>) -> RemoveMessagesResponse
 #[candid_method(update, rename = "get_messages")]
 fn get_messages() -> Vec<OutgoingMessagePair> {
     STATE.with(|s| s.get_messages())
+}
+
+#[query(name = "get_messages_count", guard = "is_authorized")]
+#[candid_method(query, rename = "get_messages_count")]
+fn get_messages_count() -> u32 {
+    let count = STATE.with(|s| s.outgoing_messages_count()) as u32;
+    count
 }
 
 #[cfg(test)]
@@ -49,6 +56,9 @@ mod tests {
         assert_eq!(stored_messages.len(), 1);
 
         assert_eq!(stored_messages.first().unwrap().msg_hash, msg_hash());
+
+        let out_messages_count = get_messages_count();
+        assert_eq!(out_messages_count, 1);
     }
 
     #[test]
@@ -60,13 +70,13 @@ mod tests {
 
         let msg_key = hex::encode(store_message.unwrap().msg_key);
         let messages_to_remove = vec![OutgoingMessagePair {
-            msg_key,
+            msg_key: msg_key.clone(),
             msg_hash: msg_hash(),
         }];
 
-        let remove_messages = remove_messages(messages_to_remove);
+        let remove_messages_res = remove_messages(messages_to_remove);
 
-        assert!(remove_messages.0.is_ok());
+        assert!(remove_messages_res.0.is_ok());
 
         let stored_messages = get_messages();
 

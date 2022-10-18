@@ -8,6 +8,7 @@ service : {
   authorize : (principal) -> ();
   consume_message : (principal, vec nat8, vec nat) -> (ConsumeMessageResponse);
   get_messages : () -> (vec OutgoingMessagePair);
+  get_messages_count : () -> (nat32) query;
   get_nonces : () -> (vec nat) query;
   remove_messages : (vec OutgoingMessagePair) -> (ConsumeMessageResponse);
   send_message : (principal, vec nat) -> (SendMessageResponse);
