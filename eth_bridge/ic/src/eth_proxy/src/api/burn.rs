@@ -72,6 +72,7 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                             });
 
                             insert_claimable_asset(ClaimableMessage {
+                                from: caller,
                                 owner: eth_addr.clone(),
                                 msg_hash: outgoing_message.msg_hash.clone(),
                                 msg_key: outgoing_message.msg_key.clone(),
