@@ -20,7 +20,7 @@ export interface TransactionPayload {
   txHash: string;
   msgHash: string;
   msgKey: string;
-  nonce: string;
+  nonce?: string;
 }
 
 const envs = requireEnv([
@@ -97,10 +97,10 @@ const handleMessage = async (body: MessagePayload) => {
     console.log('Next nonce', nextNonceBn);
 
     try {
-      if (nextNonceBn) {
-        // only increment nonce when tx is submitted
-        await db.storeLastNonce(nextNonceBn.addn(1));
-      }
+      // if (nextNonceBn) {
+      //   // only increment nonce when tx is submitted
+      //   await db.storeLastNonce(nextNonceBn.addn(1));
+      // }
 
       await db.storeTransaction(tx.transaction_hash, [key]);
 
@@ -108,7 +108,7 @@ const handleMessage = async (body: MessagePayload) => {
         msgHash: hash,
         msgKey: key,
         txHash: tx.transaction_hash,
-        nonce: nextNonce, // if tx fails, we'll replay it with same nonce
+        // nonce: nextNonce, // if tx fails, we'll replay it with same nonce
       };
 
       // we need to make sure the tx was accepted
