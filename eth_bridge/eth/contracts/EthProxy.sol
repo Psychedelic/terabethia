@@ -2,8 +2,9 @@ pragma solidity ^0.8.0;
 
 import "./ITerabethiaCore.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract EthProxy is Ownable {
+contract EthProxy is Ownable, Pausable {
     // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
 
@@ -17,7 +18,7 @@ contract EthProxy is Ownable {
         terabethiaCore = terabethiaCore_;
     }
 
-    function withdraw(uint256 amount) external {
+    function withdraw(uint256 amount) external whenNotPaused {
         // Construct the withdrawal message's payload.
         uint256[] memory payload = new uint256[](2);
         payload[0] = uint256(uint160(msg.sender));
@@ -35,7 +36,7 @@ contract EthProxy is Ownable {
         );
     }
 
-    function deposit(uint256 user) external payable {
+    function deposit(uint256 user) external payable whenNotPaused {
         require(msg.value >= 1 gwei, "DepositContract: deposit value too low");
         require(
             msg.value % 1 gwei == 0,
@@ -71,5 +72,13 @@ contract EthProxy is Ownable {
             success,
             "Address: unable to send value, recipient may have reverted"
         );
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 }

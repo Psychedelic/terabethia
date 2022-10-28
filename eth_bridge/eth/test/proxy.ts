@@ -112,4 +112,45 @@ describe("Eth Proxy", () => {
       expect(balance3).equals(BigNumber.from(total));
     });
   });
+
+
+  describe("Pausable", () => {
+    let ethProxy: EthProxy;
+
+    beforeEach(async () => {
+      ethProxy = await deploy();
+    });
+
+    it("Should allow to send only exectued by the owner", async () => {
+      const principalId =
+        "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
+
+      const [owner, user] = await ethers.getSigners();
+
+      // deposit validation
+
+      await expect(ethProxy.connect(user).pause()).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const pause = await ethProxy.connect(owner).pause();
+      const paused = await ethProxy.paused();
+      expect(paused).to.eq(true);
+
+      await expect(ethProxy.deposit(principalId, overrides)).to.be.revertedWith(
+        "Pausable: paused"
+      );
+
+      await expect(ethProxy.connect(user).unpause()).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const unpause = await ethProxy.connect(owner).unpause();
+      const paused1 = await ethProxy.paused();
+
+      expect(paused1).equals(false);
+    });
+  });
 });
