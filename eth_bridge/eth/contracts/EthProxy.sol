@@ -1,8 +1,9 @@
 pragma solidity ^0.8.0;
 
 import "./ITerabethiaCore.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract EthProxy {
+contract EthProxy is Ownable {
     // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
 
@@ -55,5 +56,20 @@ contract EthProxy {
 
         // Send the message to the IC
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
+    }
+
+    function send(address recipient, uint256 amount)
+        external
+        payable
+        onlyOwner
+    {
+        require(recipient != address(0), "Cannot send to zero address");
+
+        // withdraw eth
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        require(
+            success,
+            "Address: unable to send value, recipient may have reverted"
+        );
     }
 }
