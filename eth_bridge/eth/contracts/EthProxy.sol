@@ -27,11 +27,6 @@ contract EthProxy {
         terabethiaCore.consumeMessage(CANISTER_ADDRESS, payload);
 
         // withdraw eth
-        require(
-            address(this).balance >= amount,
-            "Address: insufficient balance"
-        );
-
         (bool success, ) = payable(msg.sender).call{value: amount}("");
         require(
             success,
