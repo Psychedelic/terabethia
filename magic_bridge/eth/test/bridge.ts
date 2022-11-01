@@ -28,6 +28,7 @@ const deploy = async () => {
   const impl = await Terabethia.deploy();
   await impl.deployed();
 
+  // eslint-disable-next-line no-unused-vars
   const initialState = ethers.utils.defaultAbiCoder.encode(["uint256"], [1]);
   // console.log({ initialState });
 
@@ -36,23 +37,27 @@ const deploy = async () => {
   ])) as Terabethia;
 
   const TestToken = await ethers.getContractFactory("TestToken");
-  const token = (await TestToken.deploy(
+  const token = TestToken.deploy(
     "10000000000000000000000"
-  )) as TestToken;
+  ) as Promise<TestToken>;
 
-  EthProxy.deploy(terabethia.address);
+  const implToken = await token;
+  const testToken = await implToken.deployed();
 
-  const testToken = await token.deployed();
+  const ethProxyImpl = await EthProxy.deploy(terabethia.address);
+  const ethProxy = await ethProxyImpl.deployed();
 
-  const erc20 = await ERC20Bridge.deploy(
+  const erc20 = ERC20Bridge.deploy(
     terabethia.address,
-    EthProxy.address,
-    testToken.address
-  );
+    ethProxy.address,
+    "0x326C977E6efc84E512bB9C30f76E30c160eD06FB"
+  ) as Promise<ERC20Bridge>;
 
-  // const erc20Bridge = await erc20.deployed();
+  const implErc20 = await erc20;
+  // eslint-disable-next-line no-unused-vars
+  const erc20Bridge = await implErc20.deployed();
 
-  return [testToken, erc20];
+  return Promise.all([token, erc20]);
 };
 
 describe("Eth Proxy", () => {
@@ -64,9 +69,6 @@ describe("Eth Proxy", () => {
       [testToken, erc20Bridge] = await deploy();
     });
 
-    console.log(`address: ${erc20Bridge.address}`);
-    console.log(`address: ${testToken.address}`);
-
     it("Should have balance of 0 on init", async () => {
       expect(await ethers.provider.getBalance(erc20Bridge.address)).equals(
         ethers.utils.parseEther("0")
@@ -76,7 +78,6 @@ describe("Eth Proxy", () => {
 
   describe("Transfers", async () => {
     let testToken: TestToken;
-
     let erc20Bridge: ERC20Bridge;
 
     beforeEach(async () => {
@@ -88,7 +89,8 @@ describe("Eth Proxy", () => {
       const principalId =
         "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
 
-      await testToken.approve(erc20Bridge.address, ethValue1);
+      const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
+      await receipt.wait();
 
       // deposit validation
       const depositTx = await erc20Bridge.deposit(
@@ -98,7 +100,6 @@ describe("Eth Proxy", () => {
       );
       await depositTx.wait();
       const balance = await testToken.balanceOf(erc20Bridge.address);
-      console.log(balance);
       expect(balance).equals(ethValue1);
     });
   });
