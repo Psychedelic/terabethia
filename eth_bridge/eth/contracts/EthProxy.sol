@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity 0.8.17;
 
 import "./ITerabethiaCore.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -11,11 +11,17 @@ contract EthProxy is Ownable, Pausable {
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001090101;
 
+    // Init event
+    event InitLog(address indexed terabethia_core);
+
     /**
       Initializes the contract state.
     */
     constructor(ITerabethiaCore terabethiaCore_) {
         terabethiaCore = terabethiaCore_;
+
+        // emit init event
+        emit InitLog(address(terabethiaCore));
     }
 
     function withdraw(uint256 amount) external whenNotPaused {
