@@ -928,6 +928,7 @@ dependencies = [
  "ic-cdk 0.4.0",
  "ic-cdk-macros 0.3.3",
  "ic-kit",
+ "ic-kit-sys",
  "num-bigint",
  "serde",
  "serde_bytes",
