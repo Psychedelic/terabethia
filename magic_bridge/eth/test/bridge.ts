@@ -11,6 +11,9 @@ import { TestToken } from "../typechain/TestToken";
 
 const ethValue1 = ethers.utils.parseEther("0.1");
 const STARKNET_CONTRACT = "0xde29d060D45901Fb19ED6C6e959EB22d8626708e";
+const principalId =
+  "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
+const amountToSend = ethers.utils.parseEther("0.01");
 
 const deploy = async () => {
   // We get the contract to deploy
@@ -62,7 +65,7 @@ const deploy = async () => {
   return Promise.all([token, erc20]);
 };
 
-describe("Eth Proxy", () => {
+describe("ERC20 Proxy", () => {
   describe("Deployment", () => {
     // eslint-disable-next-line no-unused-vars
     let testToken: TestToken;
@@ -95,6 +98,12 @@ describe("Eth Proxy", () => {
       const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
       await receipt.wait();
 
+      await erc20Bridge.addTokenToWhiteList(testToken.address);
+      const tokenIsWhiteListed = await erc20Bridge.isWhiteListed(
+        testToken.address
+      );
+      expect(tokenIsWhiteListed).equals(true);
+
       // deposit validation
       const depositTx = await erc20Bridge.deposit(
         testToken.address,
@@ -125,6 +134,12 @@ describe("Eth Proxy", () => {
 
       const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
       await receipt.wait();
+
+      await erc20Bridge.addTokenToWhiteList(testToken.address);
+      const tokenIsWhiteListed = await erc20Bridge.isWhiteListed(
+        testToken.address
+      );
+      expect(tokenIsWhiteListed).equals(true);
 
       // deposit validation
       const depositTx = await erc20Bridge.deposit(
@@ -192,6 +207,156 @@ describe("Eth Proxy", () => {
       const paused1 = await erc20Bridge.paused();
 
       expect(paused1).equals(false);
+    });
+  });
+
+  describe("WhiteList", async () => {
+    let testToken: TestToken;
+    let erc20Bridge: ERC20Bridge;
+
+    beforeEach(async () => {
+      [testToken, erc20Bridge] = await deploy();
+    });
+
+    it("Should reject non white listed tokens", async () => {
+      const [owner, user] = await ethers.getSigners();
+
+      await expect(
+        erc20Bridge.deposit(testToken.address, amountToSend, principalId)
+      ).to.be.revertedWith("Token not allowed");
+    });
+
+    it("Should allow the owner to add to the white list", async () => {
+      const [owner, user] = await ethers.getSigners();
+
+      await expect(
+        erc20Bridge.connect(user).addTokenToWhiteList(testToken.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+
+      const tokenIsNotWhitelisted = await erc20Bridge.isWhiteListed(
+        testToken.address
+      );
+      expect(tokenIsNotWhitelisted).equals(false);
+
+      await erc20Bridge.connect(owner).addTokenToWhiteList(testToken.address);
+      const tokenIsWhiteListed = await erc20Bridge.isWhiteListed(
+        testToken.address
+      );
+      expect(tokenIsWhiteListed).equals(true);
+    });
+
+    it("Should allow to deposit white listed tokens", async () => {
+      const [owner, user] = await ethers.getSigners();
+
+      const tokenIsNotWhitelisted = await erc20Bridge.isWhiteListed(
+        testToken.address
+      );
+      expect(tokenIsNotWhitelisted).equals(false);
+
+      await erc20Bridge.connect(owner).addTokenToWhiteList(testToken.address);
+      const tokenIsWhiteListed = await erc20Bridge.isWhiteListed(testToken.address);
+      expect(tokenIsWhiteListed).equals(true);
+
+      const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
+      await receipt.wait();
+
+      // deposit validation
+      const depositTx = await erc20Bridge.deposit(
+        testToken.address,
+        ethValue1,
+        principalId
+      );
+      await depositTx.wait();
+      const balance = await testToken.balanceOf(erc20Bridge.address);
+      expect(balance).equals(ethValue1);
+    });
+
+    it("Should allow deposits when all tokens allowed", async () => {
+      const [owner, user] = await ethers.getSigners();
+
+      const allTokensAllowedFalseByDefault =
+        await erc20Bridge.areAllTokensAllowed();
+      expect(allTokensAllowedFalseByDefault).equals(false);
+
+      await expect(
+        erc20Bridge.connect(user).allowAllTokens()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+
+      await erc20Bridge.connect(owner).allowAllTokens();
+
+      const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
+      await receipt.wait();
+
+      // deposit validation
+      const depositTx = await erc20Bridge.deposit(
+        testToken.address,
+        ethValue1,
+        principalId
+      );
+      await depositTx.wait();
+      const balance = await testToken.balanceOf(erc20Bridge.address);
+      expect(balance).equals(ethValue1);
+    });
+
+    it("Should disallow tokens when owners calls it", async () => {
+      const [owner, user] = await ethers.getSigners();
+
+      const allTokensAllowedFalseByDefault =
+        await erc20Bridge.areAllTokensAllowed();
+      expect(allTokensAllowedFalseByDefault).equals(false);
+
+      await erc20Bridge.connect(owner).allowAllTokens();
+
+      const allTokensAllowed = await erc20Bridge.areAllTokensAllowed();
+      expect(allTokensAllowed).equals(true);
+
+      await expect(
+        erc20Bridge.connect(user).disallowAllTokens()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+
+      await erc20Bridge.connect(owner).disallowAllTokens();
+      const tokensAllowed = await erc20Bridge.areAllTokensAllowed();
+      expect(tokensAllowed).equals(false);
+    });
+  });
+
+  describe("BlackList", async () => {
+    let testToken: TestToken;
+    let erc20Bridge: ERC20Bridge;
+
+    beforeEach(async () => {
+      [testToken, erc20Bridge] = await deploy();
+    });
+
+    it("Should only allow the owner to blacklist", async () => {
+      // eslint-disable-next-line no-unused-vars
+      const [owner, user] = await ethers.getSigners();
+
+      await expect(
+        erc20Bridge.connect(user).addTokenToBlackList(testToken.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("Should reject deposits for blacklisted tokens", async () => {
+      // eslint-disable-next-line no-unused-vars
+      const [owner, user] = await ethers.getSigners();
+
+      await erc20Bridge.allowAllTokens();
+      const allTokensAllowed = await erc20Bridge.areAllTokensAllowed();
+      await expect(allTokensAllowed).equals(true);
+
+      await erc20Bridge.addTokenToBlackList(testToken.address);
+      const tokenIsBlackListed = await erc20Bridge.isBlackListed(
+        testToken.address
+      );
+      expect(tokenIsBlackListed).equals(true);
+
+      const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
+      await receipt.wait();
+
+      await expect(
+        erc20Bridge.deposit(testToken.address, ethValue1, principalId)
+      ).to.be.revertedWith("Token is BlackListed");
     });
   });
 });

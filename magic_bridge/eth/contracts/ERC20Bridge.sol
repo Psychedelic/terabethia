@@ -22,6 +22,10 @@ contract ERC20Bridge is Ownable, Pausable {
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001540101;
 
+    mapping(address => bool) tokenWhiteList;
+    mapping(address => bool) tokenBlackList;
+    bool allTokensAllowed;
+
     /**
       Initializes the contract state.
     */
@@ -33,6 +37,7 @@ contract ERC20Bridge is Ownable, Pausable {
         terabethiaCore = terabethiaCore_;
         ethProxy = ethProxy_;
         weth = weth_;
+        allTokensAllowed = false;
     }
 
     function withdraw(address token, uint256 amount) external whenNotPaused {
@@ -55,6 +60,9 @@ contract ERC20Bridge is Ownable, Pausable {
         uint256 amount,
         uint256 user
     ) external whenNotPaused {
+        require(isTokenAllowed(token), "Token not allowed");
+        require(!isBlackListed(token), "Token is BlackListed");
+
         // convert string -> bytes -> uint256
         uint256 tokenName = uint256(
             stringToBytes32(IERC20Metadata(token).name())
@@ -125,5 +133,49 @@ contract ERC20Bridge is Ownable, Pausable {
         assembly {
             result := mload(add(source, 32))
         }
+    }
+
+    function allowAllTokens() external onlyOwner {
+        allTokensAllowed = true;
+    }
+
+    function disallowAllTokens() external onlyOwner {
+        allTokensAllowed = false;
+    }
+
+    function addTokenToWhiteList(address token) external onlyOwner {
+        tokenWhiteList[token] = true;
+    }
+
+    function removeFromWhiteList(address token) external onlyOwner {
+        require(isWhiteListed(token), "Token must be white listed");
+        delete (tokenWhiteList[token]);
+    }
+
+    function addTokenToBlackList(address token) external onlyOwner {
+        tokenBlackList[token] = true;
+    }
+
+    function removeFromBlackList(address token) external onlyOwner {
+        require(isBlackListed(token), "Token must be black listed");
+        delete (tokenBlackList[token]);
+    }
+
+    function isWhiteListed(address token) public view returns (bool) {
+        bool tokenIsWhiteListed = tokenWhiteList[token];
+        return tokenIsWhiteListed;
+    }
+
+    function isBlackListed(address token) public view returns (bool) {
+        bool tokenIsBlackListed = tokenBlackList[token];
+        return tokenIsBlackListed;
+    }
+
+    function isTokenAllowed(address token) public view returns (bool) {
+        return isWhiteListed(token) || allTokensAllowed;
+    }
+
+    function areAllTokensAllowed() public view returns (bool) {
+        return allTokensAllowed;
     }
 }
