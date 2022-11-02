@@ -4,11 +4,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ITerabethiaCore.sol";
 import "./IWeth.sol";
 import "./IEthProxy.sol";
 
-contract ERC20Bridge is Ownable {
+contract ERC20Bridge is Ownable, Pausable {
     // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
 
@@ -34,7 +35,7 @@ contract ERC20Bridge is Ownable {
         weth = weth_;
     }
 
-    function withdraw(address token, uint256 amount) external {
+    function withdraw(address token, uint256 amount) external whenNotPaused {
         // Construct the withdrawal message's payload.
         uint256[] memory payload = new uint256[](3);
         payload[0] = uint256(uint160(token));
@@ -53,7 +54,7 @@ contract ERC20Bridge is Ownable {
         address token,
         uint256 amount,
         uint256 user
-    ) external {
+    ) external whenNotPaused {
         // convert string -> bytes -> uint256
         uint256 tokenName = uint256(
             stringToBytes32(IERC20Metadata(token).name())
@@ -97,6 +98,14 @@ contract ERC20Bridge is Ownable {
         require(recipient != address(0), "Cannot send to zero address");
 
         SafeERC20.safeTransfer(IERC20(token), recipient, amount);
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 
     receive() external payable {}

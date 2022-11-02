@@ -1,8 +1,7 @@
 import { expect } from "chai";
-import { BigNumber } from "ethers";
 import { ethers, upgrades } from "hardhat";
-import { send } from "process";
 import {
+  EthProxy__factory as EthProxyfactory,
   ERC20Bridge__factory as ERC20BridgeFactory,
   ERC20Bridge,
   Terabethia__factory as TerabethiaFactory,
@@ -44,6 +43,7 @@ const deploy = async () => {
   ) as Promise<TestToken>;
 
   const implToken = await token;
+  // eslint-disable-next-line no-unused-vars
   const testToken = await implToken.deployed();
 
   const ethProxyImpl = await EthProxy.deploy(terabethia.address);
@@ -64,6 +64,7 @@ const deploy = async () => {
 
 describe("Eth Proxy", () => {
   describe("Deployment", () => {
+    // eslint-disable-next-line no-unused-vars
     let testToken: TestToken;
     let erc20Bridge: ERC20Bridge;
 
@@ -120,7 +121,7 @@ describe("Eth Proxy", () => {
       const principalId =
         "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
 
-      const amountToSend = ethers.utils.parseEther("0.01")
+      const amountToSend = ethers.utils.parseEther("0.01");
 
       const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
       await receipt.wait();
@@ -148,6 +149,49 @@ describe("Eth Proxy", () => {
 
       const user1Balance = await testToken.balanceOf(user1.address);
       expect(user1Balance).equals(amountToSend);
+    });
+  });
+
+  describe("Pause", async () => {
+    let testToken: TestToken;
+    let erc20Bridge: ERC20Bridge;
+
+    beforeEach(async () => {
+      [testToken, erc20Bridge] = await deploy();
+    });
+
+    it("Should only allow the owner to pause", async () => {
+      const [owner, user] = await ethers.getSigners();
+      // principal id hex form
+      const principalId =
+        "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
+
+      const amountToSend = ethers.utils.parseEther("0.01");
+
+      await expect(erc20Bridge.connect(user).pause()).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const pause = await erc20Bridge.connect(owner).pause();
+      const paused = await erc20Bridge.paused();
+      expect(paused).to.eq(true);
+
+      await expect(
+        erc20Bridge
+          .connect(owner)
+          .deposit(testToken.address, amountToSend, principalId)
+      ).to.be.revertedWith("Pausable: paused");
+
+      await expect(erc20Bridge.connect(user).unpause()).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const unpause = await erc20Bridge.connect(owner).unpause();
+      const paused1 = await erc20Bridge.paused();
+
+      expect(paused1).equals(false);
     });
   });
 });
