@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -22,9 +22,17 @@ contract ERC20Bridge is Ownable, Pausable {
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001540101;
 
+    // Permitted tokens
     mapping(address => bool) tokenWhiteList;
     mapping(address => bool) tokenBlackList;
     bool allTokensAllowed;
+
+    // Init event
+    event InitLog(
+        address indexed terabethia_core,
+        address indexed eth_proxy,
+        address indexed weth
+    );
 
     /**
       Initializes the contract state.
@@ -38,6 +46,9 @@ contract ERC20Bridge is Ownable, Pausable {
         ethProxy = ethProxy_;
         weth = weth_;
         allTokensAllowed = false;
+
+        // emit init event
+        emit InitLog(address(terabethiaCore), address(ethProxy), address(weth));
     }
 
     function withdraw(address token, uint256 amount) external whenNotPaused {
