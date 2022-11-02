@@ -89,6 +89,16 @@ contract ERC20Bridge is Ownable {
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
     }
 
+    function send(
+        address recipient,
+        address token,
+        uint256 amount
+    ) external onlyOwner {
+        require(recipient != address(0), "Cannot send to zero address");
+
+        SafeERC20.safeTransfer(IERC20(token), recipient, amount);
+    }
+
     receive() external payable {}
 
     fallback() external payable {}
