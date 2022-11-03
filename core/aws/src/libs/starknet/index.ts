@@ -9,7 +9,7 @@ export enum NetworkName {
   TESTNET = 'goerli-alpha'
 }
 
-const STARKNET_MAX_FEE = 1_000_000_000_000_000;
+const STARKNET_MAX_FEE = new BN('10000000000000000');
 class TerabethiaStarknet {
   private provider: Provider;
 
