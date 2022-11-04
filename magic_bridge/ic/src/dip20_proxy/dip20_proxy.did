@@ -7,6 +7,7 @@ type OperationFailure = variant {
   DIP20NotResponding : opt TxError;
   TransferFrom : opt TxError;
 };
+type MessageStatus = variant { ConsumedNotMinted; Consuming };
 type Result = variant { Ok : nat; Err : OperationFailure };
 type Result_1 = variant { Ok : vec record { text; text; nat }; Err : text };
 type Result_2 = variant { Ok : nat; Err : TxError };
@@ -29,6 +30,7 @@ service : {
   get_all_token_balance : () -> (Result_1);
   get_balance : (principal, principal, nat) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result_2);
+  message_exist : (text) -> (opt MessageStatus) query;
   mint : (principal, nat, vec nat) -> (Result_2);
   perform_handshake : () -> (Result_3);
   withdraw : (principal, principal, nat) -> (Result);
