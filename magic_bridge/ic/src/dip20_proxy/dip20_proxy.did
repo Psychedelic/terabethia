@@ -1,3 +1,4 @@
+type MessageStatus = variant { ConsumedNotMinted; Consuming };
 type OperationFailure = variant {
   SendMessage : opt TxError;
   Burn : opt TxError;
@@ -7,7 +8,6 @@ type OperationFailure = variant {
   DIP20NotResponding : opt TxError;
   TransferFrom : opt TxError;
 };
-type MessageStatus = variant { ConsumedNotMinted; Consuming };
 type Result = variant { Ok : nat; Err : OperationFailure };
 type Result_1 = variant { Ok : vec record { text; text; nat }; Err : text };
 type Result_2 = variant { Ok : nat; Err : TxError };
