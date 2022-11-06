@@ -123,7 +123,7 @@ impl MagicState {
         }
     }
 
-    pub async fn _update_settings(
+    pub async fn update_settings(
         args: UpdateSettingsArgument,
     ) -> Result<(), (RejectionCode, String)> {
         UpdateSettings::perform(Principal::management_canister(), (args,)).await
