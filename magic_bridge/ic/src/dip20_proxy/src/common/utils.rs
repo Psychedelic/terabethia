@@ -10,13 +10,13 @@ use super::types::{
 impl fmt::Display for FactoryError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FactoryError::CreateCanisterError => write!(f, "CreateCanisterError"),
-            FactoryError::CanisterStatusNotAvailableError => {
+            FactoryError::CreateCanisterError(_) => write!(f, "CreateCanisterError"),
+            FactoryError::CanisterStatusNotAvailableError(_) => {
                 write!(f, "CanisterStatusNotAvailableError")
             }
-            FactoryError::EncodeError => write!(f, "EncodeError"),
-            FactoryError::CodeAlreadyInstalled => write!(f, "CodeAlreadyInstalled"),
-            FactoryError::InstallCodeError => write!(f, "InstallCodeError"),
+            FactoryError::EncodeError(_) => write!(f, "EncodeError"),
+            FactoryError::CodeAlreadyInstalled(_) => write!(f, "CodeAlreadyInstalled"),
+            FactoryError::InstallCodeError(_) => write!(f, "InstallCodeError"),
         }
     }
 }

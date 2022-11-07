@@ -1,5 +1,6 @@
 use crate::api::admin::is_authorized;
 use crate::factory::{FromNat, CAP_ADDRESS};
+use crate::types::{FactoryError, TokenStatus, Value};
 use crate::{
     factory::{CreateCanisterParam, Factory},
     magic::STATE,
@@ -54,10 +55,24 @@ async fn create(token_type: TokenType, payload: Vec<Nat>) -> MagicResponse {
 
         match create_canister {
             Ok(canister_id) => {
-                STATE.with(|s| s.insert_canister(eth_addr, canister_id));
+                STATE
+                    .with(|s| s.insert_canister(eth_addr, Some(canister_id), TokenStatus::Running));
                 canister_id
             }
-            Err(error) => return Err(error),
+            Err(tx_error) => {
+                STATE.with(|s| {
+                    let status = match tx_error {
+                        FactoryError::CreateCanisterError(_) => TokenStatus::NotCreated,
+                        FactoryError::CanisterStatusNotAvailableError(_) => TokenStatus::Created,
+                        FactoryError::EncodeError(_) => TokenStatus::Created,
+                        FactoryError::InstallCodeError(_) => TokenStatus::Created,
+                        FactoryError::CodeAlreadyInstalled(_) => TokenStatus::Installed,
+                    };
+                    s.insert_canister(eth_addr, tx_error.canister_id(), status);
+                });
+
+                return Err(tx_error);
+            }
         }
     };
 

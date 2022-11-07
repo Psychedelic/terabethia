@@ -15,13 +15,24 @@ pub enum TokenType {
     DIP721,
 }
 
+#[derive(CandidType, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub enum TokenStatus {
+    NotCreated,
+    Created,
+    Installed,
+    Running,
+    Stopping,
+    Stopped,
+    Deleted,
+}
+
 #[derive(CandidType, Deserialize, Debug)]
 pub enum FactoryError {
-    CreateCanisterError,
-    CanisterStatusNotAvailableError,
-    EncodeError,
-    CodeAlreadyInstalled,
-    InstallCodeError,
+    CreateCanisterError(Option<Principal>),
+    CanisterStatusNotAvailableError(Option<Principal>),
+    EncodeError(Option<Principal>),
+    CodeAlreadyInstalled(Option<Principal>),
+    InstallCodeError(Option<Principal>),
 }
 #[derive(CandidType, Deserialize, Debug)]
 
@@ -52,4 +63,20 @@ pub struct InstallCodeArgumentBorrowed<'a> {
     #[serde(with = "serde_bytes")]
     pub wasm_module: &'a [u8],
     pub arg: Vec<u8>,
+}
+
+pub trait Value {
+    fn canister_id(&self) -> Option<Principal>;
+}
+
+impl Value for FactoryError {
+    fn canister_id(&self) -> Option<Principal> {
+        match self {
+            FactoryError::CreateCanisterError(_) => None,
+            FactoryError::CanisterStatusNotAvailableError(canister_id) => canister_id.to_owned(),
+            FactoryError::EncodeError(canister_id) => canister_id.to_owned(),
+            FactoryError::CodeAlreadyInstalled(canister_id) => canister_id.to_owned(),
+            FactoryError::InstallCodeError(canister_id) => canister_id.to_owned(),
+        }
+    }
 }

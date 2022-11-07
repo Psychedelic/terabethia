@@ -11,6 +11,7 @@ pub trait Dip20 {
     async fn mint(&self, to: Principal, amount: Nat) -> TxReceipt;
     async fn symbol(&self) -> Result<String, TxError>;
     async fn transfer_from(&self, from: Principal, to: Principal, amount: Nat) -> TxReceipt;
+    async fn set_name(&self, new_name: String) -> Result<String, TxError>;
 }
 
 #[async_trait]
@@ -93,5 +94,19 @@ impl Dip20 for Principal {
             (Ok(tx_id),) => Ok(tx_id),
             (Err(error),) => Err(error),
         }
+    }
+
+    async fn set_name(&self, new_name: String) -> Result<String, TxError> {
+        let _response: ((),) =
+            match call::<(String,), ()>(*self, "setName", (new_name.clone(),)).await {
+                Ok(_) => ((),),
+                Err((code, err)) => {
+                    return Err(TxError::Other(format!(
+                        "RejectionCode: {:?}\n{}",
+                        code, err
+                    )))
+                }
+            };
+        Ok(new_name)
     }
 }

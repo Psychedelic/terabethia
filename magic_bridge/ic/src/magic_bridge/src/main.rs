@@ -1,4 +1,5 @@
 mod api;
+mod common;
 mod dab;
 mod factory;
 mod magic;
@@ -12,6 +13,8 @@ fn main() {
     use crate::factory::CreateCanisterParam;
     use ic_kit::candid;
     use ic_kit::candid::Nat;
+    use ic_kit::interfaces::management::CanisterStatusResponse;
+    use ic_kit::interfaces::management::UpdateSettingsArgument;
     use ic_kit::Principal;
     use types::*;
 

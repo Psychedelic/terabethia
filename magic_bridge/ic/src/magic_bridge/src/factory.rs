@@ -7,6 +7,7 @@ use ic_kit::{
 };
 
 pub const CAP_ADDRESS: &str = "lj532-6iaaa-aaaah-qcc7a-cai";
+pub const DIP20_PROXY_ADDRESS: &str = "767da-lqaaa-aaaab-qafka-cai";
 pub const DIP20_WASM: &[u8] = include_bytes!("../../wasm/dip20/token-opt.wasm");
 // const DIP721_WASM: &[u8] = include_bytes!("../../wasm/dip721/nft-opt.wasm");
 
@@ -128,7 +129,7 @@ impl Factory {
         )
         .await
         {
-            Err(_) => return Err(FactoryError::CreateCanisterError),
+            Err(_) => return Err(FactoryError::CreateCanisterError(None)),
             Ok(res) => res,
         };
 
@@ -141,12 +142,16 @@ impl Factory {
         )
         .await
         {
-            Err(_) => return Err(FactoryError::CanisterStatusNotAvailableError),
+            Err(_) => {
+                return Err(FactoryError::CanisterStatusNotAvailableError(Some(
+                    canister_id,
+                )))
+            }
             Ok(res) => res,
         };
 
         if response.module_hash.is_some() {
-            return Err(FactoryError::CodeAlreadyInstalled);
+            return Err(FactoryError::CodeAlreadyInstalled(Some(canister_id)));
         }
 
         #[derive(CandidType, Deserialize)]
@@ -169,7 +174,7 @@ impl Factory {
             param.fee_to,
             param.cap,
         )) {
-            Err(_) => return Err(FactoryError::EncodeError),
+            Err(_) => return Err(FactoryError::EncodeError(Some(canister_id))),
             Ok(res) => res,
         };
 
@@ -191,7 +196,7 @@ impl Factory {
         .await as Result<(), (RejectionCode, std::string::String)>)
             .is_err()
         {
-            return Err(FactoryError::InstallCodeError);
+            return Err(FactoryError::InstallCodeError(Some(canister_id)));
         }
 
         // we dont care about this result because retry logic is being handled by dab module
