@@ -96,7 +96,7 @@ mod tests {
 
         assert_eq!(slice.len(), 28);
 
-        let p = Principal::from_nat(n);
+        let p = Principal::from_nat(n).unwrap();
 
         let p_expected = "kyxzn-5aawk-7tlkc-pvrag-fioax-rhyre-nev4e-4lyc6-ifk4v-zrvlm-sae";
 
@@ -111,7 +111,7 @@ mod tests {
 
         assert_eq!(slice.len(), 5);
 
-        let p = Principal::from_nat(n);
+        let p = Principal::from_nat(n).unwrap();
 
         let p_expected = "tcy4r-qaaaa-aaaab-qadyq-cai";
 

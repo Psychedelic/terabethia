@@ -17,6 +17,7 @@ impl fmt::Display for FactoryError {
             FactoryError::EncodeError => write!(f, "EncodeError"),
             FactoryError::CodeAlreadyInstalled => write!(f, "CodeAlreadyInstalled"),
             FactoryError::InstallCodeError => write!(f, "InstallCodeError"),
+            FactoryError::InvalidCanisterId => write!(f, "InvalidCanisterId"),
         }
     }
 }

@@ -205,14 +205,17 @@ impl ToNat for Principal {
 }
 
 pub trait FromNat {
-    fn from_nat(input: Nat) -> Principal;
+    fn from_nat(input: Nat) -> Result<Principal, String>;
 }
 
 impl FromNat for Principal {
     #[inline(always)]
-    fn from_nat(input: Nat) -> Principal {
+    fn from_nat(input: Nat) -> Result<Principal, String> {
         let be_bytes = input.0.to_bytes_be();
         let be_bytes_len = be_bytes.len();
+        if be_bytes_len > 29 {
+            return Err("Invalid Nat".to_string());
+        }
         let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
             29 - be_bytes_len
         } else if be_bytes_len < 10 {
@@ -222,7 +225,7 @@ impl FromNat for Principal {
         };
         let mut p_slice = vec![0u8; padding_bytes];
         p_slice.extend_from_slice(&be_bytes);
-        Principal::from_slice(&p_slice)
+        Ok(Principal::from_slice(&p_slice))
     }
 }
 
@@ -464,6 +467,19 @@ mod tests {
         assert_eq!(
             erc20_addr_pid.to_string(),
             "6iiev-lyvwz-q7nu7-5tj7n-r3kmr-c6m7u-kumzc-eipy"
+        );
+    }
+
+    #[test]
+    fn test_principal_from_nat() {
+        let eth_address_as_nat =
+            Nat::from_str("1118288024408649503359660893691376548931478070077").unwrap();
+
+        let principal = Principal::from_nat(eth_address_as_nat.clone()).unwrap();
+
+        assert_eq!(
+            principal.to_string(),
+            String::from("t2i2h-eqaaa-aaaaa-aaaaa-bq7by-tzdmi-ryasy-aj22p-4qrgf-evilg-rt2")
         );
     }
 
