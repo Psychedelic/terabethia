@@ -1,6 +1,7 @@
 mod admin;
 mod burn;
 mod cap;
+mod claimable_assets;
 mod get_balance;
 mod handle_message;
 mod init;

@@ -5,8 +5,8 @@ use ic_cdk::export::candid::{Nat, Principal};
 use ic_kit::ic;
 
 use crate::common::types::{
-    ClaimableMessage, MessageHash, MessageStatus, NonceBytes, ProxyState, StableProxyState,
-    TokendId, TxFlag,
+    ClaimableMessage, EthereumAddr, MessageHash, MessageStatus, NonceBytes, ProxyState,
+    StableProxyState, TokendId, TxFlag,
 };
 
 pub const CAP_ADDRESS: &str = "lj532-6iaaa-aaaah-qcc7a-cai";
@@ -76,6 +76,36 @@ impl ProxyState {
         self.balances
             .borrow_mut()
             .insert(caller, HashMap::from([(token_id, amount)]));
+    }
+
+    pub fn remove_claimable_message(
+        &self,
+        eth_address: EthereumAddr,
+        token_id: TokendId,
+        amount: Nat,
+    ) -> Result<bool, String> {
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map
+            .get_mut(&eth_address)
+            .ok_or_else(|| "Message not found")?;
+
+        let item_index = messages
+            .iter()
+            .position(|m| m.amount == amount && m.token == token_id)
+            .ok_or_else(|| "Message not found")?;
+
+        messages.remove(item_index);
+        return Ok(true);
+    }
+
+    pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
+        let unclaimed_messages = self
+            .messages_unclaimed
+            .borrow()
+            .get(&eth_address)
+            .unwrap_or(&vec![])
+            .clone();
+        return unclaimed_messages;
     }
 
     pub fn set_user_flag(
