@@ -7,6 +7,7 @@ use ic_kit::{
 };
 
 pub const CAP_ADDRESS: &str = "lj532-6iaaa-aaaah-qcc7a-cai";
+pub const DIP20_PROXY_ADDRESS: &str = "767da-lqaaa-aaaab-qafka-cai";
 pub const DIP20_WASM: &[u8] = include_bytes!("../../wasm/dip20/token-opt.wasm");
 // const DIP721_WASM: &[u8] = include_bytes!("../../wasm/dip721/nft-opt.wasm");
 

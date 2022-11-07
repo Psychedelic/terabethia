@@ -6,8 +6,9 @@ type ClaimableMessage = record {
   token_name : text;
 };
 type Result = variant { Ok : nat; Err : TxError };
-type Result_1 = variant { Ok : vec record { text; nat }; Err : text };
-type Result_2 = variant { Ok : bool; Err : text };
+type Result_1 = variant { Ok : text; Err : TxError };
+type Result_2 = variant { Ok : vec record { text; nat }; Err : text };
+type Result_3 = variant { Ok : bool; Err : text };
 type TxError = variant {
   InsufficientAllowance;
   InsufficientBalance;
@@ -24,10 +25,11 @@ service : {
   authorized : () -> (vec principal) query;
   burn : (principal, principal, nat) -> (Result);
   claimable_get_all : (principal) -> (vec ClaimableMessage) query;
-  get_all_token_balance : () -> (Result_1);
+  dip20_set_name : (principal, text) -> (Result_1);
+  get_all_token_balance : () -> (Result_2);
   get_balance : (principal) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (principal, nat, vec nat) -> (Result);
-  remove_claimable : (principal, principal, nat) -> (Result_2);
+  remove_claimable : (principal, principal, nat) -> (Result_3);
   withdraw : (principal, principal, nat) -> (Result);
 }

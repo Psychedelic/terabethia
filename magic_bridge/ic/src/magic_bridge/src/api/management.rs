@@ -7,9 +7,10 @@ use ic_kit::{
 
 use crate::{
     api::admin::is_authorized,
-    factory::DIP20_WASM,
+    common::dip20::Dip20Proxy,
+    factory::{DIP20_PROXY_ADDRESS, DIP20_WASM},
     magic::{MagicState, STATE},
-    types::{InstallCodeArgumentBorrowed, InstallCodeError, TokenStatus, TokenType},
+    types::{InstallCodeArgumentBorrowed, InstallCodeError, TokenStatus, TokenType, TxError},
 };
 
 #[update(name = "upgrade_code", guard = "is_authorized")]
@@ -120,5 +121,22 @@ async fn update_canister_settings(args: UpdateSettingsArgument) -> Result<(), St
             "Cannot get status for canister \nError: {:?}",
             error
         )),
+    }
+}
+
+#[update(name = "dip20_set_name", guard = "is_authorized")]
+#[candid_method(update, rename = "dip20_set_name")]
+async fn set_name(canister_id: Principal, new_name: String) -> Result<String, TxError> {
+    if !STATE.with(|s| s.canister_exists(canister_id)).is_ok() {
+        return Err(TxError::Other(format!(
+            "canister with id: {} does not exist",
+            canister_id
+        )));
+    }
+    let dip20 = Principal::from_text(DIP20_PROXY_ADDRESS).unwrap();
+
+    match dip20.set_name(canister_id, new_name).await {
+        Ok(name) => Ok(name),
+        Err(error) => Err(error),
     }
 }

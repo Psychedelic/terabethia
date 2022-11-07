@@ -1,4 +1,5 @@
 mod api;
+mod common;
 mod dab;
 mod factory;
 mod magic;

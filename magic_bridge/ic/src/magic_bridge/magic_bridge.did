@@ -1,3 +1,9 @@
+type CanisterSettings = record {
+  freezing_threshold : opt nat;
+  controllers : opt vec principal;
+  memory_allocation : opt nat;
+  compute_allocation : opt nat;
+};
 type CanisterStatusResponse = record {
   status : Status;
   memory_size : nat;
@@ -40,8 +46,10 @@ type InstallCodeError = variant {
 };
 type Result = variant { Ok : principal; Err : FactoryError };
 type Result_1 = variant { Ok : principal; Err : text };
-type Result_2 = variant { Ok : CanisterStatusResponse; Err : text };
-type Result_3 = variant { Ok : principal; Err : InstallCodeError };
+type Result_2 = variant { Ok : text; Err : TxError };
+type Result_3 = variant { Ok : CanisterStatusResponse; Err : text };
+type Result_4 = variant { Ok; Err : text };
+type Result_5 = variant { Ok : principal; Err : InstallCodeError };
 type Status = variant { stopped; stopping; running };
 type TokenStatus = variant {
   Stopped;
@@ -53,18 +61,35 @@ type TokenStatus = variant {
   Installed;
 };
 type TokenType = variant { DIP20; DIP721 };
+type TxError = variant {
+  InsufficientAllowance;
+  InsufficientBalance;
+  ErrorOperationStyle;
+  Unauthorized;
+  LedgerTrap;
+  ErrorTo;
+  Other : text;
+  BlockUsed;
+  AmountTooSmall;
+};
+type UpdateSettingsArgument = record {
+  canister_id : principal;
+  settings : CanisterSettings;
+};
 service : {
   authorize : (principal) -> ();
   create : (TokenType, vec nat) -> (Result);
   delete_canister : (principal) -> (Result_1);
+  dip20_set_name : (principal, text) -> (Result_2);
   flush_failed_registrations : () -> ();
   get_all : () -> (vec record { principal; opt principal; TokenStatus }) query;
   get_canister : (principal) -> (opt principal) query;
-  get_canister_status : (principal) -> (Result_2);
+  get_canister_status : (principal) -> (Result_3);
   get_failed_registrations : () -> (
       vec record { principal; record { CreateCanisterParam; nat8 } },
     ) query;
   start_canister : (principal) -> (Result_1);
   stop_canister : (principal) -> (Result_1);
-  upgrade_code : (principal, TokenType) -> (Result_3);
+  update_canister_settings : (UpdateSettingsArgument) -> (Result_4);
+  upgrade_code : (principal, TokenType) -> (Result_5);
 }
