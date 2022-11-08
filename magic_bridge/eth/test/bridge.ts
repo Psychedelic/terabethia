@@ -116,56 +116,6 @@ describe("ERC20 Proxy", () => {
     });
   });
 
-  describe("Send", async () => {
-    let testToken: TestToken;
-    let erc20Bridge: ERC20Bridge;
-
-    beforeEach(async () => {
-      [testToken, erc20Bridge] = await deploy();
-    });
-
-    it("Should only allow the owner to call it", async () => {
-      const [owner, user, user1] = await ethers.getSigners();
-      // principal id hex form
-      const principalId =
-        "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
-
-      const amountToSend = ethers.utils.parseEther("0.01");
-
-      const receipt = await testToken.approve(erc20Bridge.address, ethValue1);
-      await receipt.wait();
-
-      await erc20Bridge.addTokenToWhiteList(testToken.address);
-      const tokenIsWhiteListed = await erc20Bridge.isWhiteListed(
-        testToken.address
-      );
-      expect(tokenIsWhiteListed).equals(true);
-
-      // deposit validation
-      const depositTx = await erc20Bridge.deposit(
-        testToken.address,
-        ethValue1,
-        principalId
-      );
-      await depositTx.wait();
-      const balance = await testToken.balanceOf(erc20Bridge.address);
-      expect(balance).equals(ethValue1);
-
-      await expect(
-        erc20Bridge
-          .connect(user)
-          .send(user1.address, testToken.address, amountToSend)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-
-      const sendTx = await erc20Bridge
-        .connect(owner)
-        .send(user1.address, testToken.address, amountToSend);
-      await sendTx.wait();
-
-      const user1Balance = await testToken.balanceOf(user1.address);
-      expect(user1Balance).equals(amountToSend);
-    });
-  });
 
   describe("Pause", async () => {
     let testToken: TestToken;

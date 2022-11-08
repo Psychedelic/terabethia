@@ -65,21 +65,6 @@ contract EthProxy is Ownable, Pausable {
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
     }
 
-    function send(address recipient, uint256 amount)
-        external
-        payable
-        onlyOwner
-    {
-        require(recipient != address(0), "Cannot send to zero address");
-
-        // withdraw eth
-        (bool success, ) = payable(recipient).call{value: amount}("");
-        require(
-            success,
-            "Address: unable to send value, recipient may have reverted"
-        );
-    }
-
     function pause() public onlyOwner {
         _pause();
     }

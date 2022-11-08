@@ -76,43 +76,6 @@ describe("Eth Proxy", () => {
     });
   });
 
-  describe("Owner", () => {
-    let ethProxy: EthProxy;
-
-    beforeEach(async () => {
-      ethProxy = await deploy();
-    });
-
-    it("Should allow to send only exectued by the owner", async () => {
-      const principalId =
-        "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
-
-      const [user, user2] = await ethers.getSigners();
-
-      // deposit validation
-      const depositTx = await ethProxy.deposit(principalId, overrides);
-      await depositTx.wait();
-      const balance = await ethers.provider.getBalance(ethProxy.address);
-      expect(balance).equals(ethValue1);
-
-      // eslint-disable-next-line no-unused-vars
-      const sendTX = await ethProxy.send(user.address, ethValue2);
-
-      const balance2 = await ethers.provider.getBalance(ethProxy.address);
-      const total = ethValue1 - ethValue2;
-
-      expect(balance2).equals(BigNumber.from(total));
-
-      await expect(
-        ethProxy.connect(user2).send(user2.address, ethValue2)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-
-      const balance3 = await ethers.provider.getBalance(ethProxy.address);
-
-      expect(balance3).equals(BigNumber.from(total));
-    });
-  });
-
 
   describe("Pausable", () => {
     let ethProxy: EthProxy;
@@ -121,7 +84,7 @@ describe("Eth Proxy", () => {
       ethProxy = await deploy();
     });
 
-    it("Should allow to send only exectued by the owner", async () => {
+    it("Should allow to pause only exectued by the owner", async () => {
       const principalId =
         "0xced2c72d7506fa87cd9c9d5e7e08e3614221272516ba4c152047ead802";
 
