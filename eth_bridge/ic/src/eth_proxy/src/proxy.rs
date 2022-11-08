@@ -244,6 +244,12 @@ pub trait ToCapEvent {
 
 impl ToCapEvent for ClaimableMessage {
     fn to_cap_event(&self) -> IndefiniteEvent {
+        let from = if self.from.is_some() {
+            self.from.unwrap()
+        } else {
+            Principal::anonymous()
+        };
+
         let details = DetailsBuilder::default()
             .insert("owner", self.owner)
             .insert("ethContractAddress", self.token)
@@ -251,7 +257,7 @@ impl ToCapEvent for ClaimableMessage {
             .insert("msgHashKey", self.msg_key.to_nat())
             .insert("amount", self.amount.clone())
             .insert("name", String::from("Wrapped Ether"))
-            .insert("from", self.from)
+            .insert("from", from)
             .build();
 
         IndefiniteEventBuilder::new()
@@ -272,7 +278,7 @@ impl From<IndefiniteEvent> for ClaimableMessage {
         let from: Principal = event.details[6].1.clone().try_into().unwrap();
 
         ClaimableMessage {
-            from: from,
+            from: Some(from),
             owner: event.caller,
             msg_key: msg_key.to_nonce_bytes(),
             msg_hash: msg_hash,
