@@ -3,6 +3,7 @@ type ClaimableMessage = record {
   msg_hash : text;
   owner : principal;
   msg_key : vec nat8;
+  from : principal;
   amount : nat;
 };
 type Result = variant { Ok : nat; Err : TxError };
@@ -28,6 +29,7 @@ service : {
   get_balance : (principal) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result);
   mint : (nat, vec nat) -> (Result);
+  perform_handshake : () -> (Result_2);
   remove_claimable : (principal, nat) -> (Result_2);
   withdraw : (principal, nat) -> (Result);
 }

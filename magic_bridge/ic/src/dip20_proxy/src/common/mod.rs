@@ -1,3 +1,4 @@
+pub mod cap;
 pub mod dip20;
 pub mod magic;
 pub mod tera;

@@ -3,6 +3,7 @@ use std::str::FromStr;
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
+use crate::common::cap::insert_claimable_asset;
 use crate::common::tera::Tera;
 use crate::common::weth::Weth;
 use crate::proxy::{ToNat, STATE, TERA_ADDRESS, WETH_ADDRESS_ETH, WETH_ADDRESS_IC};
@@ -67,17 +68,18 @@ async fn burn(eth_addr: EthereumAddr, amount: Nat) -> TxReceipt {
                                     weth_ic_addr_pid,
                                     current_balance - amount.clone(),
                                 );
-
-                                s.add_claimable_message(ClaimableMessage {
-                                    owner: eth_addr.clone(),
-                                    msg_hash: outgoing_message.msg_hash.clone(),
-                                    msg_key: outgoing_message.msg_key.clone(),
-                                    token: weth_ic_addr_pid.clone(),
-                                    amount: amount.clone(),
-                                });
-
-                                s.remove_user_flag(caller)
+                                s.remove_user_flag(caller);
                             });
+
+                            insert_claimable_asset(ClaimableMessage {
+                                from: caller,
+                                owner: eth_addr.clone(),
+                                msg_hash: outgoing_message.msg_hash.clone(),
+                                msg_key: outgoing_message.msg_key.clone(),
+                                token: weth_ic_addr_pid.clone(),
+                                amount: amount.clone(),
+                            });
+
                             // All correct
                             return Ok(burn_txn_id);
                         }

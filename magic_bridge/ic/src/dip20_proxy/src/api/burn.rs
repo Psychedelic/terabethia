@@ -1,6 +1,7 @@
 use ic_kit::candid::candid_method;
 use ic_kit::{ic, macros::update};
 
+use crate::common::cap::insert_claimable_asset;
 use crate::common::dip20::Dip20;
 use crate::common::magic::Magic;
 use crate::common::tera::Tera;
@@ -90,16 +91,19 @@ async fn burn(
                                     current_balance - amount.clone(),
                                 );
 
-                                s.add_claimable_message(ClaimableMessage {
-                                    owner: eth_addr.clone(),
-                                    msg_hash: outgoing_message.msg_hash.clone(),
-                                    token_name: token_name_str,
-                                    token: token_id.clone(),
-                                    amount: amount.clone(),
-                                });
-
                                 s.remove_user_flag(caller, token_id)
                             });
+
+                            insert_claimable_asset(ClaimableMessage {
+                                from: caller,
+                                owner: eth_addr.clone(),
+                                msg_hash: outgoing_message.msg_hash.clone(),
+                                msg_key: Some(outgoing_message.msg_key.clone()),
+                                token_name: token_name_str,
+                                token: token_id.clone(),
+                                amount: amount.clone(),
+                            });
+
                             // All correct
                             return Ok(burn_txn_id);
                         }
