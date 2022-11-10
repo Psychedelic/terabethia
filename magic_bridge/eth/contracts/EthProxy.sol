@@ -1,4 +1,4 @@
-pragma solidity 0.8.17;
+pragma solidity ^0.8.0;
 
 import "./ITerabethiaCore.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -11,17 +11,11 @@ contract EthProxy is Ownable, Pausable {
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001090101;
 
-    // Init event
-    event InitLog(address indexed terabethia_core);
-
     /**
       Initializes the contract state.
     */
     constructor(ITerabethiaCore terabethiaCore_) {
         terabethiaCore = terabethiaCore_;
-
-        // emit init event
-        emit InitLog(address(terabethiaCore));
     }
 
     function withdraw(uint256 amount) external whenNotPaused {
@@ -63,6 +57,21 @@ contract EthProxy is Ownable, Pausable {
 
         // Send the message to the IC
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
+    }
+
+    function send(address recipient, uint256 amount)
+        external
+        payable
+        onlyOwner
+    {
+        require(recipient != address(0), "Cannot send to zero address");
+
+        // withdraw eth
+        (bool success, ) = payable(recipient).call{value: amount}("");
+        require(
+            success,
+            "Address: unable to send value, recipient may have reverted"
+        );
     }
 
     function pause() public onlyOwner {

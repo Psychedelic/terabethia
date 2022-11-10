@@ -1,13 +1,15 @@
-pragma solidity ^0.8.0;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ITerabethiaCore.sol";
 import "./IWeth.sol";
 import "./IEthProxy.sol";
 
-contract ERC20Bridge {
+contract ERC20Bridge is Ownable, Pausable {
     // Terabethia core contract.
     ITerabethiaCore terabethiaCore;
 
@@ -20,6 +22,18 @@ contract ERC20Bridge {
     // L2 Canister address
     uint256 constant CANISTER_ADDRESS = 0x00000000003001540101;
 
+    // Permitted tokens
+    mapping(address => bool) tokenWhiteList;
+    mapping(address => bool) tokenBlackList;
+    bool allTokensAllowed;
+
+    // Init event
+    event InitLog(
+        address indexed terabethia_core,
+        address indexed eth_proxy,
+        address indexed weth
+    );
+
     /**
       Initializes the contract state.
     */
@@ -31,9 +45,13 @@ contract ERC20Bridge {
         terabethiaCore = terabethiaCore_;
         ethProxy = ethProxy_;
         weth = weth_;
+        allTokensAllowed = false;
+
+        // emit init event
+        emit InitLog(address(terabethiaCore), address(ethProxy), address(weth));
     }
 
-    function withdraw(address token, uint256 amount) external {
+    function withdraw(address token, uint256 amount) external whenNotPaused {
         // Construct the withdrawal message's payload.
         uint256[] memory payload = new uint256[](3);
         payload[0] = uint256(uint160(token));
@@ -52,7 +70,10 @@ contract ERC20Bridge {
         address token,
         uint256 amount,
         uint256 user
-    ) external {
+    ) external whenNotPaused {
+        require(isTokenAllowed(token), "Token not allowed");
+        require(!isBlackListed(token), "Token is BlackListed");
+
         // convert string -> bytes -> uint256
         uint256 tokenName = uint256(
             stringToBytes32(IERC20Metadata(token).name())
@@ -88,6 +109,14 @@ contract ERC20Bridge {
         terabethiaCore.sendMessage(CANISTER_ADDRESS, payload);
     }
 
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
     receive() external payable {}
 
     fallback() external payable {}
@@ -105,5 +134,49 @@ contract ERC20Bridge {
         assembly {
             result := mload(add(source, 32))
         }
+    }
+
+    function allowAllTokens() external onlyOwner {
+        allTokensAllowed = true;
+    }
+
+    function disallowAllTokens() external onlyOwner {
+        allTokensAllowed = false;
+    }
+
+    function addTokenToWhiteList(address token) external onlyOwner {
+        tokenWhiteList[token] = true;
+    }
+
+    function removeFromWhiteList(address token) external onlyOwner {
+        require(isWhiteListed(token), "Token must be white listed");
+        delete (tokenWhiteList[token]);
+    }
+
+    function addTokenToBlackList(address token) external onlyOwner {
+        tokenBlackList[token] = true;
+    }
+
+    function removeFromBlackList(address token) external onlyOwner {
+        require(isBlackListed(token), "Token must be black listed");
+        delete (tokenBlackList[token]);
+    }
+
+    function isWhiteListed(address token) public view returns (bool) {
+        bool tokenIsWhiteListed = tokenWhiteList[token];
+        return tokenIsWhiteListed;
+    }
+
+    function isBlackListed(address token) public view returns (bool) {
+        bool tokenIsBlackListed = tokenBlackList[token];
+        return tokenIsBlackListed;
+    }
+
+    function isTokenAllowed(address token) public view returns (bool) {
+        return isWhiteListed(token) || allTokensAllowed;
+    }
+
+    function areAllTokensAllowed() public view returns (bool) {
+        return allTokensAllowed;
     }
 }

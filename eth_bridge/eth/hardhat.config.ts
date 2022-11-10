@@ -20,7 +20,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 });
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.11",
+  solidity: "0.8.17",
   networks: {
     goerli: {
       url: process.env.ALCHEMY_ENDPOINT,
