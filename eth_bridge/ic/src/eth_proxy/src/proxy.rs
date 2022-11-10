@@ -87,6 +87,39 @@ impl ProxyState {
         txs.remove(index.unwrap());
     }
 
+    pub fn get_claimable_messages(&self, eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
+        let unclaimed_messages = self
+            .messages_unclaimed
+            .borrow()
+            .get(&eth_address)
+            .unwrap_or(&vec![])
+            .clone();
+        return unclaimed_messages;
+    }
+
+    pub fn remove_claimable_message(
+        &self,
+        eth_address: EthereumAddr,
+        amount: Nat,
+    ) -> Result<(), String> {
+        let eth_addr_pid = Principal::from_text(WETH_ADDRESS_IC).unwrap();
+
+        let mut map = self.messages_unclaimed.borrow_mut();
+        let messages = map
+            .get_mut(&eth_address)
+            .ok_or_else(|| "Eth address not found")?;
+
+        // Eth address could have multiple messages with the same amount, so we only remove one
+        let item_index = messages
+            .iter()
+            .position(|m| m.amount == amount && m.token == eth_addr_pid)
+            .ok_or_else(|| "Message not found")?;
+
+        messages.remove(item_index);
+
+        return Ok(());
+    }
+
     pub fn set_user_flag(&self, user: Principal, flag: TxFlag) -> Result<(), String> {
         if self.user_is_flagged(user) {
             return Err(format!("User: {} is performing another action", user));
@@ -174,14 +207,17 @@ impl ToNat for [u8; 32] {
 }
 
 pub trait FromNat {
-    fn from_nat(input: Nat) -> Principal;
+    fn from_nat(input: Nat) -> Result<Principal, String>;
 }
 
 impl FromNat for Principal {
     #[inline(always)]
-    fn from_nat(input: Nat) -> Principal {
+    fn from_nat(input: Nat) -> Result<Principal, String> {
         let be_bytes = input.0.to_bytes_be();
         let be_bytes_len = be_bytes.len();
+        if be_bytes_len > 29 {
+            return Err("Invalid Nat".to_string());
+        }
         let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
             29 - be_bytes_len
         } else if be_bytes_len < 10 {
@@ -191,7 +227,7 @@ impl FromNat for Principal {
         };
         let mut p_slice = vec![0u8; padding_bytes];
         p_slice.extend_from_slice(&be_bytes);
-        Principal::from_slice(&p_slice)
+        Ok(Principal::from_slice(&p_slice))
     }
 }
 
@@ -218,6 +254,12 @@ pub trait ToCapEvent {
 
 impl ToCapEvent for ClaimableMessage {
     fn to_cap_event(&self) -> IndefiniteEvent {
+        let from = if self.from.is_some() {
+            self.from.unwrap()
+        } else {
+            Principal::anonymous()
+        };
+
         let details = DetailsBuilder::default()
             .insert("owner", self.owner)
             .insert("ethContractAddress", self.token)
@@ -225,7 +267,7 @@ impl ToCapEvent for ClaimableMessage {
             .insert("msgHashKey", self.msg_key.to_nat())
             .insert("amount", self.amount.clone())
             .insert("name", String::from("Wrapped Ether"))
-            .insert("from", self.from)
+            .insert("from", from)
             .build();
 
         IndefiniteEventBuilder::new()
@@ -246,7 +288,7 @@ impl From<IndefiniteEvent> for ClaimableMessage {
         let from: Principal = event.details[6].1.clone().try_into().unwrap();
 
         ClaimableMessage {
-            from: from,
+            from: Some(from),
             owner: event.caller,
             msg_key: msg_key.to_nonce_bytes(),
             msg_hash: msg_hash,

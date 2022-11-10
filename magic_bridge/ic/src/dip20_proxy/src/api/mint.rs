@@ -25,6 +25,11 @@ pub async fn mint(token_id: TokenId, nonce: Nonce, payload: Vec<Nat>) -> TxRecei
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
+    let to = match Principal::from_nat(payload[0].clone()) {
+        Ok(canister) => canister,
+        Err(msg) => return Err(TxError::Other(msg)),
+    };
+
     let msg_hash = Message.calculate_hash(IncomingMessageHashParams {
         from: erc20_addr_pid.to_nat(),
         to: self_id.to_nat(),
@@ -62,7 +67,6 @@ pub async fn mint(token_id: TokenId, nonce: Nonce, payload: Vec<Nat>) -> TxRecei
     STATE.with(|s| s.update_incoming_message_status(msg_hash.clone(), MessageStatus::Consuming));
 
     let amount = Nat::from(payload[2].0.clone());
-    let to = Principal::from_nat(payload[1].clone());
 
     match token_id.mint(to, amount).await {
         Ok(txn_id) => {

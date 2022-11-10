@@ -1,3 +1,11 @@
+type ClaimableMessage = record {
+  token : principal;
+  msg_hash : text;
+  owner : principal;
+  msg_key : vec nat8;
+  from : opt principal;
+  amount : nat;
+};
 type OperationFailure = variant {
   SendMessage : opt TxError;
   Burn : opt TxError;
@@ -26,10 +34,12 @@ service : {
   authorize : (principal) -> ();
   authorized : () -> (vec principal) query;
   burn : (principal, nat) -> (Result);
+  get_all : (principal) -> (vec ClaimableMessage) query;
   get_all_token_balance : () -> (Result_1);
   get_balance : (principal, nat) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result_2);
   mint : (nat, vec nat) -> (Result_2);
   perform_handshake : () -> (Result_3);
+  remove_claimable : (principal, nat) -> (Result_3);
   withdraw : (principal, nat) -> (Result);
 }

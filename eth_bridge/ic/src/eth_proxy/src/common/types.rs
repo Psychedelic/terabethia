@@ -31,7 +31,7 @@ pub struct ClaimableMessage {
     pub msg_hash: MessageHash,
     pub token: TokendId,
     pub amount: Nat,
-    pub from: Principal,
+    pub from: Option<Principal>,
 }
 
 #[derive(CandidType, Deserialize, Debug)]

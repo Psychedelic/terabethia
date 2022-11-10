@@ -22,6 +22,7 @@ pub enum FactoryError {
     EncodeError,
     CodeAlreadyInstalled,
     InstallCodeError,
+    InvalidCanisterId,
 }
 #[derive(CandidType, Deserialize, Debug)]
 
