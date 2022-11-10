@@ -109,14 +109,17 @@ impl ToNat for Principal {
 }
 
 pub trait FromNat {
-    fn from_nat(input: Nat) -> Principal;
+    fn from_nat(input: Nat) -> Result<Principal, String>;
 }
 
 impl FromNat for Principal {
     #[inline(always)]
-    fn from_nat(input: Nat) -> Principal {
+    fn from_nat(input: Nat) -> Result<Principal, String> {
         let be_bytes = input.0.to_bytes_be();
         let be_bytes_len = be_bytes.len();
+        if be_bytes_len > 29 {
+            return Err("Invalid Nat".to_string());
+        }
         let padding_bytes = if be_bytes_len > 10 && be_bytes_len < 29 {
             29 - be_bytes_len
         } else if be_bytes_len < 10 {
@@ -126,7 +129,19 @@ impl FromNat for Principal {
         };
         let mut p_slice = vec![0u8; padding_bytes];
         p_slice.extend_from_slice(&be_bytes);
-        Principal::from_slice(&p_slice)
+        Ok(Principal::from_slice(&p_slice))
+    }
+}
+
+impl Default for TerabetiaState {
+    fn default() -> Self {
+        TerabetiaState {
+            messages: RefCell::new(HashMap::default()),
+            nonce: RefCell::new(HashSet::default()),
+            messages_out: RefCell::new(HashSet::with_capacity(MAX_OUTGOING_MESSAGES_COUNT)),
+            message_out_index: RefCell::new(u64::default()),
+            authorized: RefCell::new(Vec::default()),
+        }
     }
 }
 
