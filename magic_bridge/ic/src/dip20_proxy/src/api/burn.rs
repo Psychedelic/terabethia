@@ -6,7 +6,7 @@ use crate::common::dip20::Dip20;
 use crate::common::magic::Magic;
 use crate::common::tera::Tera;
 use crate::common::types::{
-    ClaimableMessage, EthereumAddr, OutgoingMessage, TokendId, TxError, TxFlag, TxReceipt,
+    ClaimableMessage, EthereumAddr, OperationFailure, OutgoingMessage, TokenId, TxError, TxFlag,
 };
 use crate::proxy::{ToNat, ERC20_ADDRESS_ETH, MAGIC_ADDRESS_IC, STATE, TERA_ADDRESS};
 use ic_cdk::export::candid::{Nat, Principal};
@@ -14,10 +14,10 @@ use ic_cdk::export::candid::{Nat, Principal};
 #[update(name = "burn")]
 #[candid_method(update, rename = "burn")]
 async fn burn(
-    eth_contract_as_principal: TokendId,
+    eth_contract_as_principal: TokenId,
     eth_addr: EthereumAddr,
     amount: Nat,
-) -> TxReceipt {
+) -> Result<Nat, OperationFailure> {
     let caller = ic::caller();
     let self_id = ic::id();
 
@@ -28,15 +28,14 @@ async fn burn(
         .await
     {
         Ok(canister_id) => canister_id,
-        Err(error) => return Err(error),
+        Err(error) => return Err(OperationFailure::TokenCanisterIdNotFound(Some(error))),
     };
 
     let token_name = token_id.name().await;
     if token_name.is_err() {
-        return Err(TxError::Other(format!(
-            "Token {} canister is not responding!",
-            token_id.to_string(),
-        )));
+        return Err(OperationFailure::DIP20NotResponding(Some(TxError::Other(
+            format!("Token {} canister is not responding!", token_id.to_string(),),
+        ))));
     }
     let token_name_str = token_name.unwrap();
 
@@ -46,11 +45,11 @@ async fn burn(
     // One user cannot make multiple tx at the same time for the same token
     let set_flag = STATE.with(|s| s.set_user_flag(caller, token_id, TxFlag::Burning));
     if set_flag.is_err() {
-        return Err(TxError::Other(
+        return Err(OperationFailure::MultipleTxWithToken(Some(TxError::Other(
             set_flag
                 .err()
                 .unwrap_or("Multiple token transactions".to_string()),
-        ));
+        ))));
     }
 
     let transfer_from = token_id
@@ -59,7 +58,9 @@ async fn burn(
 
     match transfer_from {
         Ok(_) => {
-            STATE.with(|s| s.add_balance(caller, token_id, amount.clone()));
+            STATE.with(|s| {
+                s.add_balance(caller, eth_addr, eth_contract_as_principal, amount.clone())
+            });
 
             let burn = token_id.burn(amount.clone()).await;
 
@@ -80,15 +81,11 @@ async fn burn(
                     match send_message {
                         Ok(outgoing_message) => {
                             STATE.with(|s| {
-                                // there could be an underflow here
-                                // like negative balance
-                                let current_balance =
-                                    s.get_balance(caller, token_id).unwrap_or(Nat::from(0));
-
-                                s.update_balance(
+                                s.remove_balance(
                                     caller,
-                                    token_id,
-                                    current_balance - amount.clone(),
+                                    eth_addr,
+                                    eth_contract_as_principal,
+                                    amount.clone(),
                                 );
 
                                 s.remove_user_flag(caller, token_id)
@@ -110,24 +107,26 @@ async fn burn(
                         // send_message error
                         Err(_) => {
                             STATE.with(|s| s.remove_user_flag(caller, token_id));
-                            return Err(TxError::Other(format!(
-                                "Sending message to L1 failed with caller {:?}!",
-                                caller.to_string()
-                            )));
+                            return Err(OperationFailure::SendMessage(Some(TxError::Other(
+                                format!(
+                                    "Sending message to L1 failed with caller {:?}!",
+                                    caller.to_string()
+                                ),
+                            ))));
                         }
                     }
                 }
                 // burn error
                 Err(error) => {
                     STATE.with(|s| s.remove_user_flag(caller, token_id));
-                    return Err(error);
+                    return Err(OperationFailure::Burn(Some(error)));
                 }
             };
         }
         // transfer error
         Err(error) => {
             STATE.with(|s| s.remove_user_flag(caller, token_id));
-            Err(error)
+            Err(OperationFailure::TransferFrom(Some(error)))
         }
     }
 }

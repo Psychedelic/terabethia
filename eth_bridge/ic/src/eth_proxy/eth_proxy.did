@@ -6,9 +6,19 @@ type ClaimableMessage = record {
   from : opt principal;
   amount : nat;
 };
-type Result = variant { Ok : nat; Err : TxError };
+type OperationFailure = variant {
+  SendMessage : opt TxError;
+  Burn : opt TxError;
+  TokenCanisterIdNotFound : opt TxError;
+  MultipleTxWithToken : opt TxError;
+  UserHasNotBalanceToWithdraw : opt TxError;
+  DIP20NotResponding : opt TxError;
+  TransferFrom : opt TxError;
+};
+type Result = variant { Ok : nat; Err : OperationFailure };
 type Result_1 = variant { Ok : vec record { text; nat }; Err : text };
-type Result_2 = variant { Ok; Err : text };
+type Result_2 = variant { Ok : nat; Err : TxError };
+type Result_3 = variant { Ok; Err : text };
 type TxError = variant {
   InsufficientAllowance;
   InsufficientBalance;
@@ -26,10 +36,10 @@ service : {
   burn : (principal, nat) -> (Result);
   get_all : (principal) -> (vec ClaimableMessage) query;
   get_all_token_balance : () -> (Result_1);
-  get_balance : (principal) -> (opt nat);
-  handle_message : (principal, nat, vec nat) -> (Result);
-  mint : (nat, vec nat) -> (Result);
-  perform_handshake : () -> (Result_2);
-  remove_claimable : (principal, nat) -> (Result_2);
+  get_balance : (principal, nat) -> (opt nat);
+  handle_message : (principal, nat, vec nat) -> (Result_2);
+  mint : (nat, vec nat) -> (Result_2);
+  perform_handshake : () -> (Result_3);
+  remove_claimable : (principal, nat) -> (Result_3);
   withdraw : (principal, nat) -> (Result);
 }

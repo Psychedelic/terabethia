@@ -4,18 +4,21 @@ use ic_kit::{
     macros::update,
 };
 
-use crate::{common::types::TokendId, proxy::STATE};
+use crate::{
+    common::types::{EthereumAddr, WithdrawableBalance},
+    proxy::STATE,
+};
 
 #[update(name = "get_balance")]
 #[candid_method(update, rename = "get_balance")]
-pub async fn get_balance(token_id: TokendId) -> Option<Nat> {
+pub async fn get_balance(eth_address: EthereumAddr, amount: Nat) -> Option<Nat> {
     let caller = ic::caller();
-    STATE.with(|s| s.get_balance(caller, token_id))
+    STATE.with(|s| s.get_balance(caller, eth_address, amount))
 }
 
 #[update(name = "get_all_token_balance")]
 #[candid_method(update, rename = "get_all_token_balance")]
-pub async fn get_all_balances() -> Result<Vec<(String, Nat)>, String> {
+pub async fn get_all_balances() -> Result<WithdrawableBalance, String> {
     let caller = ic::caller();
     STATE.with(|s| s.get_all_balances(caller))
 }

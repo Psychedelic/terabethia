@@ -18,6 +18,9 @@ pub type MsgHashKey = [u8; 32];
 
 pub type TxReceipt = Result<Nat, TxError>;
 
+#[derive(CandidType, Deserialize)]
+pub struct WithdrawableBalance(pub Vec<(String, Nat)>);
+
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
 
@@ -78,7 +81,7 @@ pub struct ProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
     /// user balances
-    pub balances: RefCell<HashMap<Principal, HashMap<TokendId, Nat>>>,
+    pub balances: RefCell<HashMap<Principal, Vec<(Principal, Nat)>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
     // store outgoing massages waiting to be claimed
@@ -92,7 +95,7 @@ pub struct StableProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: HashMap<MessageHash, MessageStatus>,
     /// user balances
-    pub balances: HashMap<Principal, HashMap<Principal, Nat>>,
+    pub balances: Option<HashMap<Principal, Vec<(Principal, Nat)>>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
     // store outgoing massages waiting to be claimed
@@ -118,4 +121,15 @@ pub enum TxError {
     ErrorOperationStyle,
     ErrorTo,
     Other(String),
+}
+
+#[derive(CandidType, Deserialize, PartialEq)]
+pub enum OperationFailure {
+    Burn(Option<TxError>),
+    DIP20NotResponding(Option<TxError>),
+    UserHasNotBalanceToWithdraw(Option<TxError>),
+    MultipleTxWithToken(Option<TxError>),
+    SendMessage(Option<TxError>),
+    TokenCanisterIdNotFound(Option<TxError>),
+    TransferFrom(Option<TxError>),
 }

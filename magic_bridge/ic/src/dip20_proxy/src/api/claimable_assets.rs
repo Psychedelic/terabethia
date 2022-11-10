@@ -2,7 +2,7 @@ use candid::{candid_method, Nat};
 use ic_cdk_macros::{query, update};
 
 use crate::api::admin::is_authorized;
-use crate::common::types::TokendId;
+use crate::common::types::TokenId;
 use crate::{
     common::types::{ClaimableMessage, EthereumAddr},
     proxy::STATE,
@@ -18,7 +18,7 @@ fn claimable_get_all(eth_address: EthereumAddr) -> Vec<ClaimableMessage> {
 #[candid_method(update, rename = "remove_claimable")]
 fn remove_claimable(
     eth_address: EthereumAddr,
-    token_id: TokendId,
+    token_id: TokenId,
     amount: Nat,
 ) -> Result<bool, String> {
     STATE.with(|s| s.remove_claimable_message(eth_address, token_id.clone(), amount.clone()))

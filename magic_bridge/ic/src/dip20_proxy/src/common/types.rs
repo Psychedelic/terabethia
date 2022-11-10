@@ -8,7 +8,7 @@ pub type Nonce = Nat;
 
 pub type NonceBytes = [u8; 32];
 
-pub type TokendId = Principal;
+pub type TokenId = Principal;
 
 pub type MessageHash = String;
 
@@ -17,6 +17,9 @@ pub type EthereumAddr = Principal;
 pub type TxReceipt = Result<Nat, TxError>;
 
 pub type MagicResponse = Result<Principal, FactoryError>;
+
+#[derive(CandidType, Deserialize)]
+pub struct WithdrawableBalance(pub Vec<(String, String, Nat)>);
 
 #[derive(Serialize, CandidType, Deserialize)]
 pub struct Message;
@@ -70,7 +73,7 @@ pub struct ClaimableMessage {
     pub msg_hash: String,
     pub msg_key: Option<[u8; 32]>,
     pub token_name: String,
-    pub token: TokendId,
+    pub token: TokenId,
     pub amount: Nat,
     pub from: Principal,
 }
@@ -80,7 +83,7 @@ pub struct ProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: RefCell<HashMap<MessageHash, MessageStatus>>,
     /// user balances
-    pub balances: RefCell<HashMap<Principal, HashMap<TokendId, Nat>>>,
+    pub balances: RefCell<HashMap<Principal, HashMap<TokenId, Vec<(EthereumAddr, Nat)>>>>,
     /// authorized principals
     pub controllers: RefCell<Vec<Principal>>,
     // store outgoing massages waiting to be claimed
@@ -94,7 +97,7 @@ pub struct StableProxyState {
     /// store incoming messages against status locks
     pub incoming_messages: HashMap<MessageHash, MessageStatus>,
     /// user balances
-    pub balances: HashMap<Principal, HashMap<Principal, Nat>>,
+    pub balances: Option<HashMap<Principal, HashMap<TokenId, Vec<(EthereumAddr, Nat)>>>>,
     /// authorized principals
     pub controllers: Vec<Principal>,
     // store outgoing massages waiting to be claimed
@@ -109,7 +112,7 @@ pub enum TokenType {
     DIP721,
 }
 
-#[derive(Deserialize, CandidType, Debug, PartialEq)]
+#[derive(CandidType, Debug, Deserialize, PartialEq)]
 pub enum TxError {
     InsufficientBalance,
     InsufficientAllowance,
@@ -120,4 +123,15 @@ pub enum TxError {
     ErrorOperationStyle,
     ErrorTo,
     Other(String),
+}
+
+#[derive(CandidType, Deserialize, PartialEq)]
+pub enum OperationFailure {
+    Burn(Option<TxError>),
+    DIP20NotResponding(Option<TxError>),
+    UserHasNotBalanceToWithdraw(Option<TxError>),
+    MultipleTxWithToken(Option<TxError>),
+    SendMessage(Option<TxError>),
+    TokenCanisterIdNotFound(Option<TxError>),
+    TransferFrom(Option<TxError>),
 }
