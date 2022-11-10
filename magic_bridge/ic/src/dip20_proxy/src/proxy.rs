@@ -288,6 +288,11 @@ impl ToCapEvent for ClaimableMessage {
         } else {
             [0; 32]
         };
+        let from = if self.from.is_some() {
+            self.from.unwrap()
+        } else {
+            Principal::anonymous()
+        };
         let details = DetailsBuilder::default()
             .insert("owner", self.owner)
             .insert("ethContractAddress", self.token)
@@ -295,7 +300,7 @@ impl ToCapEvent for ClaimableMessage {
             .insert("msgHashKey", hash_key.to_nat())
             .insert("amount", self.amount.clone())
             .insert("name", self.token_name.clone())
-            .insert("from", self.from.clone())
+            .insert("from", from)
             .build();
 
         IndefiniteEventBuilder::new()
@@ -317,7 +322,7 @@ impl From<IndefiniteEvent> for ClaimableMessage {
         let from: Principal = event.details[6].1.clone().try_into().unwrap();
 
         ClaimableMessage {
-            from: from,
+            from: Some(from),
             owner: event.caller,
             msg_key: Some(msg_key.to_nonce_bytes()),
             msg_hash: msg_hash,
