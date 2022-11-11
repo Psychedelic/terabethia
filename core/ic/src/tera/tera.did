@@ -10,6 +10,7 @@ service : {
   get_messages : () -> (vec OutgoingMessagePair);
   get_messages_count : () -> (nat32) query;
   get_nonces : () -> (vec nat) query;
+  nonce_exist : (nat) -> (bool) query;
   remove_messages : (vec OutgoingMessagePair) -> (ConsumeMessageResponse);
   send_message : (principal, vec nat) -> (SendMessageResponse);
   store_message : (principal, principal, nat, vec nat) -> (

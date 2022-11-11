@@ -7,6 +7,7 @@ type ClaimableMessage = record {
   amount : nat;
   token_name : text;
 };
+type MessageStatus = variant { ConsumedNotMinted; Consuming };
 type OperationFailure = variant {
   SendMessage : opt TxError;
   Burn : opt TxError;
@@ -40,6 +41,7 @@ service : {
   get_all_token_balance : () -> (Result_1);
   get_balance : (principal, principal, nat) -> (opt nat);
   handle_message : (principal, nat, vec nat) -> (Result_2);
+  message_exist : (text) -> (opt MessageStatus) query;
   mint : (principal, nat, vec nat) -> (Result_2);
   perform_handshake : () -> (Result_3);
   remove_claimable : (principal, principal, nat) -> (Result_4);

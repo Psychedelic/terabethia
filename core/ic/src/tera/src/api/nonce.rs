@@ -9,3 +9,9 @@ use crate::{common::types::Nonce, tera::STATE};
 fn get_nonces() -> Vec<Nonce> {
     STATE.with(|s| s.get_nonces())
 }
+
+#[query(name = "nonce_exist")]
+#[candid_method(query, rename = "nonce_exist")]
+fn nonce_exist(nonce: Nonce) -> bool {
+    STATE.with(|s| s.nonce_exists(&nonce))
+}

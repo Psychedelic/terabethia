@@ -92,7 +92,7 @@ async fn burn(
                             });
 
                             insert_claimable_asset(ClaimableMessage {
-                                from: caller,
+                                from: Some(caller),
                                 owner: eth_addr.clone(),
                                 msg_hash: outgoing_message.msg_hash.clone(),
                                 msg_key: Some(outgoing_message.msg_key.clone()),
