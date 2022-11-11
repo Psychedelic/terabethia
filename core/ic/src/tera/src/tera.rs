@@ -145,18 +145,6 @@ impl Default for TerabetiaState {
     }
 }
 
-impl Default for TerabetiaState {
-    fn default() -> Self {
-        TerabetiaState {
-            messages: RefCell::new(HashMap::default()),
-            nonce: RefCell::new(HashSet::default()),
-            messages_out: RefCell::new(HashSet::with_capacity(MAX_OUTGOING_MESSAGES_COUNT)),
-            message_out_index: RefCell::new(u64::default()),
-            authorized: RefCell::new(Vec::default()),
-        }
-    }
-}
-
 impl TerabetiaState {
     ///
     /// Outgoing
