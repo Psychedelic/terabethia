@@ -25,7 +25,7 @@ pub async fn mint(token_id: TokenId, nonce: Nonce, payload: Vec<Nat>) -> TxRecei
     let erc20_addr_hex = ERC20_ADDRESS_ETH.trim_start_matches("0x");
     let erc20_addr_pid = Principal::from_slice(&hex::decode(erc20_addr_hex).unwrap());
 
-    let to = match Principal::from_nat(payload[0].clone()) {
+    let to = match Principal::from_nat(payload[1].clone()) {
         Ok(canister) => canister,
         Err(msg) => return Err(TxError::Other(msg)),
     };

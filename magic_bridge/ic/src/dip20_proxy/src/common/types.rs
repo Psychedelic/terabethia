@@ -75,7 +75,7 @@ pub struct ClaimableMessage {
     pub token_name: String,
     pub token: TokenId,
     pub amount: Nat,
-    pub from: Principal,
+    pub from: Option<Principal>,
 }
 
 #[derive(CandidType, Deserialize, Default)]
