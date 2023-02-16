@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use candid::candid_method;
 use ic_cdk_macros::{query, update};
 
@@ -17,6 +19,12 @@ fn remove_messages(messages: Vec<OutgoingMessagePair>) -> RemoveMessagesResponse
 #[candid_method(update, rename = "get_messages")]
 fn get_messages() -> Vec<OutgoingMessagePair> {
     STATE.with(|s| s.get_messages())
+}
+
+#[update(name = "get_incoming_messages", guard = "is_authorized")]
+#[candid_method(update, rename = "get_incoming_messages")]
+fn get_incoming_messages() -> HashMap<String, u32> {
+    STATE.with(|s| s.get_incoming_messages())
 }
 
 #[query(name = "get_messages_count", guard = "is_authorized")]

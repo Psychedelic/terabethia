@@ -7,6 +7,7 @@ type StoreMessageResponse = variant { Ok : CallResult; Err : text };
 service : {
   authorize : (principal) -> ();
   consume_message : (principal, vec nat8, vec nat) -> (ConsumeMessageResponse);
+  get_incoming_messages : () -> (vec record { text; nat32 });
   get_messages : () -> (vec OutgoingMessagePair);
   get_messages_count : () -> (nat32) query;
   get_nonces : () -> (vec nat) query;
